@@ -1,0 +1,48 @@
+name: Deploy main a las 4 EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Despliegue en ${{ matrix.nombre }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - nombre: manuel
+            environment: manuel
+          - nombre: sebastian
+            environment: sebastian
+          - nombre: juanpablo
+            environment: juanpablo
+          - nombre: yordy
+            environment: yordy
+    environment: ${{ matrix.environment }}
+    steps:
+      - name: Conectar via SSH y actualizar main
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_PORT }}
+          script: |
+            set -e
+            cd ${{ secrets.PROJECT_PATH }}
+            git fetch origin main
+            git reset --hard origin/main
+
+            if [ -d "venv" ]; then
+              source venv/bin/activate
+              pip install -r requirements.txt --quiet
+            fi
+
+            sudo systemctl restart uninorte-api.service
+            if systemctl list-unit-files | grep -q uninorte-listener.service; then
+              sudo systemctl restart uninorte-listener.service
+            fi
+            sudo systemctl reload nginx

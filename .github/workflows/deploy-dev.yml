@@ -1,0 +1,34 @@
+name: Deploy dev a la EC2 de companero1
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy:
+    name: Despliegue dev (sebastian)
+    runs-on: ubuntu-latest
+    environment: sebastian
+    steps:
+      - name: Conectar via SSH y actualizar dev
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_PORT }}
+          script: |
+            set -e
+            cd ${{ secrets.PROJECT_PATH_DEV }}
+            git fetch origin dev
+            git reset --hard origin/dev
+
+            if [ -d "venv" ]; then
+              source venv/bin/activate
+              pip install -r requirements.txt --quiet
+            fi
+
+            sudo systemctl restart uninorte-api-dev.service
+            sudo systemctl restart uninorte-listener-dev.service
+            sudo systemctl reload nginx
