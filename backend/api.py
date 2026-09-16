@@ -1,9 +1,10 @@
 """
 API mínima que expone el último registro de telemetría.
-Escucha SOLO en 127.0.0.1:8000 — nunca expuesto directamente a la red,
+Escucha SOLO en localhost — nunca expuesto directamente a la red,
 NGINX es el único que le hace reverse proxy desde afuera.
 """
 
+import os
 from flask import Flask, jsonify
 
 from db import obtener_ultimo_registro
@@ -50,7 +51,13 @@ def solo_hora():
     return jsonify({"hora": registro_o_vacio()["hora"]})
 
 
+@app.get("/api/integrante")
+def nombre_integrante():
+    return jsonify({"nombre": os.environ.get("NOMBRE_INTEGRANTE", "Desconocido")})
+
+
 if __name__ == "__main__":
-    puerto = int(os.environ.get("API_PORT", 8000))
     # host="127.0.0.1": solo accesible localmente, jamás directo desde la web.
+    # El puerto viene del .env (API_PORT); si no está definido, usa 8000 (main).
+    puerto = int(os.environ.get("API_PORT", 8000))
     app.run(host="127.0.0.1", port=puerto, debug=False)
