@@ -51,5 +51,6 @@ def solo_hora():
 
 
 if __name__ == "__main__":
+    puerto = int(os.environ.get("API_PORT", 8000))
     # host="127.0.0.1": solo accesible localmente, jamás directo desde la web.
-    app.run(host="127.0.0.1", port=8001, debug=False)
+    app.run(host="127.0.0.1", port=puerto, debug=False)
