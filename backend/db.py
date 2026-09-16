@@ -21,6 +21,10 @@ DB_CONFIG = {
     "password": os.environ["DB_PASSWORD"],
 }
 
+if os.environ.get("DB_SSLMODE"):
+    DB_CONFIG["sslmode"] = os.environ["DB_SSLMODE"]
+    if os.environ.get("DB_SSLROOTCERT"):
+        DB_CONFIG["sslrootcert"] = os.environ["DB_SSLROOTCERT"]
 
 def _conectar():
     """Abre una conexión nueva a RDS. Falla rápido y explícito si faltan
