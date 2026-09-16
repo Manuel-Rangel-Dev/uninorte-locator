@@ -74,6 +74,8 @@
     
     let mapa;
     let marcador;
+    let recorrido;
+    let ultimaPosicionRecorrido = null;
 
     async function refrescarCampo(nombreCampo, idElemento) {
         const elemento = document.getElementById(idElemento);
@@ -102,6 +104,15 @@
         const posicion = [Number(lat), Number(lng)];
         marcador.setLatLng(posicion);
         mapa.panTo(posicion);
+
+        const esPosicionNueva = !ultimaPosicionRecorrido
+            || ultimaPosicionRecorrido[0] !== posicion[0]
+            || ultimaPosicionRecorrido[1] !== posicion[1];
+
+        if (esPosicionNueva) {
+            recorrido.addLatLng(posicion);
+            ultimaPosicionRecorrido = posicion;
+        }
     }
 
     function initMap() {
@@ -114,6 +125,9 @@
 
         marcador = L.marker(CENTRO_DEFAULT).addTo(mapa)
             .bindPopup('Vehículo');
+
+        // El recorrido vive solo en memoria: se reinicia en cada carga/recarga de la página.
+        recorrido = L.polyline([], { color: '#C8102E', weight: 3 }).addTo(mapa);
 
         actualizarMarcador();
         setInterval(actualizarMarcador, INTERVALO_MS);
