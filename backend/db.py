@@ -1,14 +1,14 @@
 """
 Módulo de acceso a la base de datos PostgreSQL (AWS RDS).
-Reemplaza la versión SQLite de Semana 4. Las credenciales se leen
-SIEMPRE de variables de entorno (.env local o systemd EnvironmentFile),
-nunca quemadas en el código.
+Las credenciales se leen SIEMPRE de variables de entorno (.env local o
+systemd EnvironmentFile), nunca quemadas en el código.
 """
 
 import os
 
 import psycopg2
 import psycopg2.extras
+from psycopg2 import sql
 from dotenv import load_dotenv
 
 load_dotenv()  # busca un archivo .env en el directorio actual, si existe
@@ -26,6 +26,11 @@ if os.environ.get("DB_SSLMODE"):
     if os.environ.get("DB_SSLROOTCERT"):
         DB_CONFIG["sslrootcert"] = os.environ["DB_SSLROOTCERT"]
 
+# Nombre de la tabla: permite que main y los entornos dev convivan en la
+# misma RDS sin pisarse los datos (cada uno con su propia tabla).
+DB_TABLE = os.environ.get("DB_TABLE", "telemetria")
+
+
 def _conectar():
     """Abre una conexión nueva a RDS. Falla rápido y explícito si faltan
     variables de entorno (KeyError arriba, antes de siquiera intentar conectar)."""
@@ -33,22 +38,23 @@ def _conectar():
 
 
 def init_db() -> None:
-    """Crea la tabla telemetria si no existe. RDS ya trae la base de datos
-    'telemetria' creada desde la consola (Initial database name)."""
+    """Crea la tabla (DB_TABLE) si no existe."""
     conexion = _conectar()
     try:
         with conexion.cursor() as cur:
             cur.execute(
-                """
-                CREATE TABLE IF NOT EXISTS telemetria (
-                    id SERIAL PRIMARY KEY,
-                    recibido_en TIMESTAMP NOT NULL,
-                    lat DOUBLE PRECISION NOT NULL,
-                    lng DOUBLE PRECISION NOT NULL,
-                    fecha TEXT NOT NULL,
-                    hora TEXT NOT NULL
-                )
-                """
+                sql.SQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS {tabla} (
+                        id SERIAL PRIMARY KEY,
+                        recibido_en TIMESTAMP NOT NULL,
+                        lat DOUBLE PRECISION NOT NULL,
+                        lng DOUBLE PRECISION NOT NULL,
+                        fecha TEXT NOT NULL,
+                        hora TEXT NOT NULL
+                    )
+                    """
+                ).format(tabla=sql.Identifier(DB_TABLE))
             )
         conexion.commit()
     finally:
@@ -63,10 +69,12 @@ def insertar_registro(lat: float, lng: float, fecha: str, hora: str) -> None:
     try:
         with conexion.cursor() as cur:
             cur.execute(
-                """
-                INSERT INTO telemetria (recibido_en, lat, lng, fecha, hora)
-                VALUES (%s, %s, %s, %s, %s)
-                """,
+                sql.SQL(
+                    """
+                    INSERT INTO {tabla} (recibido_en, lat, lng, fecha, hora)
+                    VALUES (%s, %s, %s, %s, %s)
+                    """
+                ).format(tabla=sql.Identifier(DB_TABLE)),
                 (datetime.now(), lat, lng, fecha, hora),
             )
         conexion.commit()
@@ -79,7 +87,11 @@ def obtener_ultimo_registro() -> dict | None:
     conexion = _conectar()
     try:
         with conexion.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute("SELECT * FROM telemetria ORDER BY id DESC LIMIT 1")
+            cur.execute(
+                sql.SQL("SELECT * FROM {tabla} ORDER BY id DESC LIMIT 1").format(
+                    tabla=sql.Identifier(DB_TABLE)
+                )
+            )
             fila = cur.fetchone()
         return dict(fila) if fila else None
     finally:
