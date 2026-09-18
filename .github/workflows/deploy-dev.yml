@@ -1,17 +1,17 @@
-name: Deploy dev a la EC2 de companero1
+name: Deploy dev a la EC2 de cada integrante
 
 on:
   push:
     branches:
-      - dev
+      - 'dev-*'
 
 jobs:
   deploy:
-    name: Despliegue dev (sebastian)
+    name: Despliegue dev (${{ github.ref_name }})
     runs-on: ubuntu-latest
-    environment: sebastian
+    environment: ${{ replace(github.ref_name, 'dev-', '') }}
     steps:
-      - name: Conectar via SSH y actualizar dev
+      - name: Conectar via SSH y actualizar ${{ github.ref_name }}
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -20,15 +20,25 @@ jobs:
           port: ${{ secrets.EC2_PORT }}
           script: |
             set -e
+
+            if [ -z "${{ secrets.PROJECT_PATH_DEV }}" ]; then
+              echo "PROJECT_PATH_DEV no está configurado todavía para este entorno — nada que desplegar."
+              exit 0
+            fi
+
             cd ${{ secrets.PROJECT_PATH_DEV }}
-            git fetch origin dev
-            git reset --hard origin/dev
+            git fetch origin ${{ github.ref_name }}
+            git reset --hard origin/${{ github.ref_name }}
 
             if [ -d "venv" ]; then
               source venv/bin/activate
               pip install -r requirements.txt --quiet
             fi
 
-            sudo systemctl restart uninorte-api-dev.service
-            sudo systemctl restart uninorte-listener-dev.service
+            if systemctl list-unit-files | grep -q uninorte-api-dev.service; then
+              sudo systemctl restart uninorte-api-dev.service
+            fi
+            if systemctl list-unit-files | grep -q uninorte-listener-dev.service; then
+              sudo systemctl restart uninorte-listener-dev.service
+            fi
             sudo systemctl reload nginx
