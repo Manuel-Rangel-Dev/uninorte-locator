@@ -1,15 +1,19 @@
 """
-Listener UDP ("sniffer"): escucha en el puerto 5000, parsea el JSON
-enviado por la app Android y lo persiste en SQLite.
+Listener UDP ("sniffer"): escucha en el puerto configurado, parsea el JSON
+enviado por la app Android y lo persiste en la base de datos (tabla
+configurable vía DB_TABLE, ver db.py).
 """
 
 import json
+import os
 import socket
 from datetime import datetime
 
 from db import init_db, insertar_registro
 
-PUERTO_UDP = 5000
+# Configurable para poder correr un listener de dev en la misma EC2 que el
+# de main sin pisarse el puerto UDP.
+PUERTO_UDP = int(os.environ.get("LISTENER_UDP_PORT", "5000"))
 CAMPOS_REQUERIDOS = {"lat", "lng", "date", "hour"}
 
 
