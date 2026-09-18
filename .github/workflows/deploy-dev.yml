@@ -6,10 +6,19 @@ on:
       - 'dev-*'
 
 jobs:
+  compute-env:
+    runs-on: ubuntu-latest
+    outputs:
+      env: ${{ steps.strip.outputs.env }}
+    steps:
+      - id: strip
+        run: echo "env=${GITHUB_REF_NAME#dev-}" >> "$GITHUB_OUTPUT"
+
   deploy:
+    needs: compute-env
     name: Despliegue dev (${{ github.ref_name }})
     runs-on: ubuntu-latest
-    environment: ${{ replace(github.ref_name, 'dev-', '') }}
+    environment: ${{ needs.compute-env.outputs.env }}
     steps:
       - name: Conectar via SSH y actualizar ${{ github.ref_name }}
         uses: appleboy/ssh-action@v1.0.3
