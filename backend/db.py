@@ -96,3 +96,20 @@ def obtener_ultimo_registro() -> dict | None:
         return dict(fila) if fila else None
     finally:
         conexion.close()
+def obtener_registros_en_rango(desde, hasta) -> list[dict]:
+    """Devuelve los registros entre dos timestamps, ordenados cronológicamente."""
+    conexion = _conectar()
+    try:
+        with conexion.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                sql.SQL(
+                    "SELECT lat, lng, fecha, hora, recibido_en FROM {tabla} "
+                    "WHERE recibido_en BETWEEN %s AND %s "
+                    "ORDER BY recibido_en ASC"
+                ).format(tabla=sql.Identifier(DB_TABLE)),
+                (desde, hasta),
+            )
+            filas = cur.fetchall()
+        return [dict(f) for f in filas]
+    finally:
+        conexion.close()

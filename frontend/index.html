@@ -34,7 +34,7 @@
         min-width: 200px;
     }
     #panelInfo h1 {
-        color: #00ffbf;
+        color: #dc0303;
         font-size: 14px;
         margin: 0 0 8px 0;
     }
@@ -46,6 +46,187 @@
     .etiquetaInfo {
         color: #B3B3B3;
         margin-right: 12px;
+    }
+    #btnCentrar {
+        position: absolute;
+        top: 50%;
+        right: 12px;
+        transform: translateY(-50%);
+        z-index: 1000;
+        background-color: rgba(18, 18, 18, 0.9);
+        border: 1px solid #2A2A2A;
+        border-radius: 6px;
+        color: #ffffff;
+        width: 42px;
+        height: 42px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    #btnCentrar:hover {
+        border-color: #dc0303;
+    }
+    #btnHistoricos {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        z-index: 1000;
+        background-color: rgba(18, 18, 18, 0.9);
+        border: 1px solid #2A2A2A;
+        border-radius: 6px;
+        color: #ffffff;
+        height: 38px;
+        padding: 0 12px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-family: monospace;
+        font-size: 13px;
+    }
+    #btnHistoricos:hover {
+        border-color: #dc0303;
+    }
+
+    #panelHistoricos {
+        display: none;
+        position: absolute;
+        top: 58px;
+        right: 12px;
+        z-index: 1000;
+        background-color: rgba(18, 18, 18, 0.95);
+        border: 1px solid #2A2A2A;
+        border-radius: 6px;
+        padding: 12px;
+        width: 240px;
+        flex-direction: column;
+        gap: 10px;
+    }
+    #panelHistoricos.abierto {
+        display: flex;
+    }
+
+    #calendarioHeader {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 13px;
+    }
+    .navCalendario {
+        background: none;
+        border: 1px solid #2A2A2A;
+        color: #ffffff;
+        border-radius: 4px;
+        width: 24px;
+        height: 24px;
+        cursor: pointer;
+    }
+    .navCalendario:disabled {
+        color: #555555;
+        cursor: not-allowed;
+    }
+    .navCalendario:not(:disabled):hover {
+        border-color: #dc0303;
+    }
+
+    #diasSemana, #gridCalendario {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        text-align: center;
+        font-size: 11px;
+    }
+    #diasSemana {
+        color: #B3B3B3;
+        margin-bottom: 4px;
+    }
+    .diaCalendario {
+        padding: 4px 0;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    .diaCalendario:hover {
+        background-color: #2A2A2A;
+    }
+    .diaSeleccionado {
+        background-color: #dc0303;
+        color: #ffffff;
+    }
+
+    .filaHora {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 12px;
+    }
+    .etiquetaHora {
+        color: #B3B3B3;
+    }
+    .selectorHora {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .inputHora {
+        width: 26px;
+        background-color: #1c1c1c;
+        border: 1px solid #2A2A2A;
+        color: #ffffff;
+        text-align: center;
+        font-family: monospace;
+        font-size: 12px;
+        border-radius: 4px;
+        padding: 3px 0;
+    }
+    .dosPuntos {
+        color: #B3B3B3;
+    }
+
+    .toggleAmPm {
+        position: relative;
+        width: 54px;
+        height: 22px;
+        background-color: #1c1c1c;
+        border: 1px solid #2A2A2A;
+        border-radius: 11px;
+        display: flex;
+        cursor: pointer;
+        overflow: hidden;
+    }
+    .toggleOpcion {
+        flex: 1;
+        text-align: center;
+        font-size: 9px;
+        line-height: 20px;
+        z-index: 1;
+        color: #B3B3B3;
+    }
+    .toggleSlider {
+        position: absolute;
+        top: 1px;
+        left: 1px;
+        width: 26px;
+        height: 18px;
+        background-color: #dc0303;
+        border-radius: 9px;
+        transition: transform 0.2s ease;
+    }
+    .toggleAmPm.activoPM .toggleSlider {
+        transform: translateX(26px);
+    }
+
+    #btnVerRecorrido {
+        background-color: #dc0303;
+        border: none;
+        color: #ffffff;
+        padding: 8px 0;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+        cursor: pointer;
+    }
+    #btnVerRecorrido:hover {
+        background-color: #a80202;
     }
 </style>
 </head>
@@ -59,6 +240,64 @@
     <div class="filaInfo"><span class="etiquetaInfo">HOUR:</span><span id="valorHora">--</span></div>
 </div>
 
+<button id="btnCentrar" title="Centrar en el vehículo">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="3" fill="#ffffff"/>
+        <path d="M12 2V5" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+        <path d="M12 19V22" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+        <path d="M2 12H5" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+        <path d="M19 12H22" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="12" cy="12" r="7" stroke="#ffffff" stroke-width="1.5"/>
+    </svg>
+</button>
+<button id="btnHistoricos" title="Ver histórico de recorrido">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="9" stroke="#ffffff" stroke-width="1.5"/>
+        <path d="M12 7V12L15.5 14" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span>Históricos</span>
+</button>
+
+<div id="panelHistoricos">
+    <div id="calendarioHeader">
+        <button id="btnMesAnterior" class="navCalendario">&#8592;</button>
+        <span id="tituloMesAnio">--</span>
+        <button id="btnMesSiguiente" class="navCalendario">&#8594;</button>
+    </div>
+    <div id="diasSemana">
+        <span>D</span><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span>
+    </div>
+    <div id="gridCalendario"></div>
+
+    <div class="filaHora">
+        <span class="etiquetaHora">Desde:</span>
+        <div class="selectorHora">
+            <input type="text" class="inputHora" id="horaDesdeHH" maxlength="2" value="12">
+            <span class="dosPuntos">:</span>
+            <input type="text" class="inputHora" id="horaDesdeMM" maxlength="2" value="00">
+            <div class="toggleAmPm" id="toggleDesde" data-valor="AM">
+                <div class="toggleOpcion">AM</div>
+                <div class="toggleOpcion">PM</div>
+                <div class="toggleSlider"></div>
+            </div>
+        </div>
+    </div>
+    <div class="filaHora">
+        <span class="etiquetaHora">Hasta:</span>
+        <div class="selectorHora">
+            <input type="text" class="inputHora" id="horaHastaHH" maxlength="2" value="12">
+            <span class="dosPuntos">:</span>
+            <input type="text" class="inputHora" id="horaHastaMM" maxlength="2" value="00">
+            <div class="toggleAmPm" id="toggleHasta" data-valor="PM">
+                <div class="toggleOpcion">AM</div>
+                <div class="toggleOpcion">PM</div>
+                <div class="toggleSlider"></div>
+            </div>
+        </div>
+    </div>
+
+    <button id="btnVerRecorrido">Ver recorrido</button>
+</div>
 <div id="mapa"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -103,7 +342,7 @@
 
         const posicion = [Number(lat), Number(lng)];
         marcador.setLatLng(posicion);
-        mapa.panTo(posicion);
+        
 
         const esPosicionNueva = !ultimaPosicionRecorrido
             || ultimaPosicionRecorrido[0] !== posicion[0]
@@ -125,15 +364,148 @@
 
         marcador = L.marker(CENTRO_DEFAULT).addTo(mapa)
             .bindPopup('Vehículo');
+        document.getElementById('btnCentrar').addEventListener('click', () => {
+            mapa.setView(marcador.getLatLng(), mapa.getZoom());
+        });
 
-        // El recorrido vive solo en memoria: se reinicia en cada carga/recarga de la página.
         recorrido = L.polyline([], { color: '#C8102E', weight: 3 }).addTo(mapa);
+        recorridoHistorico = L.polyline([], { color: '#4A90D9', weight: 3, dashArray: '6,4' }).addTo(mapa);
+
+        initHistoricos();
 
         actualizarMarcador();
         setInterval(actualizarMarcador, INTERVALO_MS);
     }
+    
+    const HISTORICO_MIN_ANIO = 2026;
+    let fechaCalendario = new Date();
+    let fechaSeleccionada = null;
+    let recorridoHistorico;
 
-    document.addEventListener('DOMContentLoaded', initMap);
+    function renderCalendario() {
+        const anio = fechaCalendario.getFullYear();
+        const mes = fechaCalendario.getMonth();
+        const nombresMes = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        document.getElementById('tituloMesAnio').textContent = `${nombresMes[mes]} ${anio}`;
+
+        const grid = document.getElementById('gridCalendario');
+        grid.innerHTML = '';
+
+        const primerDiaSemana = new Date(anio, mes, 1).getDay();
+        const diasEnMes = new Date(anio, mes + 1, 0).getDate();
+
+        for (let i = 0; i < primerDiaSemana; i++) {
+            grid.appendChild(document.createElement('span'));
+        }
+
+        for (let dia = 1; dia <= diasEnMes; dia++) {
+            const celda = document.createElement('span');
+            celda.textContent = dia;
+            celda.classList.add('diaCalendario');
+
+            const esSeleccionado = fechaSeleccionada
+                && fechaSeleccionada.getFullYear() === anio
+                && fechaSeleccionada.getMonth() === mes
+                && fechaSeleccionada.getDate() === dia;
+            if (esSeleccionado) celda.classList.add('diaSeleccionado');
+
+            celda.addEventListener('click', () => {
+                fechaSeleccionada = new Date(anio, mes, dia);
+                renderCalendario();
+            });
+            grid.appendChild(celda);
+        }
+
+        document.getElementById('btnMesAnterior').disabled = (anio === HISTORICO_MIN_ANIO && mes === 0);
+    }
+
+    function cambiarMes(delta) {
+        const nuevaFecha = new Date(fechaCalendario.getFullYear(), fechaCalendario.getMonth() + delta, 1);
+        if (nuevaFecha.getFullYear() < HISTORICO_MIN_ANIO) return;
+        fechaCalendario = nuevaFecha;
+        renderCalendario();
+    }
+
+    function limitarInputHora(input, max) {
+        input.addEventListener('input', () => {
+            input.value = input.value.replace(/[^0-9]/g, '').slice(0, 2);
+        });
+        input.addEventListener('blur', () => {
+            let valor = parseInt(input.value, 10);
+            if (isNaN(valor)) valor = 0;
+            valor = Math.max(0, Math.min(max, valor));
+            input.value = String(valor).padStart(2, '0');
+        });
+    }
+
+    function configurarToggleAmPm(idToggle) {
+        const toggle = document.getElementById(idToggle);
+        toggle.addEventListener('click', () => {
+            const nuevoValor = toggle.dataset.valor === 'AM' ? 'PM' : 'AM';
+            toggle.dataset.valor = nuevoValor;
+            toggle.classList.toggle('activoPM', nuevoValor === 'PM');
+        });
+    }
+
+    function obtenerHora24(idHH, idMM, idToggle) {
+        let hh = parseInt(document.getElementById(idHH).value, 10);
+        const mm = document.getElementById(idMM).value.padStart(2, '0');
+        const esPM = document.getElementById(idToggle).dataset.valor === 'PM';
+
+        if (hh === 12) hh = 0;
+        if (esPM) hh += 12;
+
+        return `${String(hh).padStart(2, '0')}:${mm}`;
+    }
+
+    function initHistoricos() {
+        document.getElementById('btnHistoricos').addEventListener('click', () => {
+            document.getElementById('panelHistoricos').classList.toggle('abierto');
+        });
+
+        document.getElementById('btnMesAnterior').addEventListener('click', () => cambiarMes(-1));
+        document.getElementById('btnMesSiguiente').addEventListener('click', () => cambiarMes(1));
+
+        limitarInputHora(document.getElementById('horaDesdeHH'), 12);
+        limitarInputHora(document.getElementById('horaDesdeMM'), 59);
+        limitarInputHora(document.getElementById('horaHastaHH'), 12);
+        limitarInputHora(document.getElementById('horaHastaMM'), 59);
+
+        configurarToggleAmPm('toggleDesde');
+        configurarToggleAmPm('toggleHasta');
+
+        document.getElementById('btnVerRecorrido').addEventListener('click', async () => {
+            if (!fechaSeleccionada) {
+                alert('Seleccioná un día en el calendario.');
+                return;
+            }
+
+            const desde = obtenerHora24('horaDesdeHH', 'horaDesdeMM', 'toggleDesde');
+            const hasta = obtenerHora24('horaHastaHH', 'horaHastaMM', 'toggleHasta');
+
+            const anio = fechaSeleccionada.getFullYear();
+            const mes = String(fechaSeleccionada.getMonth() + 1).padStart(2, '0');
+            const dia = String(fechaSeleccionada.getDate()).padStart(2, '0');
+            const fechaISO = `${anio}-${mes}-${dia}`;
+
+            try {
+                const respuesta = await fetch(`${API_BASE}/api/historico?fecha=${fechaISO}&desde=${desde}&hasta=${hasta}`);
+                if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+                const puntos = await respuesta.json();
+
+                recorridoHistorico.setLatLngs(puntos.map(p => [p.lat, p.lng]));
+                if (puntos.length > 0) {
+                    mapa.fitBounds(recorridoHistorico.getBounds());
+                }
+            } catch (error) {
+                console.error('Error al obtener histórico:', error);
+                alert('No se pudo cargar el histórico (falta implementar el endpoint en el backend).');
+            }
+        });
+
+        renderCalendario();
+    }
+        document.addEventListener('DOMContentLoaded', initMap);
 </script>
 
 </body>

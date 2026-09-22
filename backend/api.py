@@ -5,10 +5,9 @@ NGINX es el único que le hace reverse proxy desde afuera.
 """
 
 import os
-from flask import Flask, jsonify
-
-from db import obtener_ultimo_registro
-
+from datetime import datetime
+from flask import Flask, jsonify, request
+from db import obtener_ultimo_registro, obtener_registros_en_rango
 app = Flask(__name__)
 
 
@@ -55,7 +54,27 @@ def solo_hora():
 def nombre_integrante():
     return jsonify({"nombre": os.environ.get("NOMBRE_INTEGRANTE", "Desconocido")})
 
+@app.get("/api/historico")
+def historico():
+    fecha = request.args.get("fecha")
+    desde = request.args.get("desde")
+    hasta = request.args.get("hasta")
 
+    if not fecha or not desde or not hasta:
+        return jsonify({"error": "Faltan parámetros: fecha, desde, hasta"}), 400
+
+    try:
+        desde_dt = datetime.strptime(f"{fecha} {desde}", "%Y-%m-%d %H:%M")
+        hasta_dt = datetime.strptime(f"{fecha} {hasta}", "%Y-%m-%d %H:%M")
+    except ValueError:
+        return jsonify({"error": "Formato inválido. Usar fecha=YYYY-MM-DD, desde/hasta=HH:MM"}), 400
+
+    if hasta_dt < desde_dt:
+        return jsonify({"error": "'hasta' no puede ser antes que 'desde'"}), 400
+
+    registros = obtener_registros_en_rango(desde_dt, hasta_dt)
+    return jsonify([{"lat": r["lat"], "lng": r["lng"]} for r in registros])
+    
 if __name__ == "__main__":
     # host="127.0.0.1": solo accesible localmente, jamás directo desde la web.
     # El puerto viene del .env (API_PORT); si no está definido, usa 8000 (main).
