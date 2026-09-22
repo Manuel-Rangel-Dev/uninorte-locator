@@ -99,7 +99,7 @@
         border: 1px solid #2A2A2A;
         border-radius: 6px;
         padding: 12px;
-        width: 250px;
+        width: 275px;
         flex-direction: column;
         gap: 10px;
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
@@ -221,10 +221,10 @@
     .selectorHora {
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 3px;
     }
     .inputHora {
-        width: 26px;
+        width: 24px;
         background-color: #1c1c1c;
         border: 1px solid #2A2A2A;
         color: #ffffff;
@@ -372,9 +372,11 @@
     <div class="filaHora">
         <span class="etiquetaHora">Hora inicio:</span>
         <div class="selectorHora">
-            <input type="text" class="inputHora" id="horaDesdeHH" maxlength="2" value="12">
+            <input type="text" class="inputHora" id="horaDesdeHH" maxlength="2" value="12" title="Hora (01-12)">
             <span class="dosPuntos">:</span>
-            <input type="text" class="inputHora" id="horaDesdeMM" maxlength="2" value="00">
+            <input type="text" class="inputHora" id="horaDesdeMM" maxlength="2" value="00" title="Minutos (00-59)">
+            <span class="dosPuntos">:</span>
+            <input type="text" class="inputHora" id="horaDesdeSS" maxlength="2" value="00" title="Segundos (00-59)">
             <div class="toggleAmPm" id="toggleDesde" data-valor="AM">
                 <div class="toggleOpcion">AM</div>
                 <div class="toggleOpcion">PM</div>
@@ -385,9 +387,11 @@
     <div class="filaHora">
         <span class="etiquetaHora">Hora fin:</span>
         <div class="selectorHora">
-            <input type="text" class="inputHora" id="horaHastaHH" maxlength="2" value="11">
+            <input type="text" class="inputHora" id="horaHastaHH" maxlength="2" value="11" title="Hora (01-12)">
             <span class="dosPuntos">:</span>
-            <input type="text" class="inputHora" id="horaHastaMM" maxlength="2" value="59">
+            <input type="text" class="inputHora" id="horaHastaMM" maxlength="2" value="59" title="Minutos (00-59)">
+            <span class="dosPuntos">:</span>
+            <input type="text" class="inputHora" id="horaHastaSS" maxlength="2" value="59" title="Segundos (00-59)">
             <div class="toggleAmPm activoPM" id="toggleHasta" data-valor="PM">
                 <div class="toggleOpcion">AM</div>
                 <div class="toggleOpcion">PM</div>
@@ -421,6 +425,7 @@
     let recorrido;
     let recorridoHistorico;
     let ultimaPosicionRecorrido = null;
+    let mapaCentradoInicial = false;
 
     async function refrescarCampo(nombreCampo, idElemento) {
         const elemento = document.getElementById(idElemento);
@@ -444,11 +449,15 @@
         refrescarCampo('fecha', 'valorFecha');
         refrescarCampo('hora', 'valorHora');
 
-        if (lat === null || lng === null) return;
+        if (lat === null || lng === null || isNaN(Number(lat)) || isNaN(Number(lng))) return;
 
         const posicion = [Number(lat), Number(lng)];
         marcador.setLatLng(posicion);
-        
+
+        if (!mapaCentradoInicial) {
+            mapa.setView(posicion, mapa.getZoom());
+            mapaCentradoInicial = true;
+        }
 
         const esPosicionNueva = !ultimaPosicionRecorrido
             || ultimaPosicionRecorrido[0] !== posicion[0]
@@ -460,15 +469,29 @@
         }
     }
 
-    function initMap() {
-        mapa = L.map('mapa').setView(CENTRO_DEFAULT, 15);
+    async function initMap() {
+        let centroInicial = CENTRO_DEFAULT;
+        try {
+            const res = await fetch(`${API_BASE}/api/ultimo`);
+            if (res.ok) {
+                const datos = await res.json();
+                if (datos.lat !== null && datos.lng !== null && !isNaN(Number(datos.lat)) && !isNaN(Number(datos.lng))) {
+                    centroInicial = [Number(datos.lat), Number(datos.lng)];
+                    mapaCentradoInicial = true;
+                }
+            }
+        } catch (e) {
+            console.warn('No se pudo obtener la posición inicial desde /api/ultimo, usando centro por defecto:', e);
+        }
+
+        mapa = L.map('mapa').setView(centroInicial, 15);
 
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(mapa);
 
-        marcador = L.marker(CENTRO_DEFAULT).addTo(mapa)
+        marcador = L.marker(centroInicial).addTo(mapa)
             .bindPopup('Vehículo');
         document.getElementById('btnCentrar').addEventListener('click', () => {
             mapa.setView(marcador.getLatLng(), mapa.getZoom());
@@ -607,16 +630,17 @@
         });
     }
 
-    function obtenerHora24(idHH, idMM, idToggle) {
+    function obtenerHora24(idHH, idMM, idSS, idToggle) {
         let hh = parseInt(document.getElementById(idHH).value, 10);
         if (isNaN(hh)) hh = 0;
         const mm = (document.getElementById(idMM).value || '00').padStart(2, '0');
+        const ss = (document.getElementById(idSS).value || '00').padStart(2, '0');
         const esPM = document.getElementById(idToggle).dataset.valor === 'PM';
 
         if (hh === 12) hh = 0;
         if (esPM) hh += 12;
 
-        return `${String(hh).padStart(2, '0')}:${mm}`;
+        return `${String(hh).padStart(2, '0')}:${mm}:${ss}`;
     }
 
     function initHistoricos() {
@@ -647,8 +671,10 @@
 
         limitarInputHora(document.getElementById('horaDesdeHH'), 12);
         limitarInputHora(document.getElementById('horaDesdeMM'), 59);
+        limitarInputHora(document.getElementById('horaDesdeSS'), 59);
         limitarInputHora(document.getElementById('horaHastaHH'), 12);
         limitarInputHora(document.getElementById('horaHastaMM'), 59);
+        limitarInputHora(document.getElementById('horaHastaSS'), 59);
 
         configurarToggleAmPm('toggleDesde');
         configurarToggleAmPm('toggleHasta');
@@ -670,11 +696,11 @@
 
             const fechaDesdeISO = formatearFechaISO(fechaDesde);
             const fechaHastaISO = formatearFechaISO(fechaHasta);
-            const horaDesde = obtenerHora24('horaDesdeHH', 'horaDesdeMM', 'toggleDesde');
-            const horaHasta = obtenerHora24('horaHastaHH', 'horaHastaMM', 'toggleHasta');
+            const horaDesde = obtenerHora24('horaDesdeHH', 'horaDesdeMM', 'horaDesdeSS', 'toggleDesde');
+            const horaHasta = obtenerHora24('horaHastaHH', 'horaHastaMM', 'horaHastaSS', 'toggleHasta');
 
-            const dtInicio = new Date(`${fechaDesdeISO}T${horaDesde}:00`);
-            const dtFin = new Date(`${fechaHastaISO}T${horaHasta}:00`);
+            const dtInicio = new Date(`${fechaDesdeISO}T${horaDesde}`);
+            const dtFin = new Date(`${fechaHastaISO}T${horaHasta}`);
 
             if (dtFin < dtInicio) {
                 mostrarEstadoHistorico('La fecha/hora final debe ser posterior a la inicial.', '#ff6b6b');
