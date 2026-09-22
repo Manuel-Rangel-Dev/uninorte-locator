@@ -34,7 +34,7 @@
         min-width: 200px;
     }
     #panelInfo h1 {
-        color: #00ffbf;
+        color: #dc0303;
         font-size: 14px;
         margin: 0 0 8px 0;
     }
@@ -47,6 +47,23 @@
         color: #B3B3B3;
         margin-right: 12px;
     }
+    #btnCentrar {
+        position: absolute;
+        bottom: 12px;
+        right: 12px;
+        z-index: 1000;
+        background-color: rgba(18, 18, 18, 0.9);
+        border: 1px solid #2A2A2A;
+        border-radius: 6px;
+        color: #ffffff;
+        width: 42px;
+        height: 42px;
+        font-size: 18px;
+        cursor: pointer;
+    }
+    #btnCentrar:hover {
+        border-color: #dc0303;
+    }
 </style>
 </head>
 <body>
@@ -58,6 +75,8 @@
     <div class="filaInfo"><span class="etiquetaInfo">DATE:</span><span id="valorFecha">--</span></div>
     <div class="filaInfo"><span class="etiquetaInfo">HOUR:</span><span id="valorHora">--</span></div>
 </div>
+
+<button id="btnCentrar" title="Centrar en el vehículo">📍</button>
 
 <div id="mapa"></div>
 
@@ -103,7 +122,7 @@
 
         const posicion = [Number(lat), Number(lng)];
         marcador.setLatLng(posicion);
-        mapa.panTo(posicion);
+        
 
         const esPosicionNueva = !ultimaPosicionRecorrido
             || ultimaPosicionRecorrido[0] !== posicion[0]
@@ -125,7 +144,9 @@
 
         marcador = L.marker(CENTRO_DEFAULT).addTo(mapa)
             .bindPopup('Vehículo');
-
+        document.getElementById('btnCentrar').addEventListener('click', () => {
+            mapa.setView(marcador.getLatLng(), mapa.getZoom());
+        });
         // El recorrido vive solo en memoria: se reinicia en cada carga/recarga de la página.
         recorrido = L.polyline([], { color: '#C8102E', weight: 3 }).addTo(mapa);
 
