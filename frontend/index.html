@@ -49,8 +49,9 @@
     }
     #btnCentrar {
         position: absolute;
-        bottom: 12px;
+        top: 50%;
         right: 12px;
+        transform: translateY(-50%);
         z-index: 1000;
         background-color: rgba(18, 18, 18, 0.9);
         border: 1px solid #2A2A2A;
@@ -58,8 +59,10 @@
         color: #ffffff;
         width: 42px;
         height: 42px;
-        font-size: 18px;
         cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
     #btnCentrar:hover {
         border-color: #dc0303;
@@ -76,7 +79,16 @@
     <div class="filaInfo"><span class="etiquetaInfo">HOUR:</span><span id="valorHora">--</span></div>
 </div>
 
-<button id="btnCentrar" title="Centrar en el vehículo">📍</button>
+<button id="btnCentrar" title="Centrar en el vehículo">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="3" fill="#ffffff"/>
+        <path d="M12 2V5" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+        <path d="M12 19V22" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+        <path d="M2 12H5" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+        <path d="M19 12H22" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="12" cy="12" r="7" stroke="#ffffff" stroke-width="1.5"/>
+    </svg>
+</button>
 
 <div id="mapa"></div>
 
