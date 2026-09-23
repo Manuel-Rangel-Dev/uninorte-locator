@@ -342,14 +342,15 @@
     }
 
     .tooltipRecorrido {
-    background-color: rgba(18, 18, 18, 0.9);
-    border: 1px solid #2A2A2A;
-    color: #ffffff;
-    font-family: monospace;
-    font-size: 11px;
-    font-weight: bold;
-    padding: 2px 8px;
-    border-radius: 4px;
+        background-color: rgba(18, 18, 18, 0.9);
+        border: 1px solid #2A2A2A;
+        color: #ffffff;
+        font-family: monospace;
+        font-size: 11px;
+        font-weight: bold;
+        padding: 2px 8px;
+        border-radius: 4px;
+        white-space: nowrap;
     }
     .tooltipInicio {
         border-color: #2ecc71;
@@ -479,10 +480,18 @@
     const CENTRO_DEFAULT = [11.019, -74.851]; // Barranquilla, fallback inicial
     const DECIMALES_COORDENADAS = 4; // ~11m de resolución: filtra el ruido GPS cuando el vehículo está detenido
     const ZOOM_CENTRADO = 17; // Nivel de zoom específico al centrar en el vehículo
+    const UMBRAL_SEGMENTACION_MINUTOS = 30; // Diferencia mínima para considerar un nuevo recorrido (30 min)
+    const UMBRAL_SEGMENTACION_METROS = 2000; // Salto de distancia para considerar un nuevo recorrido (2 km)
 
     function redondearCoord(coord, decimales = DECIMALES_COORDENADAS) {
         if (coord === null || coord === undefined || isNaN(Number(coord))) return coord;
         return Number(Number(coord).toFixed(decimales));
+    }
+
+    function obtenerTimestampPunto(punto) {
+        if (!punto || !punto.fecha || !punto.hora) return null;
+        const dt = new Date(`${punto.fecha.trim()}T${punto.hora.trim()}`);
+        return isNaN(dt.getTime()) ? null : dt.getTime();
     }
 
     document.title = APP_CONFIG.integrante;
@@ -490,12 +499,115 @@
     let mapa;
     let marcador;
     let recorrido;
-    let recorridoHistorico;
     let hayRecorridoHistorico = false;
     let ultimaPosicionRecorrido = null;
-    let marcadorInicioHistorico = null;
-    let marcadorFinHistorico = null;
+    let lineasHistoricas = [];
+    let marcadoresHistoricos = [];
     let mapaCentradoInicial = false;
+
+    function segmentarRecorridos(puntos) {
+        if (!puntos || puntos.length === 0) return [];
+
+        const puntosValidos = [];
+        for (const p of puntos) {
+            if (p.lat === null || p.lng === null || isNaN(Number(p.lat)) || isNaN(Number(p.lng))) continue;
+            puntosValidos.push({
+                lat: redondearCoord(p.lat),
+                lng: redondearCoord(p.lng),
+                fecha: p.fecha,
+                hora: p.hora,
+                timestamp: obtenerTimestampPunto(p)
+            });
+        }
+
+        if (puntosValidos.length === 0) return [];
+
+        const recorridos = [];
+        let recorridoActual = [puntosValidos[0]];
+        let primerTimestampEnPosicion = puntosValidos[0].timestamp;
+
+        for (let i = 1; i < puntosValidos.length; i++) {
+            const puntoAnterior = puntosValidos[i - 1];
+            const puntoActual = puntosValidos[i];
+
+            let cortaRecorrido = false;
+
+            // Criterio 1: Tiempo entre datos consecutivos (>= 30 minutos)
+            if (puntoAnterior.timestamp && puntoActual.timestamp) {
+                const diffMinutos = (puntoActual.timestamp - puntoAnterior.timestamp) / (1000 * 60);
+                if (diffMinutos >= UMBRAL_SEGMENTACION_MINUTOS) {
+                    cortaRecorrido = true;
+                }
+            }
+
+            // Criterio 2: Distancia excesiva entre datos consecutivos (>= 2 km)
+            if (!cortaRecorrido) {
+                const distMetros = L.latLng(puntoAnterior.lat, puntoAnterior.lng)
+                                   .distanceTo(L.latLng(puntoActual.lat, puntoActual.lng));
+                if (distMetros >= UMBRAL_SEGMENTACION_METROS) {
+                    cortaRecorrido = true;
+                }
+            }
+
+            const esMismaPosicion = puntoAnterior.lat === puntoActual.lat && puntoAnterior.lng === puntoActual.lng;
+
+            // Criterio 3: Estacionado en la misma posición por >= 30 minutos antes de reiniciar marcha
+            if (!cortaRecorrido && !esMismaPosicion && primerTimestampEnPosicion && puntoActual.timestamp) {
+                const minutosEstacionado = (puntoActual.timestamp - primerTimestampEnPosicion) / (1000 * 60);
+                if (minutosEstacionado >= UMBRAL_SEGMENTACION_MINUTOS) {
+                    cortaRecorrido = true;
+                }
+            }
+
+            if (cortaRecorrido) {
+                if (recorridoActual.length > 0) {
+                    recorridos.push(recorridoActual);
+                }
+                recorridoActual = [puntoActual];
+                primerTimestampEnPosicion = puntoActual.timestamp;
+            } else {
+                if (!esMismaPosicion) {
+                    recorridoActual.push(puntoActual);
+                    primerTimestampEnPosicion = puntoActual.timestamp;
+                } else {
+                    const ultimoEnRecorrido = recorridoActual[recorridoActual.length - 1];
+                    ultimoEnRecorrido.fecha = puntoActual.fecha;
+                    ultimoEnRecorrido.hora = puntoActual.hora;
+                    ultimoEnRecorrido.timestamp = puntoActual.timestamp;
+                }
+            }
+        }
+
+        if (recorridoActual.length > 0) {
+            recorridos.push(recorridoActual);
+        }
+
+        return recorridos;
+    }
+
+    function crearIconoInicio(num) {
+        return L.divIcon({
+            className: '',
+            html: `<div style="width:28px;height:28px;border-radius:50% 50% 50% 0;background:#2ecc71;border:2px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.6);transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;">
+                    <span style="transform:rotate(45deg);color:#ffffff;font-weight:bold;font-size:${num > 9 ? '10px' : '12px'};font-family:sans-serif;">${num}</span>
+                </div>`,
+            iconSize: [28, 28],
+            iconAnchor: [14, 28],
+            popupAnchor: [0, -26]
+        });
+    }
+
+    function crearIconoFin(num) {
+        return L.divIcon({
+            className: '',
+            html: `<div style="width:28px;height:28px;border-radius:50% 50% 50% 0;background:#dc0303;border:2px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.6);transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;">
+                    <span style="transform:rotate(45deg);color:#ffffff;font-weight:bold;font-size:${num > 9 ? '10px' : '12px'};font-family:sans-serif;">${num}</span>
+                </div>`,
+            iconSize: [28, 28],
+            iconAnchor: [14, 28],
+            popupAnchor: [0, -26]
+        });
+    }
 
     async function refrescarCampo(nombreCampo, idElemento) {
         const elemento = document.getElementById(idElemento);
@@ -542,26 +654,6 @@
         }
     }
 
-    const iconoInicioRecorrido = L.divIcon({
-        className: '',
-        html: `<div style="width:28px;height:28px;border-radius:50% 50% 50% 0;background:#2ecc71;border:2px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.6);transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;">
-                <span style="transform:rotate(45deg);color:#ffffff;font-weight:bold;font-size:12px;font-family:sans-serif;">A</span>
-            </div>`,
-        iconSize: [28, 28],
-        iconAnchor: [14, 28],
-        popupAnchor: [0, -26]
-    });
-
-    const iconoFinRecorrido = L.divIcon({
-        className: '',
-        html: `<div style="width:28px;height:28px;border-radius:50% 50% 50% 0;background:#dc0303;border:2px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.6);transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;">
-                <span style="transform:rotate(45deg);color:#ffffff;font-weight:bold;font-size:12px;font-family:sans-serif;">B</span>
-            </div>`,
-        iconSize: [28, 28],
-        iconAnchor: [14, 28],
-        popupAnchor: [0, -26]
-    });
-
     async function initMap() {
         let centroInicial = CENTRO_DEFAULT;
         try {
@@ -591,7 +683,6 @@
         });
 
         recorrido = L.polyline([], { color: '#C8102E', weight: 3 }).addTo(mapa);
-        recorridoHistorico = L.polyline([], { color: '#4A90D9', weight: 3, dashArray: '6,4' }).addTo(mapa);
 
         initHistoricos();
 
@@ -768,17 +859,10 @@
 
     function limpiarRecorridoHistorico() {
         hayRecorridoHistorico = false;
-        if (recorridoHistorico) {
-            recorridoHistorico.setLatLngs([]);
-        }
-        if (marcadorInicioHistorico) {
-            mapa.removeLayer(marcadorInicioHistorico);
-            marcadorInicioHistorico = null;
-        }
-        if (marcadorFinHistorico) {
-            mapa.removeLayer(marcadorFinHistorico);
-            marcadorFinHistorico = null;
-        }
+        lineasHistoricas.forEach(l => mapa.removeLayer(l));
+        lineasHistoricas = [];
+        marcadoresHistoricos.forEach(m => mapa.removeLayer(m));
+        marcadoresHistoricos = [];
         const btnLimpiar = document.getElementById('btnLimpiarRecorrido');
         if (btnLimpiar) {
             btnLimpiar.style.display = 'none';
@@ -856,48 +940,77 @@
 
                 if (!puntos || puntos.length === 0) {
                     limpiarRecorridoHistorico();
-                    mostrarEstadoHistorico('No hay puntos en este rango.', '#e5a50a');
+                    mostrarEstadoHistorico('No hay recorridos en este rango.', '#e5a50a');
+                    return;
+                }
+
+                const recorridos = segmentarRecorridos(puntos);
+
+                if (recorridos.length === 0) {
+                    limpiarRecorridoHistorico();
+                    mostrarEstadoHistorico('No hay recorridos en este rango.', '#e5a50a');
                     return;
                 }
 
                 hayRecorridoHistorico = true;
-                const puntosFiltrados = [];
-                for (const p of puntos) {
-                    if (p.lat === null || p.lng === null || isNaN(Number(p.lat)) || isNaN(Number(p.lng))) continue;
-                    const latR = redondearCoord(p.lat);
-                    const lngR = redondearCoord(p.lng);
-                    if (puntosFiltrados.length === 0 ||
-                        puntosFiltrados[puntosFiltrados.length - 1][0] !== latR ||
-                        puntosFiltrados[puntosFiltrados.length - 1][1] !== lngR) {
-                        puntosFiltrados.push([latR, lngR]);
-                    }
+
+                // Limpiar trazos y pines históricos previos si existían
+                lineasHistoricas.forEach(l => mapa.removeLayer(l));
+                lineasHistoricas = [];
+                marcadoresHistoricos.forEach(m => mapa.removeLayer(m));
+                marcadoresHistoricos = [];
+
+                const todosPuntos = [];
+
+                recorridos.forEach((rec, idx) => {
+                    const num = idx + 1;
+                    const coords = rec.map(p => [p.lat, p.lng]);
+                    coords.forEach(c => todosPuntos.push(c));
+
+                    // Polilínea para el recorrido segmentado
+                    const linea = L.polyline(coords, {
+                        color: '#4A90D9',
+                        weight: 3,
+                        dashArray: '6,4'
+                    }).addTo(mapa);
+                    linea.bindPopup(`Recorrido ${num} (${rec.length} punto${rec.length === 1 ? '' : 's'})`);
+                    lineasHistoricas.push(linea);
+
+                    const puntoInicio = rec[0];
+                    const puntoFin = rec[rec.length - 1];
+
+                    // Pin verde de inicio recorrido #
+                    const marcadorInicio = L.marker([puntoInicio.lat, puntoInicio.lng], { icon: crearIconoInicio(num) })
+                        .addTo(mapa)
+                        .bindTooltip(`Inicio recorrido ${num}`, {
+                            permanent: true,
+                            direction: 'top',
+                            offset: [0, -28],
+                            className: 'tooltipRecorrido tooltipInicio'
+                        })
+                        .bindPopup(`Inicio recorrido ${num}${puntoInicio.fecha ? ' — ' + puntoInicio.fecha + ' ' + (puntoInicio.hora || '') : ''}`);
+                    marcadoresHistoricos.push(marcadorInicio);
+
+                    // Pin rojo de fin recorrido #
+                    const marcadorFin = L.marker([puntoFin.lat, puntoFin.lng], { icon: crearIconoFin(num) })
+                        .addTo(mapa)
+                        .bindTooltip(`Fin recorrido ${num}`, {
+                            permanent: true,
+                            direction: 'top',
+                            offset: [0, -28],
+                            className: 'tooltipRecorrido tooltipFin'
+                        })
+                        .bindPopup(`Fin recorrido ${num}${puntoFin.fecha ? ' — ' + puntoFin.fecha + ' ' + (puntoFin.hora || '') : ''}`);
+                    marcadoresHistoricos.push(marcadorFin);
+                });
+
+                if (todosPuntos.length > 0) {
+                    const bounds = L.latLngBounds(todosPuntos);
+                    mapa.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
                 }
 
-                const rutaHistorica = puntosFiltrados.length > 0
-                    ? puntosFiltrados
-                    : puntos.map(p => [redondearCoord(p.lat), redondearCoord(p.lng)]);
-
-                recorridoHistorico.setLatLngs(rutaHistorica);
-                mapa.fitBounds(recorridoHistorico.getBounds(), { padding: [30, 30], maxZoom: 16 });
-                mostrarEstadoHistorico(`${puntos.length} punto(s) encontrado(s)`, '#4cd964');
+                mostrarEstadoHistorico(`${recorridos.length} recorrido(s) encontrado(s)`, '#4cd964');
                 document.getElementById('btnLimpiarRecorrido').style.display = 'block';
-
-                // --- Marcadores de inicio y fin del recorrido histórico ---
-                if (marcadorInicioHistorico) mapa.removeLayer(marcadorInicioHistorico);
-                if (marcadorFinHistorico) mapa.removeLayer(marcadorFinHistorico);
-
-                const puntoInicio = puntos[0];
-                const puntoFin = puntos[puntos.length - 1];
-
-                marcadorInicioHistorico = L.marker([redondearCoord(puntoInicio.lat), redondearCoord(puntoInicio.lng)], { icon: iconoInicioRecorrido })
-                    .addTo(mapa)
-                    .bindTooltip('Inicio', { permanent: true, direction: 'top', offset: [0, -28], className: 'tooltipRecorrido tooltipInicio' })
-                    .bindPopup(`Inicio del recorrido${puntoInicio.fecha ? ' — ' + puntoInicio.fecha + ' ' + (puntoInicio.hora || '') : ''}`);
-
-                marcadorFinHistorico = L.marker([redondearCoord(puntoFin.lat), redondearCoord(puntoFin.lng)], { icon: iconoFinRecorrido })
-                    .addTo(mapa)
-                    .bindTooltip('Fin', { permanent: true, direction: 'top', offset: [0, -28], className: 'tooltipRecorrido tooltipFin' })
-                    .bindPopup(`Fin del recorrido${puntoFin.fecha ? ' — ' + puntoFin.fecha + ' ' + (puntoFin.hora || '') : ''}`);
 
                 actualizarVisibilidadTiempoReal();
 
