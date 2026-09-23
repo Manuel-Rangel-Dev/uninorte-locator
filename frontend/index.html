@@ -99,12 +99,53 @@
         border: 1px solid #2A2A2A;
         border-radius: 6px;
         padding: 12px;
-        width: 240px;
+        width: 275px;
         flex-direction: column;
         gap: 10px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
     }
     #panelHistoricos.abierto {
         display: flex;
+    }
+
+    .selectorRangoFecha {
+        display: flex;
+        gap: 6px;
+    }
+    .tabRangoFecha {
+        flex: 1;
+        background-color: #1a1a1a;
+        border: 1px solid #2A2A2A;
+        border-radius: 4px;
+        padding: 6px 4px;
+        color: #ffffff;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        font-family: monospace;
+        transition: all 0.2s ease;
+    }
+    .tabRangoFecha:hover {
+        border-color: #555555;
+    }
+    .tabRangoFecha.activo {
+        border-color: #dc0303;
+        background-color: rgba(220, 3, 3, 0.15);
+    }
+    .etiquetaRango {
+        font-size: 9px;
+        color: #888888;
+        font-weight: bold;
+        letter-spacing: 0.5px;
+    }
+    .tabRangoFecha.activo .etiquetaRango {
+        color: #dc0303;
+    }
+    .fechaRango {
+        font-size: 11px;
+        font-weight: bold;
     }
 
     #calendarioHeader {
@@ -141,15 +182,30 @@
         margin-bottom: 4px;
     }
     .diaCalendario {
-        padding: 4px 0;
-        border-radius: 4px;
+        padding: 5px 0;
         cursor: pointer;
+        transition: background-color 0.15s;
     }
     .diaCalendario:hover {
-        background-color: #2A2A2A;
+        background-color: #2e2e2e;
     }
-    .diaSeleccionado {
-        background-color: #dc0303;
+    .diaInicio {
+        background-color: #dc0303 !important;
+        color: #ffffff;
+        border-radius: 4px 0 0 4px;
+        font-weight: bold;
+    }
+    .diaFin {
+        background-color: #dc0303 !important;
+        color: #ffffff;
+        border-radius: 0 4px 4px 0;
+        font-weight: bold;
+    }
+    .diaInicio.diaFin {
+        border-radius: 4px !important;
+    }
+    .diaEnRango {
+        background-color: rgba(220, 3, 3, 0.25);
         color: #ffffff;
     }
 
@@ -165,10 +221,10 @@
     .selectorHora {
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 3px;
     }
     .inputHora {
-        width: 26px;
+        width: 24px;
         background-color: #1c1c1c;
         border: 1px solid #2A2A2A;
         color: #ffffff;
@@ -215,7 +271,19 @@
         transform: translateX(26px);
     }
 
+    #estadoHistorico {
+        font-size: 11px;
+        text-align: center;
+        min-height: 14px;
+        color: #B3B3B3;
+    }
+
+    .accionesHistoricos {
+        display: flex;
+        gap: 6px;
+    }
     #btnVerRecorrido {
+        flex: 1;
         background-color: #dc0303;
         border: none;
         color: #ffffff;
@@ -224,9 +292,59 @@
         font-family: monospace;
         font-size: 12px;
         cursor: pointer;
+        transition: background-color 0.2s;
     }
     #btnVerRecorrido:hover {
         background-color: #a80202;
+    }
+    #btnVerRecorrido:disabled {
+        background-color: #555555;
+        cursor: not-allowed;
+    }
+    #btnLimpiarRecorrido {
+        display: none;
+        background-color: #2A2A2A;
+        border: 1px solid #3A3A3A;
+        color: #ffffff;
+        padding: 8px 10px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    #btnLimpiarRecorrido:hover {
+        background-color: #383838;
+        border-color: #555555;
+    }
+
+    .tooltipRecorrido {
+    background-color: rgba(18, 18, 18, 0.9);
+    border: 1px solid #2A2A2A;
+    color: #ffffff;
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 4px;
+    }
+    .tooltipInicio {
+        border-color: #2ecc71;
+    }
+    .tooltipFin {
+        border-color: #dc0303;
+    }
+    .tooltipRecorrido::before {
+        display: none;
+    }
+    /* MODO HISTÓRICO */
+    .modoHistorico #panelInfo,
+    .modoHistorico #btnCentrar {
+        display: none !important;
+    }
+
+    .modoHistorico #btnHistoricos {
+        display: flex;
     }
 </style>
 </head>
@@ -259,10 +377,21 @@
 </button>
 
 <div id="panelHistoricos">
+    <div class="selectorRangoFecha">
+        <button type="button" class="tabRangoFecha activo" id="tabDesde" title="Seleccionar fecha de inicio">
+            <span class="etiquetaRango">DESDE</span>
+            <span class="fechaRango" id="txtFechaDesde">--</span>
+        </button>
+        <button type="button" class="tabRangoFecha" id="tabHasta" title="Seleccionar fecha de fin">
+            <span class="etiquetaRango">HASTA</span>
+            <span class="fechaRango" id="txtFechaHasta">--</span>
+        </button>
+    </div>
+
     <div id="calendarioHeader">
-        <button id="btnMesAnterior" class="navCalendario">&#8592;</button>
+        <button id="btnMesAnterior" class="navCalendario" title="Mes anterior">&#8592;</button>
         <span id="tituloMesAnio">--</span>
-        <button id="btnMesSiguiente" class="navCalendario">&#8594;</button>
+        <button id="btnMesSiguiente" class="navCalendario" title="Mes siguiente">&#8594;</button>
     </div>
     <div id="diasSemana">
         <span>D</span><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span>
@@ -270,11 +399,13 @@
     <div id="gridCalendario"></div>
 
     <div class="filaHora">
-        <span class="etiquetaHora">Desde:</span>
+        <span class="etiquetaHora">Hora inicio:</span>
         <div class="selectorHora">
-            <input type="text" class="inputHora" id="horaDesdeHH" maxlength="2" value="12">
+            <input type="text" class="inputHora" id="horaDesdeHH" maxlength="2" value="12" title="Hora (01-12)">
             <span class="dosPuntos">:</span>
-            <input type="text" class="inputHora" id="horaDesdeMM" maxlength="2" value="00">
+            <input type="text" class="inputHora" id="horaDesdeMM" maxlength="2" value="00" title="Minutos (00-59)">
+            <span class="dosPuntos">:</span>
+            <input type="text" class="inputHora" id="horaDesdeSS" maxlength="2" value="00" title="Segundos (00-59)">
             <div class="toggleAmPm" id="toggleDesde" data-valor="AM">
                 <div class="toggleOpcion">AM</div>
                 <div class="toggleOpcion">PM</div>
@@ -283,12 +414,14 @@
         </div>
     </div>
     <div class="filaHora">
-        <span class="etiquetaHora">Hasta:</span>
+        <span class="etiquetaHora">Hora fin:</span>
         <div class="selectorHora">
-            <input type="text" class="inputHora" id="horaHastaHH" maxlength="2" value="12">
+            <input type="text" class="inputHora" id="horaHastaHH" maxlength="2" value="11" title="Hora (01-12)">
             <span class="dosPuntos">:</span>
-            <input type="text" class="inputHora" id="horaHastaMM" maxlength="2" value="00">
-            <div class="toggleAmPm" id="toggleHasta" data-valor="PM">
+            <input type="text" class="inputHora" id="horaHastaMM" maxlength="2" value="59" title="Minutos (00-59)">
+            <span class="dosPuntos">:</span>
+            <input type="text" class="inputHora" id="horaHastaSS" maxlength="2" value="59" title="Segundos (00-59)">
+            <div class="toggleAmPm activoPM" id="toggleHasta" data-valor="PM">
                 <div class="toggleOpcion">AM</div>
                 <div class="toggleOpcion">PM</div>
                 <div class="toggleSlider"></div>
@@ -296,7 +429,12 @@
         </div>
     </div>
 
-    <button id="btnVerRecorrido">Ver recorrido</button>
+    <div id="estadoHistorico"></div>
+
+    <div class="accionesHistoricos">
+        <button id="btnLimpiarRecorrido" type="button">Limpiar</button>
+        <button id="btnVerRecorrido" type="button">Ver recorrido</button>
+    </div>
 </div>
 <div id="mapa"></div>
 
@@ -308,13 +446,24 @@
     const API_BASE = '';
     const INTERVALO_MS = 5000;
     const CENTRO_DEFAULT = [11.019, -74.851]; // Barranquilla, fallback inicial
+    const DECIMALES_COORDENADAS = 4; // ~11m de resolución: filtra el ruido GPS cuando el vehículo está detenido
+
+    function redondearCoord(coord, decimales = DECIMALES_COORDENADAS) {
+        if (coord === null || coord === undefined || isNaN(Number(coord))) return coord;
+        return Number(Number(coord).toFixed(decimales));
+    }
 
     document.title = APP_CONFIG.integrante;
     
     let mapa;
     let marcador;
     let recorrido;
+    let recorridoHistorico;
+    let hayRecorridoHistorico = false;
     let ultimaPosicionRecorrido = null;
+    let marcadorInicioHistorico = null;
+    let marcadorFinHistorico = null;
+    let mapaCentradoInicial = false;
 
     async function refrescarCampo(nombreCampo, idElemento) {
         const elemento = document.getElementById(idElemento);
@@ -338,11 +487,15 @@
         refrescarCampo('fecha', 'valorFecha');
         refrescarCampo('hora', 'valorHora');
 
-        if (lat === null || lng === null) return;
+        if (lat === null || lng === null || isNaN(Number(lat)) || isNaN(Number(lng))) return;
 
-        const posicion = [Number(lat), Number(lng)];
+        const posicion = [redondearCoord(lat), redondearCoord(lng)];
         marcador.setLatLng(posicion);
-        
+
+        if (!mapaCentradoInicial && !document.body.classList.contains('modoHistorico')) {
+            mapa.setView(posicion, mapa.getZoom());
+            mapaCentradoInicial = true;
+        }
 
         const esPosicionNueva = !ultimaPosicionRecorrido
             || ultimaPosicionRecorrido[0] !== posicion[0]
@@ -351,18 +504,55 @@
         if (esPosicionNueva) {
             recorrido.addLatLng(posicion);
             ultimaPosicionRecorrido = posicion;
+            if (document.body.classList.contains('modoHistorico')) {
+                recorrido.setStyle({ opacity: 0 });
+            }
         }
     }
 
-    function initMap() {
-        mapa = L.map('mapa').setView(CENTRO_DEFAULT, 15);
+    const iconoInicioRecorrido = L.divIcon({
+        className: '',
+        html: `<div style="width:28px;height:28px;border-radius:50% 50% 50% 0;background:#2ecc71;border:2px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.6);transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;">
+                <span style="transform:rotate(45deg);color:#ffffff;font-weight:bold;font-size:12px;font-family:sans-serif;">A</span>
+            </div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 28],
+        popupAnchor: [0, -26]
+    });
+
+    const iconoFinRecorrido = L.divIcon({
+        className: '',
+        html: `<div style="width:28px;height:28px;border-radius:50% 50% 50% 0;background:#dc0303;border:2px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.6);transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;">
+                <span style="transform:rotate(45deg);color:#ffffff;font-weight:bold;font-size:12px;font-family:sans-serif;">B</span>
+            </div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 28],
+        popupAnchor: [0, -26]
+    });
+
+    async function initMap() {
+        let centroInicial = CENTRO_DEFAULT;
+        try {
+            const res = await fetch(`${API_BASE}/api/ultimo`);
+            if (res.ok) {
+                const datos = await res.json();
+                if (datos.lat !== null && datos.lng !== null && !isNaN(Number(datos.lat)) && !isNaN(Number(datos.lng))) {
+                    centroInicial = [redondearCoord(datos.lat), redondearCoord(datos.lng)];
+                    mapaCentradoInicial = true;
+                }
+            }
+        } catch (e) {
+            console.warn('No se pudo obtener la posición inicial desde /api/ultimo, usando centro por defecto:', e);
+        }
+
+        mapa = L.map('mapa').setView(centroInicial, 15);
 
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(mapa);
 
-        marcador = L.marker(CENTRO_DEFAULT).addTo(mapa)
+        marcador = L.marker(centroInicial).addTo(mapa)
             .bindPopup('Vehículo');
         document.getElementById('btnCentrar').addEventListener('click', () => {
             mapa.setView(marcador.getLatLng(), mapa.getZoom());
@@ -377,10 +567,43 @@
         setInterval(actualizarMarcador, INTERVALO_MS);
     }
     
-    const HISTORICO_MIN_ANIO = 2026;
+    const HISTORICO_MIN_ANIO = 2020;
     let fechaCalendario = new Date();
-    let fechaSeleccionada = null;
-    let recorridoHistorico;
+    let fechaDesde = new Date();
+    let fechaHasta = new Date();
+    let modoSeleccion = 'desde';
+
+    function normalizarFecha(d) {
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    }
+
+    function formatearFechaCorta(d) {
+        if (!d) return '--';
+        const nombresMes = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        return `${d.getDate()} ${nombresMes[d.getMonth()]} ${d.getFullYear()}`;
+    }
+
+    function formatearFechaISO(d) {
+        const anio = d.getFullYear();
+        const mes = String(d.getMonth() + 1).padStart(2, '0');
+        const dia = String(d.getDate()).padStart(2, '0');
+        return `${anio}-${mes}-${dia}`;
+    }
+
+    function mostrarEstadoHistorico(mensaje, color = '#B3B3B3') {
+        const el = document.getElementById('estadoHistorico');
+        if (el) {
+            el.textContent = mensaje;
+            el.style.color = color;
+        }
+    }
+
+    function actualizarPillsFecha() {
+        document.getElementById('txtFechaDesde').textContent = formatearFechaCorta(fechaDesde);
+        document.getElementById('txtFechaHasta').textContent = formatearFechaCorta(fechaHasta);
+        document.getElementById('tabDesde').classList.toggle('activo', modoSeleccion === 'desde');
+        document.getElementById('tabHasta').classList.toggle('activo', modoSeleccion === 'hasta');
+    }
 
     function renderCalendario() {
         const anio = fechaCalendario.getFullYear();
@@ -398,21 +621,42 @@
             grid.appendChild(document.createElement('span'));
         }
 
+        const tDesde = fechaDesde ? normalizarFecha(fechaDesde) : null;
+        const tHasta = fechaHasta ? normalizarFecha(fechaHasta) : null;
+
         for (let dia = 1; dia <= diasEnMes; dia++) {
             const celda = document.createElement('span');
             celda.textContent = dia;
             celda.classList.add('diaCalendario');
 
-            const esSeleccionado = fechaSeleccionada
-                && fechaSeleccionada.getFullYear() === anio
-                && fechaSeleccionada.getMonth() === mes
-                && fechaSeleccionada.getDate() === dia;
-            if (esSeleccionado) celda.classList.add('diaSeleccionado');
+            const tActual = new Date(anio, mes, dia).getTime();
+            const esInicio = tDesde && tActual === tDesde;
+            const esFin = tHasta && tActual === tHasta;
+            const enRango = tDesde && tHasta && tActual > tDesde && tActual < tHasta;
+
+            if (esInicio) celda.classList.add('diaInicio');
+            if (esFin) celda.classList.add('diaFin');
+            if (enRango) celda.classList.add('diaEnRango');
 
             celda.addEventListener('click', () => {
-                fechaSeleccionada = new Date(anio, mes, dia);
+                const diaClick = new Date(anio, mes, dia);
+                if (modoSeleccion === 'desde') {
+                    fechaDesde = diaClick;
+                    if (fechaHasta && normalizarFecha(fechaHasta) < normalizarFecha(fechaDesde)) {
+                        fechaHasta = new Date(fechaDesde);
+                    }
+                    modoSeleccion = 'hasta';
+                } else {
+                    if (fechaDesde && normalizarFecha(diaClick) < normalizarFecha(fechaDesde)) {
+                        fechaDesde = diaClick;
+                    } else {
+                        fechaHasta = diaClick;
+                    }
+                }
+                actualizarPillsFecha();
                 renderCalendario();
             });
+
             grid.appendChild(celda);
         }
 
@@ -447,20 +691,89 @@
         });
     }
 
-    function obtenerHora24(idHH, idMM, idToggle) {
+    function obtenerHora24(idHH, idMM, idSS, idToggle) {
         let hh = parseInt(document.getElementById(idHH).value, 10);
-        const mm = document.getElementById(idMM).value.padStart(2, '0');
+        if (isNaN(hh)) hh = 0;
+        const mm = (document.getElementById(idMM).value || '00').padStart(2, '0');
+        const ss = (document.getElementById(idSS).value || '00').padStart(2, '0');
         const esPM = document.getElementById(idToggle).dataset.valor === 'PM';
 
         if (hh === 12) hh = 0;
         if (esPM) hh += 12;
 
-        return `${String(hh).padStart(2, '0')}:${mm}`;
+        return `${String(hh).padStart(2, '0')}:${mm}:${ss}`;
+    }
+    function actualizarVisibilidadTiempoReal() {
+        const panelHistoricos = document.getElementById('panelHistoricos');
+        const panelAbierto = panelHistoricos && panelHistoricos.classList.contains('abierto');
+        const debeOcultar = panelAbierto || hayRecorridoHistorico;
+
+        document.body.classList.toggle('modoHistorico', debeOcultar);
+
+        if (marcador) {
+            marcador.setOpacity(debeOcultar ? 0 : 1);
+        }
+        if (recorrido) {
+            recorrido.setStyle({ opacity: debeOcultar ? 0 : 1 });
+        }
+    }
+
+    function alternarPanelHistoricos() {
+        const panel = document.getElementById('panelHistoricos');
+        const estabaAbierto = panel.classList.contains('abierto');
+
+        if (estabaAbierto) {
+            panel.classList.remove('abierto');
+            actualizarVisibilidadTiempoReal();
+            if (!hayRecorridoHistorico && marcador && marcador.getLatLng()) {
+                mapa.setView(marcador.getLatLng(), mapa.getZoom());
+            }
+        } else {
+            panel.classList.add('abierto');
+            actualizarVisibilidadTiempoReal();
+        }
+    }
+
+    function limpiarRecorridoHistorico() {
+        hayRecorridoHistorico = false;
+        if (recorridoHistorico) {
+            recorridoHistorico.setLatLngs([]);
+        }
+        if (marcadorInicioHistorico) {
+            mapa.removeLayer(marcadorInicioHistorico);
+            marcadorInicioHistorico = null;
+        }
+        if (marcadorFinHistorico) {
+            mapa.removeLayer(marcadorFinHistorico);
+            marcadorFinHistorico = null;
+        }
+        const btnLimpiar = document.getElementById('btnLimpiarRecorrido');
+        if (btnLimpiar) {
+            btnLimpiar.style.display = 'none';
+        }
+        mostrarEstadoHistorico('');
+        actualizarVisibilidadTiempoReal();
     }
 
     function initHistoricos() {
-        document.getElementById('btnHistoricos').addEventListener('click', () => {
-            document.getElementById('panelHistoricos').classList.toggle('abierto');
+        document.getElementById('btnHistoricos').addEventListener('click', alternarPanelHistoricos);
+
+        document.getElementById('tabDesde').addEventListener('click', () => {
+            modoSeleccion = 'desde';
+            if (fechaDesde) {
+                fechaCalendario = new Date(fechaDesde.getFullYear(), fechaDesde.getMonth(), 1);
+            }
+            actualizarPillsFecha();
+            renderCalendario();
+        });
+
+        document.getElementById('tabHasta').addEventListener('click', () => {
+            modoSeleccion = 'hasta';
+            if (fechaHasta) {
+                fechaCalendario = new Date(fechaHasta.getFullYear(), fechaHasta.getMonth(), 1);
+            }
+            actualizarPillsFecha();
+            renderCalendario();
         });
 
         document.getElementById('btnMesAnterior').addEventListener('click', () => cambiarMes(-1));
@@ -468,41 +781,103 @@
 
         limitarInputHora(document.getElementById('horaDesdeHH'), 12);
         limitarInputHora(document.getElementById('horaDesdeMM'), 59);
+        limitarInputHora(document.getElementById('horaDesdeSS'), 59);
         limitarInputHora(document.getElementById('horaHastaHH'), 12);
         limitarInputHora(document.getElementById('horaHastaMM'), 59);
+        limitarInputHora(document.getElementById('horaHastaSS'), 59);
 
         configurarToggleAmPm('toggleDesde');
         configurarToggleAmPm('toggleHasta');
 
+        document.getElementById('btnLimpiarRecorrido').addEventListener('click', limpiarRecorridoHistorico);
+
         document.getElementById('btnVerRecorrido').addEventListener('click', async () => {
-            if (!fechaSeleccionada) {
-                alert('Seleccioná un día en el calendario.');
+            if (!fechaDesde || !fechaHasta) {
+                mostrarEstadoHistorico('Selecciona las fechas en el calendario.', '#ff6b6b');
                 return;
             }
 
-            const desde = obtenerHora24('horaDesdeHH', 'horaDesdeMM', 'toggleDesde');
-            const hasta = obtenerHora24('horaHastaHH', 'horaHastaMM', 'toggleHasta');
+            const fechaDesdeISO = formatearFechaISO(fechaDesde);
+            const fechaHastaISO = formatearFechaISO(fechaHasta);
+            const horaDesde = obtenerHora24('horaDesdeHH', 'horaDesdeMM', 'horaDesdeSS', 'toggleDesde');
+            const horaHasta = obtenerHora24('horaHastaHH', 'horaHastaMM', 'horaHastaSS', 'toggleHasta');
 
-            const anio = fechaSeleccionada.getFullYear();
-            const mes = String(fechaSeleccionada.getMonth() + 1).padStart(2, '0');
-            const dia = String(fechaSeleccionada.getDate()).padStart(2, '0');
-            const fechaISO = `${anio}-${mes}-${dia}`;
+            const dtInicio = new Date(`${fechaDesdeISO}T${horaDesde}`);
+            const dtFin = new Date(`${fechaHastaISO}T${horaHasta}`);
+
+            if (dtFin < dtInicio) {
+                mostrarEstadoHistorico('La fecha/hora final debe ser posterior a la inicial.', '#ff6b6b');
+                return;
+            }
+
+            mostrarEstadoHistorico('Cargando recorrido...', '#B3B3B3');
+            document.getElementById('btnVerRecorrido').disabled = true;
 
             try {
-                const respuesta = await fetch(`${API_BASE}/api/historico?fecha=${fechaISO}&desde=${desde}&hasta=${hasta}`);
-                if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+                const url = `${API_BASE}/api/historico?fecha_desde=${fechaDesdeISO}&hora_desde=${horaDesde}&fecha_hasta=${fechaHastaISO}&hora_hasta=${horaHasta}`;
+                const respuesta = await fetch(url);
+                if (!respuesta.ok) {
+                    const errData = await respuesta.json().catch(() => null);
+                    throw new Error(errData && errData.error ? errData.error : `HTTP ${respuesta.status}`);
+                }
                 const puntos = await respuesta.json();
 
-                recorridoHistorico.setLatLngs(puntos.map(p => [p.lat, p.lng]));
-                if (puntos.length > 0) {
-                    mapa.fitBounds(recorridoHistorico.getBounds());
+                if (!puntos || puntos.length === 0) {
+                    limpiarRecorridoHistorico();
+                    mostrarEstadoHistorico('No hay puntos en este rango.', '#e5a50a');
+                    return;
                 }
+
+                hayRecorridoHistorico = true;
+                const puntosFiltrados = [];
+                for (const p of puntos) {
+                    if (p.lat === null || p.lng === null || isNaN(Number(p.lat)) || isNaN(Number(p.lng))) continue;
+                    const latR = redondearCoord(p.lat);
+                    const lngR = redondearCoord(p.lng);
+                    if (puntosFiltrados.length === 0 ||
+                        puntosFiltrados[puntosFiltrados.length - 1][0] !== latR ||
+                        puntosFiltrados[puntosFiltrados.length - 1][1] !== lngR) {
+                        puntosFiltrados.push([latR, lngR]);
+                    }
+                }
+
+                const rutaHistorica = puntosFiltrados.length > 0
+                    ? puntosFiltrados
+                    : puntos.map(p => [redondearCoord(p.lat), redondearCoord(p.lng)]);
+
+                recorridoHistorico.setLatLngs(rutaHistorica);
+                mapa.fitBounds(recorridoHistorico.getBounds(), { padding: [30, 30], maxZoom: 16 });
+                mostrarEstadoHistorico(`${puntos.length} punto(s) encontrado(s)`, '#4cd964');
+                document.getElementById('btnLimpiarRecorrido').style.display = 'block';
+
+                // --- Marcadores de inicio y fin del recorrido histórico ---
+                if (marcadorInicioHistorico) mapa.removeLayer(marcadorInicioHistorico);
+                if (marcadorFinHistorico) mapa.removeLayer(marcadorFinHistorico);
+
+                const puntoInicio = puntos[0];
+                const puntoFin = puntos[puntos.length - 1];
+
+                marcadorInicioHistorico = L.marker([redondearCoord(puntoInicio.lat), redondearCoord(puntoInicio.lng)], { icon: iconoInicioRecorrido })
+                    .addTo(mapa)
+                    .bindTooltip('Inicio', { permanent: true, direction: 'top', offset: [0, -28], className: 'tooltipRecorrido tooltipInicio' })
+                    .bindPopup(`Inicio del recorrido${puntoInicio.fecha ? ' — ' + puntoInicio.fecha + ' ' + (puntoInicio.hora || '') : ''}`);
+
+                marcadorFinHistorico = L.marker([redondearCoord(puntoFin.lat), redondearCoord(puntoFin.lng)], { icon: iconoFinRecorrido })
+                    .addTo(mapa)
+                    .bindTooltip('Fin', { permanent: true, direction: 'top', offset: [0, -28], className: 'tooltipRecorrido tooltipFin' })
+                    .bindPopup(`Fin del recorrido${puntoFin.fecha ? ' — ' + puntoFin.fecha + ' ' + (puntoFin.hora || '') : ''}`);
+
+                actualizarVisibilidadTiempoReal();
+
             } catch (error) {
                 console.error('Error al obtener histórico:', error);
-                alert('No se pudo cargar el histórico (falta implementar el endpoint en el backend).');
+                mostrarEstadoHistorico(error.message || 'Error al cargar histórico', '#ff6b6b');
+            } finally {
+                document.getElementById('btnVerRecorrido').disabled = false;
             }
         });
 
+        actualizarPillsFecha();
         renderCalendario();
     }
         document.addEventListener('DOMContentLoaded', initMap);
