@@ -478,6 +478,7 @@
     const INTERVALO_MS = 5000;
     const CENTRO_DEFAULT = [11.019, -74.851]; // Barranquilla, fallback inicial
     const DECIMALES_COORDENADAS = 4; // ~11m de resolución: filtra el ruido GPS cuando el vehículo está detenido
+    const ZOOM_CENTRADO = 17; // Nivel de zoom específico al centrar en el vehículo
 
     function redondearCoord(coord, decimales = DECIMALES_COORDENADAS) {
         if (coord === null || coord === undefined || isNaN(Number(coord))) return coord;
@@ -586,7 +587,7 @@
         marcador = L.marker(centroInicial).addTo(mapa)
             .bindPopup('Vehículo');
         document.getElementById('btnCentrar').addEventListener('click', () => {
-            mapa.setView(marcador.getLatLng(), mapa.getZoom());
+            mapa.setView(marcador.getLatLng(), ZOOM_CENTRADO);
         });
 
         recorrido = L.polyline([], { color: '#C8102E', weight: 3 }).addTo(mapa);
