@@ -453,6 +453,7 @@
     let marcador;
     let recorrido;
     let recorridoHistorico;
+    let hayRecorridoHistorico = false;
     let ultimaPosicionRecorrido = null;
     let marcadorInicioHistorico = null;
     let marcadorFinHistorico = null;
@@ -485,7 +486,7 @@
         const posicion = [Number(lat), Number(lng)];
         marcador.setLatLng(posicion);
 
-        if (!mapaCentradoInicial) {
+        if (!mapaCentradoInicial && !document.body.classList.contains('modoHistorico')) {
             mapa.setView(posicion, mapa.getZoom());
             mapaCentradoInicial = true;
         }
@@ -497,6 +498,9 @@
         if (esPosicionNueva) {
             recorrido.addLatLng(posicion);
             ultimaPosicionRecorrido = posicion;
+            if (document.body.classList.contains('modoHistorico')) {
+                recorrido.setStyle({ opacity: 0 });
+            }
         }
     }
 
@@ -693,50 +697,60 @@
 
         return `${String(hh).padStart(2, '0')}:${mm}:${ss}`;
     }
-    function activarModoHistorico() {
-        document.body.classList.add('modoHistorico');
+    function actualizarVisibilidadTiempoReal() {
+        const panelHistoricos = document.getElementById('panelHistoricos');
+        const panelAbierto = panelHistoricos && panelHistoricos.classList.contains('abierto');
+        const debeOcultar = panelAbierto || hayRecorridoHistorico;
 
-        // Ocultar ubicación actual
+        document.body.classList.toggle('modoHistorico', debeOcultar);
+
         if (marcador) {
-            marcador.setOpacity(0);
+            marcador.setOpacity(debeOcultar ? 0 : 1);
         }
-
-        // Ocultar recorrido en tiempo real
         if (recorrido) {
-            recorrido.setStyle({ opacity: 0 });
+            recorrido.setStyle({ opacity: debeOcultar ? 0 : 1 });
         }
-
-        // Mostrar panel de históricos
-        document.getElementById('panelHistoricos').classList.add('abierto');
     }
 
-    function desactivarModoHistorico() {
-        document.body.classList.remove('modoHistorico');
+    function alternarPanelHistoricos() {
+        const panel = document.getElementById('panelHistoricos');
+        const estabaAbierto = panel.classList.contains('abierto');
 
-        // Mostrar ubicación actual
-        if (marcador) {
-            marcador.setOpacity(1);
+        if (estabaAbierto) {
+            panel.classList.remove('abierto');
+            actualizarVisibilidadTiempoReal();
+            if (!hayRecorridoHistorico && marcador && marcador.getLatLng()) {
+                mapa.setView(marcador.getLatLng(), mapa.getZoom());
+            }
+        } else {
+            panel.classList.add('abierto');
+            actualizarVisibilidadTiempoReal();
         }
+    }
 
-        // Mostrar recorrido en tiempo real
-        if (recorrido) {
-            recorrido.setStyle({ opacity: 1 });
+    function limpiarRecorridoHistorico() {
+        hayRecorridoHistorico = false;
+        if (recorridoHistorico) {
+            recorridoHistorico.setLatLngs([]);
         }
-
-        // Ocultar panel de históricos
-        document.getElementById('panelHistoricos').classList.remove('abierto');
+        if (marcadorInicioHistorico) {
+            mapa.removeLayer(marcadorInicioHistorico);
+            marcadorInicioHistorico = null;
+        }
+        if (marcadorFinHistorico) {
+            mapa.removeLayer(marcadorFinHistorico);
+            marcadorFinHistorico = null;
+        }
+        const btnLimpiar = document.getElementById('btnLimpiarRecorrido');
+        if (btnLimpiar) {
+            btnLimpiar.style.display = 'none';
+        }
+        mostrarEstadoHistorico('');
+        actualizarVisibilidadTiempoReal();
     }
 
     function initHistoricos() {
-        document.getElementById('btnHistoricos').addEventListener('click', () => {
-            const modoHistorico = document.body.classList.contains('modoHistorico');
-
-            if (modoHistorico) {
-                desactivarModoHistorico();
-            } else {
-                activarModoHistorico();
-            }
-        });
+        document.getElementById('btnHistoricos').addEventListener('click', alternarPanelHistoricos);
 
         document.getElementById('tabDesde').addEventListener('click', () => {
             modoSeleccion = 'desde';
@@ -769,17 +783,7 @@
         configurarToggleAmPm('toggleDesde');
         configurarToggleAmPm('toggleHasta');
 
-        document.getElementById('btnLimpiarRecorrido').addEventListener('click', () => {
-            // Asegurar que estamos en modo histórico
-            recorridoHistorico.setLatLngs([]);
-            if (marcadorInicioHistorico) { mapa.removeLayer(marcadorInicioHistorico); marcadorInicioHistorico = null; }
-            if (marcadorFinHistorico) { mapa.removeLayer(marcadorFinHistorico); marcadorFinHistorico = null; }
-            document.getElementById('btnLimpiarRecorrido').style.display = 'none';
-            mostrarEstadoHistorico('');
-            if (marcador && marcador.getLatLng()) {
-                mapa.setView(marcador.getLatLng(), mapa.getZoom());
-            }
-        });
+        document.getElementById('btnLimpiarRecorrido').addEventListener('click', limpiarRecorridoHistorico);
 
         document.getElementById('btnVerRecorrido').addEventListener('click', async () => {
             if (!fechaDesde || !fechaHasta) {
@@ -813,13 +817,12 @@
                 const puntos = await respuesta.json();
 
                 if (!puntos || puntos.length === 0) {
-                    recorridoHistorico.setLatLngs([]);
-                    document.getElementById('btnLimpiarRecorrido').style.display = 'none';
+                    limpiarRecorridoHistorico();
                     mostrarEstadoHistorico('No hay puntos en este rango.', '#e5a50a');
                     return;
                 }
-                // Asegurar que estamos en modo histórico
-                activarModoHistorico();
+
+                hayRecorridoHistorico = true;
                 recorridoHistorico.setLatLngs(puntos.map(p => [p.lat, p.lng]));
                 mapa.fitBounds(recorridoHistorico.getBounds(), { padding: [30, 30] });
                 mostrarEstadoHistorico(`${puntos.length} punto(s) encontrado(s)`, '#4cd964');
@@ -841,6 +844,8 @@
                     .addTo(mapa)
                     .bindTooltip('Fin', { permanent: true, direction: 'top', offset: [0, -28], className: 'tooltipRecorrido tooltipFin' })
                     .bindPopup(`Fin del recorrido${puntoFin.fecha ? ' — ' + puntoFin.fecha + ' ' + (puntoFin.hora || '') : ''}`);
+
+                actualizarVisibilidadTiempoReal();
 
             } catch (error) {
                 console.error('Error al obtener histórico:', error);
