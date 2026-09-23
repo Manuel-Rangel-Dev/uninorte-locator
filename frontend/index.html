@@ -32,6 +32,11 @@
         padding: 10px 14px;
         font-size: 13px;
         min-width: 200px;
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+        pointer-events: auto;
+        transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
     }
     #panelInfo h1 {
         color: #dc0303;
@@ -63,6 +68,10 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transition: opacity 0.25s ease, border-color 0.2s ease, visibility 0.25s ease;
     }
     #btnCentrar:hover {
         border-color: #dc0303;
@@ -84,13 +93,14 @@
         gap: 6px;
         font-family: monospace;
         font-size: 13px;
+        transition: border-color 0.2s ease;
     }
     #btnHistoricos:hover {
         border-color: #dc0303;
     }
 
     #panelHistoricos {
-        display: none;
+        display: flex;
         position: absolute;
         top: 58px;
         right: 12px;
@@ -103,9 +113,17 @@
         flex-direction: column;
         gap: 10px;
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-8px);
+        pointer-events: none;
+        transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
     }
     #panelHistoricos.abierto {
-        display: flex;
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+        pointer-events: auto;
     }
 
     .selectorRangoFecha {
@@ -312,10 +330,15 @@
         font-size: 12px;
         cursor: pointer;
         transition: background-color 0.2s;
+        animation: fadeIn 0.2s ease;
     }
     #btnLimpiarRecorrido:hover {
         background-color: #383838;
         border-color: #555555;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.96); }
+        to { opacity: 1; transform: scale(1); }
     }
 
     .tooltipRecorrido {
@@ -338,9 +361,17 @@
         display: none;
     }
     /* MODO HISTÓRICO */
-    .modoHistorico #panelInfo,
+    .modoHistorico #panelInfo {
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(8px);
+        pointer-events: none;
+    }
+
     .modoHistorico #btnCentrar {
-        display: none !important;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
     }
 
     .modoHistorico #btnHistoricos {
