@@ -446,6 +446,12 @@
     const API_BASE = '';
     const INTERVALO_MS = 5000;
     const CENTRO_DEFAULT = [11.019, -74.851]; // Barranquilla, fallback inicial
+    const DECIMALES_COORDENADAS = 4; // ~11m de resolución: filtra el ruido GPS cuando el vehículo está detenido
+
+    function redondearCoord(coord, decimales = DECIMALES_COORDENADAS) {
+        if (coord === null || coord === undefined || isNaN(Number(coord))) return coord;
+        return Number(Number(coord).toFixed(decimales));
+    }
 
     document.title = APP_CONFIG.integrante;
     
@@ -483,7 +489,7 @@
 
         if (lat === null || lng === null || isNaN(Number(lat)) || isNaN(Number(lng))) return;
 
-        const posicion = [Number(lat), Number(lng)];
+        const posicion = [redondearCoord(lat), redondearCoord(lng)];
         marcador.setLatLng(posicion);
 
         if (!mapaCentradoInicial && !document.body.classList.contains('modoHistorico')) {
@@ -531,7 +537,7 @@
             if (res.ok) {
                 const datos = await res.json();
                 if (datos.lat !== null && datos.lng !== null && !isNaN(Number(datos.lat)) && !isNaN(Number(datos.lng))) {
-                    centroInicial = [Number(datos.lat), Number(datos.lng)];
+                    centroInicial = [redondearCoord(datos.lat), redondearCoord(datos.lng)];
                     mapaCentradoInicial = true;
                 }
             }
@@ -823,8 +829,24 @@
                 }
 
                 hayRecorridoHistorico = true;
-                recorridoHistorico.setLatLngs(puntos.map(p => [p.lat, p.lng]));
-                mapa.fitBounds(recorridoHistorico.getBounds(), { padding: [30, 30] });
+                const puntosFiltrados = [];
+                for (const p of puntos) {
+                    if (p.lat === null || p.lng === null || isNaN(Number(p.lat)) || isNaN(Number(p.lng))) continue;
+                    const latR = redondearCoord(p.lat);
+                    const lngR = redondearCoord(p.lng);
+                    if (puntosFiltrados.length === 0 ||
+                        puntosFiltrados[puntosFiltrados.length - 1][0] !== latR ||
+                        puntosFiltrados[puntosFiltrados.length - 1][1] !== lngR) {
+                        puntosFiltrados.push([latR, lngR]);
+                    }
+                }
+
+                const rutaHistorica = puntosFiltrados.length > 0
+                    ? puntosFiltrados
+                    : puntos.map(p => [redondearCoord(p.lat), redondearCoord(p.lng)]);
+
+                recorridoHistorico.setLatLngs(rutaHistorica);
+                mapa.fitBounds(recorridoHistorico.getBounds(), { padding: [30, 30], maxZoom: 16 });
                 mostrarEstadoHistorico(`${puntos.length} punto(s) encontrado(s)`, '#4cd964');
                 document.getElementById('btnLimpiarRecorrido').style.display = 'block';
 
@@ -835,12 +857,12 @@
                 const puntoInicio = puntos[0];
                 const puntoFin = puntos[puntos.length - 1];
 
-                marcadorInicioHistorico = L.marker([puntoInicio.lat, puntoInicio.lng], { icon: iconoInicioRecorrido })
+                marcadorInicioHistorico = L.marker([redondearCoord(puntoInicio.lat), redondearCoord(puntoInicio.lng)], { icon: iconoInicioRecorrido })
                     .addTo(mapa)
                     .bindTooltip('Inicio', { permanent: true, direction: 'top', offset: [0, -28], className: 'tooltipRecorrido tooltipInicio' })
                     .bindPopup(`Inicio del recorrido${puntoInicio.fecha ? ' — ' + puntoInicio.fecha + ' ' + (puntoInicio.hora || '') : ''}`);
 
-                marcadorFinHistorico = L.marker([puntoFin.lat, puntoFin.lng], { icon: iconoFinRecorrido })
+                marcadorFinHistorico = L.marker([redondearCoord(puntoFin.lat), redondearCoord(puntoFin.lng)], { icon: iconoFinRecorrido })
                     .addTo(mapa)
                     .bindTooltip('Fin', { permanent: true, direction: 'top', offset: [0, -28], className: 'tooltipRecorrido tooltipFin' })
                     .bindPopup(`Fin del recorrido${puntoFin.fecha ? ' — ' + puntoFin.fecha + ' ' + (puntoFin.hora || '') : ''}`);
