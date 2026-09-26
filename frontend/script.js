@@ -41,6 +41,7 @@ let ultimaPosicionRecorrido = null;
 let lineasHistoricas = [];
 let marcadoresHistoricos = [];
 let mapaCentradoInicial = false;
+let modoTracking = false;
 
 // =============================================================================
 // 5. SEGMENTACIÓN Y ESTILOS DE RUTAS HISTÓRICAS
@@ -182,6 +183,8 @@ async function actualizarMarcador() {
     if (!mapaCentradoInicial && !document.body.classList.contains('modoHistorico')) {
         mapa.setView(posicion, mapa.getZoom());
         mapaCentradoInicial = true;
+    } else if (modoTracking && !document.body.classList.contains('modoHistorico')) {
+        mapa.setView(posicion, mapa.getZoom());
     }
 
     const esPosicionNueva = !ultimaPosicionRecorrido
@@ -224,8 +227,16 @@ async function initMap() {
 
     marcador = L.marker(centroInicial).addTo(mapa)
         .bindPopup('Vehículo');
-    document.getElementById('btnCentrar').addEventListener('click', () => {
-        mapa.setView(marcador.getLatLng(), ZOOM_CENTRADO);
+
+    const btnCentrar = document.getElementById('btnCentrar');
+    btnCentrar.addEventListener('click', () => {
+        modoTracking = !modoTracking;
+        btnCentrar.classList.toggle('activo', modoTracking);
+        btnCentrar.title = modoTracking ? 'Desactivar modo seguimiento' : 'Activar modo seguimiento';
+
+        if (modoTracking && marcador && marcador.getLatLng()) {
+            mapa.setView(marcador.getLatLng(), ZOOM_CENTRADO);
+        }
     });
 
     recorrido = L.polyline([], { color: '#C8102E', weight: 3 }).addTo(mapa);

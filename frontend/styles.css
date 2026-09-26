@@ -32,7 +32,7 @@ html, body {
 }
 
 #panelInfo h1 {
-    color: #3d03dc;
+    color: #dc0303;
     font-size: 14px;
     margin: 0 0 8px 0;
 }
@@ -67,11 +67,18 @@ html, body {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
-    transition: opacity 0.25s ease, border-color 0.2s ease, visibility 0.25s ease;
+    transition: opacity 0.25s ease, border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, visibility 0.25s ease;
 }
 
 #btnCentrar:hover {
     border-color: #dc0303;
+}
+
+#btnCentrar.activo {
+    border-color: #dc0303;
+    background-color: rgba(220, 3, 3, 0.2);
+    color: #dc0303;
+    box-shadow: 0 0 10px rgba(220, 3, 3, 0.35);
 }
 
 #btnHistoricos {
