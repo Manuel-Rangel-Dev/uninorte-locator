@@ -23,7 +23,7 @@ export function activarModoSeleccionCentro() {
     const instruccion = document.getElementById('instruccionZona');
     if (instruccion) {
         instruccion.textContent = 'Haz clic en el mapa para colocar el centro de búsqueda.';
-        instruccion.style.color = '#38bdf8';
+        instruccion.style.color = '#dc0303';
     }
 }
 
@@ -40,10 +40,10 @@ export function establecerCentroZona(latlng) {
     if (!estado.circuloZona) {
         estado.circuloZona = L.circle([latlng.lat, latlng.lng], {
             radius: estado.radioZona,
-            color: '#38bdf8',
+            color: '#dc0303',
             weight: 2,
-            fillColor: '#38bdf8',
-            fillOpacity: 0.18,
+            fillColor: '#dc0303',
+            fillOpacity: 0.15,
             dashArray: '5,5'
         }).addTo(estado.mapa);
     } else {
@@ -56,7 +56,7 @@ export function establecerCentroZona(latlng) {
             draggable: true,
             icon: L.divIcon({
                 className: '',
-                html: `<div style="width:16px;height:16px;border-radius:50%;background:#0284c7;border:3px solid #ffffff;box-shadow:0 0 10px rgba(56,189,248,0.9);transform:translate(-5px,-5px);"></div>`,
+                html: `<div style="width:16px;height:16px;border-radius:50%;background:#dc0303;border:3px solid #ffffff;box-shadow:0 0 10px rgba(220,3,3,0.8);transform:translate(-5px,-5px);"></div>`,
                 iconSize: [16, 16],
                 iconAnchor: [8, 8]
             })
@@ -76,7 +76,7 @@ export function establecerCentroZona(latlng) {
     const instruccion = document.getElementById('instruccionZona');
     if (instruccion) {
         instruccion.textContent = 'Centro colocado. Ajusta el radio y presiona “Buscar en esta zona”.';
-        instruccion.style.color = '#cbd5e1';
+        instruccion.style.color = '#B3B3B3';
     }
 
     desactivarModoSeleccionCentro();
@@ -276,7 +276,7 @@ export function limpiarZona() {
     const instruccion = document.getElementById('instruccionZona');
     if (instruccion) {
         instruccion.textContent = 'Haz clic en el mapa para colocar el centro de búsqueda.';
-        instruccion.style.color = '#cbd5e1';
+        instruccion.style.color = '#B3B3B3';
     }
 
     desactivarModoSeleccionCentro();

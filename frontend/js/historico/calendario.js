@@ -254,4 +254,14 @@ export function limpiarRecorridoHistorico() {
         reproductor.style.display = 'none';
     }
     mostrarEstadoHistorico('');
+
+    estado.tipoFiltroHistorico = 'fecha';
+    const btnFiltroFecha = document.getElementById('btnFiltroFecha');
+    const btnFiltroZona = document.getElementById('btnFiltroZona');
+    const vistaFiltroFecha = document.getElementById('vistaFiltroFecha');
+    const vistaFiltroZona = document.getElementById('vistaFiltroZona');
+    if (btnFiltroFecha) btnFiltroFecha.classList.add('activo');
+    if (btnFiltroZona) btnFiltroZona.classList.remove('activo');
+    if (vistaFiltroFecha) vistaFiltroFecha.style.display = 'block';
+    if (vistaFiltroZona) vistaFiltroZona.style.display = 'none';
 }

@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="" />
-    <link rel="stylesheet" href="styles.css?v=3">
+    <link rel="stylesheet" href="styles.css?v=4">
     <script src="config.js"></script>
     <script>
         if (typeof APP_CONFIG === 'undefined') {
@@ -54,26 +54,10 @@
     </button>
 
     <div id="panelHistoricos">
-        <!-- Header del menú -->
-        <div class="menuHeader">
-            <span class="menuTitulo">MENÚ</span>
-            <button id="btnCerrarMenu" class="btnCerrarMenu" type="button" title="Cerrar panel">✕</button>
-        </div>
-
-        <!-- Botones de Modo Principal (Fila 1 de img4.png) -->
-        <div class="menuModosPrincipales">
-            <button id="btnModoTiempoReal" class="btnPillModo" type="button">
-                <span class="iconoPill">📍</span> Tiempo Real
-            </button>
-            <button id="btnModoHistoricos" class="btnPillModo activo" type="button">
-                <span class="iconoPill">🕟</span> Históricos
-            </button>
-        </div>
-
-        <!-- Botones de Tipo de Filtro (Fila 2 de img4.png) -->
-        <div class="menuSubModos">
-            <button id="btnFiltroFecha" class="btnSubModo activo" type="button">Filtrar por fecha</button>
-            <button id="btnFiltroZona" class="btnSubModo" type="button">Filtrar por zona</button>
+        <!-- Selector de Tipo de Filtro (Fecha / Zona) -->
+        <div class="selectorTipoFiltro">
+            <button id="btnFiltroFecha" class="tabTipoFiltro activo" type="button">Filtrar por fecha</button>
+            <button id="btnFiltroZona" class="tabTipoFiltro" type="button">Filtrar por zona</button>
         </div>
 
         <!-- SECCIÓN 1: FILTRAR POR FECHA (Mantiene exactamente lo existente) -->

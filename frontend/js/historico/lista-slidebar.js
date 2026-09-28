@@ -105,9 +105,9 @@ export function seleccionarRecorrido(indice) {
 
     const distInicioFin = L.latLng(puntoInicio.lat, puntoInicio.lng).distanceTo(L.latLng(puntoFin.lat, puntoFin.lng));
     const direccionFin = distInicioFin < 30 ? 'bottom' : 'top';
-    const offsetFin = distInicioFin < 30 ? [0, 5] : [0, -28];
+    const offsetFin = distInicioFin < 30 ? [0, 14] : [0, -14];
 
-    // Pin verde de inicio recorrido
+    // Círculo verde de inicio recorrido
     const marcadorInicio = L.marker([puntoInicio.lat, puntoInicio.lng], {
         icon: crearIconoInicio(numero),
         zIndexOffset: 500
@@ -116,12 +116,12 @@ export function seleccionarRecorrido(indice) {
         .bindTooltip(`Inicio recorrido ${numero}`, {
             permanent: true,
             direction: 'top',
-            offset: [0, -28],
+            offset: [0, -14],
             className: 'tooltipRecorrido tooltipInicio'
         })
         .bindPopup(`Inicio recorrido ${numero}${puntoInicio.fecha ? ' — ' + puntoInicio.fecha + ' ' + (puntoInicio.hora || '') : ''}`);
 
-    // Pin rojo de fin recorrido
+    // Círculo rojo de fin recorrido
     const marcadorFin = L.marker([puntoFin.lat, puntoFin.lng], {
         icon: crearIconoFin(numero),
         zIndexOffset: 500
@@ -273,23 +273,23 @@ function obtenerVelocidadReproduccion() {
 export function crearIconoInicio(num) {
     return L.divIcon({
         className: '',
-        html: `<div style="width:28px;height:28px;border-radius:50% 50% 50% 0;background:#2ecc71;border:2px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.6);transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;">
-                <span style="transform:rotate(45deg);color:#ffffff;font-weight:bold;font-size:${num > 9 ? '10px' : '12px'};font-family:sans-serif;">${num}</span>
+        html: `<div style="width:24px;height:24px;border-radius:50%;background:#2ecc71;border:2px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;">
+                <span style="color:#ffffff;font-weight:bold;font-size:${num > 9 ? '10px' : '11px'};font-family:monospace;">${num}</span>
             </div>`,
-        iconSize: [28, 28],
-        iconAnchor: [14, 28],
-        popupAnchor: [0, -26]
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+        popupAnchor: [0, -14]
     });
 }
 
 export function crearIconoFin(num) {
     return L.divIcon({
         className: '',
-        html: `<div style="width:28px;height:28px;border-radius:50% 50% 50% 0;background:#dc0303;border:2px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.6);transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;">
-                <span style="transform:rotate(45deg);color:#ffffff;font-weight:bold;font-size:${num > 9 ? '10px' : '12px'};font-family:sans-serif;">${num}</span>
+        html: `<div style="width:24px;height:24px;border-radius:50%;background:#dc0303;border:2px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;">
+                <span style="color:#ffffff;font-weight:bold;font-size:${num > 9 ? '10px' : '11px'};font-family:monospace;">${num}</span>
             </div>`,
-        iconSize: [28, 28],
-        iconAnchor: [14, 28],
-        popupAnchor: [0, -26]
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+        popupAnchor: [0, -14]
     });
 }

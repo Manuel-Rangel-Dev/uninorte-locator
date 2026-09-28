@@ -544,103 +544,37 @@ html, body {
 }
 
 /* ============================================================
-   CABECERA Y MODOS DEL MENÚ (img4.png)
+   SELECTOR DE TIPO DE FILTRO (Fila 2: Fecha / Zona)
    ============================================================ */
-.menuHeader {
+.selectorTipoFiltro {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 2px;
+    gap: 6px;
 }
 
-.menuTitulo {
-    font-size: 12px;
-    font-weight: 700;
-    color: #94a3b8;
-    letter-spacing: 1px;
-}
-
-.btnCerrarMenu {
-    background: none;
-    border: none;
-    color: #94a3b8;
-    font-size: 16px;
-    cursor: pointer;
-    padding: 2px 6px;
+.tabTipoFiltro {
+    flex: 1;
+    background-color: #1a1a1a;
+    border: 1px solid #2A2A2A;
     border-radius: 4px;
-    line-height: 1;
-}
-
-.btnCerrarMenu:hover {
-    color: #ffffff;
-    background-color: #334155;
-}
-
-.menuModosPrincipales {
-    display: flex;
-    gap: 6px;
-}
-
-.btnPillModo {
-    flex: 1;
-    padding: 7px 10px;
-    border-radius: 8px;
-    border: 1px solid #334155;
-    background: #1e293b;
-    color: #cbd5e1;
-    font-family: inherit;
-    font-size: 12px;
-    font-weight: 600;
+    padding: 7px 4px;
+    color: #B3B3B3;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    transition: all 0.2s ease;
-}
-
-.btnPillModo:hover {
-    border-color: #64748b;
-    background: #273549;
-}
-
-.btnPillModo.activo {
-    background: #f1f5f9;
-    color: #0f172a;
-    border-color: #f1f5f9;
-    font-weight: 700;
-}
-
-.menuSubModos {
-    display: flex;
-    gap: 6px;
-}
-
-.btnSubModo {
-    flex: 1;
-    padding: 7px 6px;
-    border-radius: 8px;
-    border: 1px solid #334155;
-    background: #1e293b;
-    color: #cbd5e1;
-    font-family: inherit;
+    font-family: monospace;
     font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
+    font-weight: bold;
     text-align: center;
     transition: all 0.2s ease;
 }
 
-.btnSubModo:hover {
-    border-color: #64748b;
-    background: #273549;
+.tabTipoFiltro:hover {
+    border-color: #555555;
+    color: #ffffff;
 }
 
-.btnSubModo.activo {
-    background: #f1f5f9;
-    color: #0f172a;
-    border-color: #f1f5f9;
-    font-weight: 700;
+.tabTipoFiltro.activo {
+    border-color: #dc0303;
+    background-color: rgba(220, 3, 3, 0.15);
+    color: #ffffff;
 }
 
 #vistaFiltroFecha {
@@ -650,7 +584,7 @@ html, body {
 }
 
 /* ============================================================
-   VISTA FILTRO POR ZONA (img4.png)
+   VISTA FILTRO POR ZONA
    ============================================================ */
 #vistaFiltroZona {
     display: flex;
@@ -659,9 +593,10 @@ html, body {
 }
 
 .textoInstruccionZona {
-    font-size: 12px;
-    color: #cbd5e1;
+    font-size: 11px;
+    color: #B3B3B3;
     line-height: 1.4;
+    font-family: monospace;
     padding: 2px 0;
 }
 
@@ -670,71 +605,72 @@ html, body {
     align-items: center;
     justify-content: space-between;
     font-size: 11px;
-    font-weight: 700;
+    font-family: monospace;
 }
 
 .etiquetaRadioZona {
-    color: #94a3b8;
+    color: #888888;
+    font-weight: bold;
     letter-spacing: 0.5px;
 }
 
 .valorRadioZona {
-    color: #38bdf8;
+    color: #dc0303;
     font-size: 12px;
     font-weight: bold;
+    font-family: monospace;
 }
 
 .sliderZona {
     width: 100%;
-    accent-color: #38bdf8;
+    accent-color: #dc0303;
     cursor: pointer;
 }
 
 .filaBotonesZona {
     display: flex;
-    gap: 8px;
+    gap: 6px;
 }
 
 .btnSecundarioZona {
     flex: 1;
-    padding: 8px 10px;
-    background: #1e293b;
-    border: 1px solid #475569;
-    border-radius: 8px;
-    color: #f1f5f9;
-    font-family: inherit;
-    font-size: 12px;
-    font-weight: 600;
+    background-color: #1a1a1a;
+    border: 1px solid #2A2A2A;
+    border-radius: 4px;
+    padding: 7px 4px;
+    color: #ffffff;
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: bold;
     cursor: pointer;
+    text-align: center;
     transition: all 0.2s ease;
 }
 
 .btnSecundarioZona:hover {
-    border-color: #38bdf8;
-    background: #273549;
+    border-color: #dc0303;
+    background-color: rgba(220, 3, 3, 0.1);
 }
 
 .btnBuscarZona {
     width: 100%;
-    padding: 10px 0;
-    background: #f1f5f9;
+    background-color: #dc0303;
     border: none;
-    border-radius: 8px;
-    color: #0f172a;
-    font-family: inherit;
+    color: #ffffff;
+    padding: 8px 0;
+    border-radius: 4px;
+    font-family: monospace;
     font-size: 12px;
-    font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s;
 }
 
 .btnBuscarZona:hover {
-    background: #ffffff;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    background-color: #a80202;
 }
 
 .btnBuscarZona:disabled {
-    opacity: 0.5;
+    background-color: #555555;
     cursor: not-allowed;
 }
 
@@ -743,6 +679,7 @@ html, body {
     text-align: center;
     min-height: 14px;
     color: #B3B3B3;
+    font-family: monospace;
 }
 
 #contenedorRutasZona {
@@ -752,7 +689,7 @@ html, body {
 #listaRutasZona {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     margin-top: 6px;
 }
 
@@ -762,12 +699,12 @@ html, body {
     gap: 4px;
     width: 100%;
     text-align: left;
-    padding: 9px 12px;
-    background: #f1f5f9;
-    border-radius: 10px;
-    border: 1px solid transparent;
-    border-left-width: 6px !important;
-    color: #0f172a;
+    padding: 8px 10px;
+    background-color: #222222;
+    border-radius: 6px;
+    border: 1px solid #444444;
+    border-left-width: 5px !important;
+    color: #ffffff;
     font-family: monospace;
     cursor: pointer;
     box-sizing: border-box;
@@ -775,15 +712,13 @@ html, body {
 }
 
 .cardRutaZona:hover {
-    background: #ffffff;
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
-    transform: translateY(-1px);
+    background-color: #303030;
+    border-color: #555555;
 }
 
 .cardRutaZona.seleccionada {
-    background: #ffffff;
-    border-color: #38bdf8;
-    box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+    border-color: #dc0303;
+    background-color: rgba(220, 3, 3, 0.15);
 }
 
 .filaDatoZona {
@@ -794,23 +729,23 @@ html, body {
 }
 
 .lblRutaZona {
-    font-weight: 800;
-    color: #475569;
+    font-weight: bold;
+    color: #888888;
     font-size: 10px;
     letter-spacing: 0.5px;
 }
 
 .valRutaZona {
-    font-weight: 700;
-    color: #0f172a;
+    font-weight: bold;
+    color: #ffffff;
     font-size: 11px;
 }
 
 .metaRutaZona {
     font-size: 10px;
-    color: #64748b;
+    color: #B3B3B3;
     margin-top: 2px;
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid #333333;
     padding-top: 4px;
     display: flex;
     gap: 4px;

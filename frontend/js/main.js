@@ -20,9 +20,7 @@ import {
     obtenerHora24,
     mostrarEstadoHistorico,
     alternarModoHistorico,
-    actualizarVisibilidadTiempoReal,
-    volverARecorridoEnVivo,
-    abrirHistoricos
+    actualizarVisibilidadTiempoReal
 } from './historico/calendario.js';
 import { initMap } from './mapa-vivo.js';
 import {
@@ -37,21 +35,6 @@ if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.integrante) {
 
 function initHistoricos() {
     initFiltroZona();
-
-    const btnCerrarMenu = document.getElementById('btnCerrarMenu');
-    if (btnCerrarMenu) {
-        btnCerrarMenu.addEventListener('click', volverARecorridoEnVivo);
-    }
-
-    const btnModoTiempoReal = document.getElementById('btnModoTiempoReal');
-    if (btnModoTiempoReal) {
-        btnModoTiempoReal.addEventListener('click', volverARecorridoEnVivo);
-    }
-
-    const btnModoHistoricos = document.getElementById('btnModoHistoricos');
-    if (btnModoHistoricos) {
-        btnModoHistoricos.addEventListener('click', abrirHistoricos);
-    }
 
     const btnFiltroFecha = document.getElementById('btnFiltroFecha');
     const btnFiltroZona = document.getElementById('btnFiltroZona');
