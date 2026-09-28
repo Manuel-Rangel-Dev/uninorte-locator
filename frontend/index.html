@@ -97,6 +97,85 @@
 
         <div id="estadoHistorico"></div>
 
+        <!-- =========================================================
+     SELECTOR Y REPRODUCTOR DE RECORRIDOS HISTÓRICOS
+     ========================================================= -->
+
+        <div id="selectorRecorridos" style="display: none;">
+
+            <div class="tituloRecorridos">
+                RECORRIDOS ENCONTRADOS
+            </div>
+
+            <div id="listaRecorridos"></div>
+
+        </div>
+
+
+        <div id="reproductorHistorico" style="display: none;">
+
+            <div class="infoReproduccion">
+
+                <div id="infoRecorridoSeleccionado">
+                    Recorrido --
+                </div>
+
+                <div id="fechaHoraReproduccion">
+                    --/--/---- --:--:--
+                </div>
+
+            </div>
+
+
+            <!-- Slider -->
+            <div class="contenedorSlider">
+
+                <span id="tiempoInicioRecorrido">--:--</span>
+
+                <input
+                    type="range"
+                    id="sliderRecorrido"
+                    min="0"
+                    max="0"
+                    value="0"
+                    step="1"
+                >
+
+                <span id="tiempoFinRecorrido">--:--</span>
+
+            </div>
+
+
+            <!-- Controles -->
+            <div class="controlesReproduccion">
+
+                <button
+                    id="btnPlayRecorrido"
+                    type="button"
+                >
+                    ▶
+                </button>
+
+                <button
+                    id="btnReiniciarRecorrido"
+                    type="button"
+                >
+                    ↺
+                </button>
+
+                <select id="velocidadRecorrido">
+
+                    <option value="1000">1x</option>
+                    <option value="500">2x</option>
+                    <option value="250">4x</option>
+                    <option value="100">10x</option>
+
+                </select>
+
+            </div>
+
+        </div>
+
         <div class="accionesHistoricos">
             <button id="btnVerRecorrido" type="button">Ver recorrido</button>
         </div>
@@ -107,6 +186,6 @@
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
     <script src="config.js"></script>
-    <script src="script.js"></script>
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>
