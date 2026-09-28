@@ -21,15 +21,64 @@ import {
     mostrarEstadoHistorico,
     alternarModoHistorico,
     actualizarVisibilidadTiempoReal,
-    limpiarRecorridoHistorico
+    volverARecorridoEnVivo,
+    abrirHistoricos
 } from './historico/calendario.js';
 import { initMap } from './mapa-vivo.js';
+import {
+    initFiltroZona,
+    activarModoSeleccionCentro,
+    desactivarModoSeleccionCentro
+} from './historico/filtro-zona.js';
 
 if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.integrante) {
     document.title = APP_CONFIG.integrante;
 }
 
 function initHistoricos() {
+    initFiltroZona();
+
+    const btnCerrarMenu = document.getElementById('btnCerrarMenu');
+    if (btnCerrarMenu) {
+        btnCerrarMenu.addEventListener('click', volverARecorridoEnVivo);
+    }
+
+    const btnModoTiempoReal = document.getElementById('btnModoTiempoReal');
+    if (btnModoTiempoReal) {
+        btnModoTiempoReal.addEventListener('click', volverARecorridoEnVivo);
+    }
+
+    const btnModoHistoricos = document.getElementById('btnModoHistoricos');
+    if (btnModoHistoricos) {
+        btnModoHistoricos.addEventListener('click', abrirHistoricos);
+    }
+
+    const btnFiltroFecha = document.getElementById('btnFiltroFecha');
+    const btnFiltroZona = document.getElementById('btnFiltroZona');
+    const vistaFiltroFecha = document.getElementById('vistaFiltroFecha');
+    const vistaFiltroZona = document.getElementById('vistaFiltroZona');
+
+    if (btnFiltroFecha && btnFiltroZona) {
+        btnFiltroFecha.addEventListener('click', () => {
+            estado.tipoFiltroHistorico = 'fecha';
+            btnFiltroFecha.classList.add('activo');
+            btnFiltroZona.classList.remove('activo');
+            if (vistaFiltroFecha) vistaFiltroFecha.style.display = 'block';
+            if (vistaFiltroZona) vistaFiltroZona.style.display = 'none';
+            desactivarModoSeleccionCentro();
+        });
+
+        btnFiltroZona.addEventListener('click', () => {
+            estado.tipoFiltroHistorico = 'zona';
+            btnFiltroZona.classList.add('activo');
+            btnFiltroFecha.classList.remove('activo');
+            if (vistaFiltroFecha) vistaFiltroFecha.style.display = 'none';
+            if (vistaFiltroZona) vistaFiltroZona.style.display = 'block';
+            if (!estado.centroZona) {
+                activarModoSeleccionCentro();
+            }
+        });
+    }
     const btnPlayRecorrido = document.getElementById('btnPlayRecorrido');
     if (btnPlayRecorrido) {
         btnPlayRecorrido.addEventListener('click', () => {
@@ -122,6 +171,7 @@ function initHistoricos() {
                 throw new Error(errData && errData.error ? errData.error : `HTTP ${respuesta.status}`);
             }
             const puntos = await respuesta.json();
+            estado.cachePuntosHistoricos = puntos;
 
             if (!puntos || puntos.length === 0) {
                 limpiarRecorridoHistorico();

@@ -9,3 +9,6 @@ export const ZOOM_CENTRADO = 17; // Nivel de zoom específico al centrar en el v
 export const UMBRAL_SEGMENTACION_MINUTOS = 30; // Diferencia mínima para considerar un nuevo recorrido (30 min)
 export const UMBRAL_SEGMENTACION_METROS = 2000; // Salto de distancia para considerar un nuevo recorrido (2 km)
 export const HISTORICO_MIN_ANIO = 2020;
+export const RADIO_DEFAULT_METROS = 300;
+export const RADIO_MIN_METROS = 50;
+export const RADIO_MAX_METROS = 3000;

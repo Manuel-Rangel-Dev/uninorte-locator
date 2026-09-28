@@ -37,3 +37,50 @@ export function formatearDistancia(metros) {
     }
     return `${(metros / 1000).toFixed(2)} km`;
 }
+
+export function formatearRadio(metros) {
+    if (metros < 1000) {
+        return `${Math.round(metros)} M`;
+    }
+    return `${(metros / 1000).toFixed(1)} KM`;
+}
+
+export function formatearFechaHoraCard(fechaStr, horaStr) {
+    if (!fechaStr) return '--';
+    const partesFecha = fechaStr.split('-');
+    let fechaFmt = fechaStr;
+    if (partesFecha.length === 3) {
+        const [yyyy, mm, dd] = partesFecha;
+        const yy = yyyy.slice(-2);
+        fechaFmt = `${dd}/${mm}/${yy}`;
+    }
+    const horaFmt = horaStr ? horaStr.slice(0, 5) : '';
+    return horaFmt ? `${fechaFmt} - ${horaFmt}` : fechaFmt;
+}
+
+export function distanciaSegmentoAPunto(p1, p2, centro) {
+    const latRad = (centro.lat * Math.PI) / 180;
+    const mPorGradoLat = 111132.92;
+    const mPorGradoLng = 111412.84 * Math.cos(latRad);
+
+    const x1 = (p1.lng - centro.lng) * mPorGradoLng;
+    const y1 = (p1.lat - centro.lat) * mPorGradoLat;
+    const x2 = (p2.lng - centro.lng) * mPorGradoLng;
+    const y2 = (p2.lat - centro.lat) * mPorGradoLat;
+
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const lenSq = dx * dx + dy * dy;
+
+    if (lenSq === 0) {
+        return Math.hypot(x1, y1);
+    }
+
+    let t = -(x1 * dx + y1 * dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+
+    const projX = x1 + t * dx;
+    const projY = y1 + t * dy;
+
+    return Math.hypot(projX, projY);
+}

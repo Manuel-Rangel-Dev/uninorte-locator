@@ -28,5 +28,15 @@ export const estado = {
     fechaCalendario: new Date(),
     fechaDesde: new Date(),
     fechaHasta: new Date(),
-    modoSeleccion: 'desde'
+    modoSeleccion: 'desde',
+
+    // Históricos: caché y filtro por zona
+    cachePuntosHistoricos: null,
+    tipoFiltroHistorico: 'fecha',
+    centroZona: null,
+    radioZona: 300,
+    circuloZona: null,
+    marcadorCentroZona: null,
+    modoSeleccionCentro: false,
+    rutasZona: []
 };

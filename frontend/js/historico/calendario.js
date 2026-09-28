@@ -214,6 +214,33 @@ export function limpiarRecorridoHistorico() {
         estado.marcadorReproduccion = null;
     }
 
+    if (estado.circuloZona && estado.mapa) {
+        estado.mapa.removeLayer(estado.circuloZona);
+        estado.circuloZona = null;
+    }
+    if (estado.marcadorCentroZona && estado.mapa) {
+        estado.mapa.removeLayer(estado.marcadorCentroZona);
+        estado.marcadorCentroZona = null;
+    }
+    estado.centroZona = null;
+    estado.modoSeleccionCentro = false;
+    if (estado.mapa && estado.mapa.getContainer()) {
+        estado.mapa.getContainer().style.cursor = '';
+    }
+
+    const contenedorRutasZona = document.getElementById('contenedorRutasZona');
+    if (contenedorRutasZona) {
+        contenedorRutasZona.style.display = 'none';
+    }
+    const listaRutasZona = document.getElementById('listaRutasZona');
+    if (listaRutasZona) {
+        listaRutasZona.innerHTML = '';
+    }
+    const estadoZona = document.getElementById('estadoZona');
+    if (estadoZona) {
+        estadoZona.textContent = '';
+    }
+
     estado.recorridosHistoricos = [];
     estado.recorridoSeleccionado = null;
     estado.indiceReproduccion = 0;
