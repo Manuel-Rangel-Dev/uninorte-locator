@@ -282,6 +282,17 @@ export function limpiarZona() {
     desactivarModoSeleccionCentro();
 }
 
+export function registrarClickMapaZona() {
+    if (estado.mapa && !estado.mapa._listenerZonaRegistrado) {
+        estado.mapa.on('click', (e) => {
+            if (estado.tipoFiltroHistorico === 'zona' && (estado.modoSeleccionCentro || !estado.centroZona)) {
+                establecerCentroZona(e.latlng);
+            }
+        });
+        estado.mapa._listenerZonaRegistrado = true;
+    }
+}
+
 export function initFiltroZona() {
     const slider = document.getElementById('sliderRadioZona');
     if (slider) {
@@ -312,11 +323,5 @@ export function initFiltroZona() {
         });
     }
 
-    if (estado.mapa) {
-        estado.mapa.on('click', (e) => {
-            if (estado.tipoFiltroHistorico === 'zona' && (estado.modoSeleccionCentro || !estado.centroZona)) {
-                establecerCentroZona(e.latlng);
-            }
-        });
-    }
+    registrarClickMapaZona();
 }

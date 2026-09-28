@@ -262,6 +262,6 @@ export function limpiarRecorridoHistorico() {
     const vistaFiltroZona = document.getElementById('vistaFiltroZona');
     if (btnFiltroFecha) btnFiltroFecha.classList.add('activo');
     if (btnFiltroZona) btnFiltroZona.classList.remove('activo');
-    if (vistaFiltroFecha) vistaFiltroFecha.style.display = 'block';
+    if (vistaFiltroFecha) vistaFiltroFecha.style.display = 'flex';
     if (vistaFiltroZona) vistaFiltroZona.style.display = 'none';
 }

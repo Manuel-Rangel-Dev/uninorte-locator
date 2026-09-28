@@ -1,16 +1,16 @@
 // =============================================================================
 // PUNTO DE ENTRADA: EVENTOS DE HISTÓRICOS Y BOOTSTRAP DE LA APP
 // =============================================================================
-import { API_BASE } from './constantes.js';
-import { estado } from './estado.js';
-import { formatearFechaISO } from './utilidades.js';
-import { segmentarRecorridos } from './historico/segmentacion.js';
+import { API_BASE } from './constantes.js?v=5';
+import { estado } from './estado.js?v=5';
+import { formatearFechaISO } from './utilidades.js?v=5';
+import { segmentarRecorridos } from './historico/segmentacion.js?v=5';
 import {
     mostrarListaRecorridos,
     iniciarReproduccion,
     detenerReproduccion,
     actualizarPuntoReproduccion
-} from './historico/lista-slidebar.js';
+} from './historico/lista-slidebar.js?v=5';
 import {
     renderCalendario,
     actualizarPillsFecha,
@@ -21,13 +21,14 @@ import {
     mostrarEstadoHistorico,
     alternarModoHistorico,
     actualizarVisibilidadTiempoReal
-} from './historico/calendario.js';
-import { initMap } from './mapa-vivo.js';
+} from './historico/calendario.js?v=5';
+import { initMap } from './mapa-vivo.js?v=5';
 import {
     initFiltroZona,
     activarModoSeleccionCentro,
-    desactivarModoSeleccionCentro
-} from './historico/filtro-zona.js';
+    desactivarModoSeleccionCentro,
+    registrarClickMapaZona
+} from './historico/filtro-zona.js?v=5';
 
 if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.integrante) {
     document.title = APP_CONFIG.integrante;
@@ -43,20 +44,23 @@ function initHistoricos() {
 
     if (btnFiltroFecha && btnFiltroZona) {
         btnFiltroFecha.addEventListener('click', () => {
+            console.log('[Locator] Modo: Filtrar por fecha');
             estado.tipoFiltroHistorico = 'fecha';
             btnFiltroFecha.classList.add('activo');
             btnFiltroZona.classList.remove('activo');
-            if (vistaFiltroFecha) vistaFiltroFecha.style.display = 'block';
+            if (vistaFiltroFecha) vistaFiltroFecha.style.display = 'flex';
             if (vistaFiltroZona) vistaFiltroZona.style.display = 'none';
             desactivarModoSeleccionCentro();
         });
 
         btnFiltroZona.addEventListener('click', () => {
+            console.log('[Locator] Modo: Filtrar por zona');
             estado.tipoFiltroHistorico = 'zona';
             btnFiltroZona.classList.add('activo');
             btnFiltroFecha.classList.remove('activo');
             if (vistaFiltroFecha) vistaFiltroFecha.style.display = 'none';
-            if (vistaFiltroZona) vistaFiltroZona.style.display = 'block';
+            if (vistaFiltroZona) vistaFiltroZona.style.display = 'flex';
+            registrarClickMapaZona();
             if (!estado.centroZona) {
                 activarModoSeleccionCentro();
             }
@@ -217,7 +221,22 @@ function initHistoricos() {
     renderCalendario();
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-    await initMap();
-    initHistoricos();
-});
+async function bootstrap() {
+    console.log('[Locator] Inicializando aplicación (v5)...');
+    try {
+        await initMap();
+    } catch (err) {
+        console.error('[Locator] Error al inicializar el mapa:', err);
+    }
+    try {
+        initHistoricos();
+    } catch (err) {
+        console.error('[Locator] Error al inicializar históricos:', err);
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootstrap);
+} else {
+    bootstrap();
+}
