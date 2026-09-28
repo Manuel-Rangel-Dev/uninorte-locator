@@ -1,6 +1,11 @@
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
 html, body {
     margin: 0;
     padding: 0;
+    width: 100%;
     height: 100%;
     overflow: hidden;
     font-family: monospace;
@@ -113,8 +118,10 @@ html, body {
     position: absolute;
     top: 58px;
     right: 12px;
-    max-height: calc(100vh - 78px);  /* 👈 nuevo: límite de altura */
-    overflow-y: auto;  
+    max-height: calc(100vh - 78px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
     z-index: 1000;
     background-color: rgba(18, 18, 18, 0.95);
     border: 1px solid #2A2A2A;
@@ -410,14 +417,15 @@ html, body {
 }
 
 .diaFuturo {
-    opacity: 0.35;
-    cursor: not-allowed;
-    background-color: #2a2a2a;
-    color: #777;
+    opacity: 0.35 !important;
+    cursor: not-allowed !important;
+    background-color: #2a2a2a !important;
+    color: #777777 !important;
+    pointer-events: none;
 }
 
 .diaFuturo:hover {
-    background-color: #2a2a2a;
+    background-color: #2a2a2a !important;
 }
 
 /* ============================================================
@@ -450,6 +458,8 @@ html, body {
     background: #222;
     color: white;
     cursor: pointer;
+    font-family: inherit;
+    box-sizing: border-box;
 }
 
 .itemRecorrido:hover {
