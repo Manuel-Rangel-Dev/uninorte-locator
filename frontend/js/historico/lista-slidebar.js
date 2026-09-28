@@ -87,6 +87,10 @@ export function seleccionarRecorrido(indice) {
         estado.lineaRecorridoSeleccionado = null;
     }
 
+    // Limpiar marcadores de inicio y fin previos si existían
+    estado.marcadoresHistoricos.forEach(marcador => estado.mapa.removeLayer(marcador));
+    estado.marcadoresHistoricos = [];
+
     const coordenadas = estado.recorridoSeleccionado.map(punto => [punto.lat, punto.lng]);
 
     estado.lineaRecorridoSeleccionado = L.polyline(coordenadas, {
@@ -94,6 +98,44 @@ export function seleccionarRecorrido(indice) {
         weight: 5,
         opacity: 0.9
     }).addTo(estado.mapa);
+
+    const numero = indice + 1;
+    const puntoInicio = estado.recorridoSeleccionado[0];
+    const puntoFin = estado.recorridoSeleccionado[estado.recorridoSeleccionado.length - 1];
+
+    const distInicioFin = L.latLng(puntoInicio.lat, puntoInicio.lng).distanceTo(L.latLng(puntoFin.lat, puntoFin.lng));
+    const direccionFin = distInicioFin < 30 ? 'bottom' : 'top';
+    const offsetFin = distInicioFin < 30 ? [0, 5] : [0, -28];
+
+    // Pin verde de inicio recorrido
+    const marcadorInicio = L.marker([puntoInicio.lat, puntoInicio.lng], {
+        icon: crearIconoInicio(numero),
+        zIndexOffset: 500
+    })
+        .addTo(estado.mapa)
+        .bindTooltip(`Inicio recorrido ${numero}`, {
+            permanent: true,
+            direction: 'top',
+            offset: [0, -28],
+            className: 'tooltipRecorrido tooltipInicio'
+        })
+        .bindPopup(`Inicio recorrido ${numero}${puntoInicio.fecha ? ' — ' + puntoInicio.fecha + ' ' + (puntoInicio.hora || '') : ''}`);
+
+    // Pin rojo de fin recorrido
+    const marcadorFin = L.marker([puntoFin.lat, puntoFin.lng], {
+        icon: crearIconoFin(numero),
+        zIndexOffset: 500
+    })
+        .addTo(estado.mapa)
+        .bindTooltip(`Fin recorrido ${numero}`, {
+            permanent: true,
+            direction: direccionFin,
+            offset: offsetFin,
+            className: 'tooltipRecorrido tooltipFin'
+        })
+        .bindPopup(`Fin recorrido ${numero}${puntoFin.fecha ? ' — ' + puntoFin.fecha + ' ' + (puntoFin.hora || '') : ''}`);
+
+    estado.marcadoresHistoricos.push(marcadorInicio, marcadorFin);
 
     const slider = document.getElementById('sliderRecorrido');
     if (slider) {
@@ -124,7 +166,7 @@ export function seleccionarRecorrido(indice) {
 
     if (coordenadas.length > 0) {
         estado.mapa.fitBounds(estado.lineaRecorridoSeleccionado.getBounds(), {
-            padding: [40, 40],
+            padding: [60, 50],
             maxZoom: 17
         });
     }
