@@ -750,3 +750,8 @@ html, body {
     display: flex;
     gap: 4px;
 }
+
+.marcador-centro-zona {
+    background: transparent !important;
+    border: none !important;
+}

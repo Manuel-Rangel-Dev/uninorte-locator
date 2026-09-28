@@ -59,8 +59,8 @@ export function establecerCentroZona(latlng) {
         estado.marcadorCentroZona = L.marker([latlng.lat, latlng.lng], {
             draggable: true,
             icon: L.divIcon({
-                className: '',
-                html: `<div style="width:16px;height:16px;border-radius:50%;background:#dc0303;border:3px solid #ffffff;box-shadow:0 0 10px rgba(220,3,3,0.8);transform:translate(-5px,-5px);"></div>`,
+                className: 'marcador-centro-zona',
+                html: `<div style="width:16px;height:16px;border-radius:50%;background:#dc0303;border:2px solid #ffffff;box-shadow:0 0 6px rgba(0,0,0,0.6), 0 0 10px rgba(220,3,3,0.8);box-sizing:border-box;"></div>`,
                 iconSize: [16, 16],
                 iconAnchor: [8, 8]
             })
