@@ -25,6 +25,7 @@ export function activarModoSeleccionCentro() {
         instruccion.textContent = 'Haz clic en el mapa para colocar el centro de búsqueda.';
         instruccion.style.color = '#dc0303';
     }
+    registrarClickMapaZona();
 }
 
 export function desactivarModoSeleccionCentro() {
@@ -35,11 +36,14 @@ export function desactivarModoSeleccionCentro() {
 }
 
 export function establecerCentroZona(latlng) {
+    console.log('[Locator] Estableciendo centro de zona en:', latlng);
     estado.centroZona = { lat: latlng.lat, lng: latlng.lng };
+
+    const radio = estado.radioZona || 300;
 
     if (!estado.circuloZona) {
         estado.circuloZona = L.circle([latlng.lat, latlng.lng], {
-            radius: estado.radioZona,
+            radius: radio,
             color: '#dc0303',
             weight: 2,
             fillColor: '#dc0303',
@@ -48,7 +52,7 @@ export function establecerCentroZona(latlng) {
         }).addTo(estado.mapa);
     } else {
         estado.circuloZona.setLatLng(latlng);
-        estado.circuloZona.setRadius(estado.radioZona);
+        estado.circuloZona.setRadius(radio);
     }
 
     if (!estado.marcadorCentroZona) {
@@ -285,7 +289,12 @@ export function limpiarZona() {
 export function registrarClickMapaZona() {
     if (estado.mapa && !estado.mapa._listenerZonaRegistrado) {
         estado.mapa.on('click', (e) => {
-            if (estado.tipoFiltroHistorico === 'zona' && (estado.modoSeleccionCentro || !estado.centroZona)) {
+            console.log('[Locator] Clic en mapa detectado:', e.latlng);
+            const vistaZonaVisible = document.getElementById('vistaFiltroZona') &&
+                document.getElementById('vistaFiltroZona').style.display !== 'none';
+            const enModoZona = estado.tipoFiltroHistorico === 'zona' || vistaZonaVisible;
+
+            if (enModoZona && (estado.modoSeleccionCentro || !estado.centroZona)) {
                 establecerCentroZona(e.latlng);
             }
         });

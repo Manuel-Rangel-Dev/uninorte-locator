@@ -1,16 +1,16 @@
 // =============================================================================
 // PUNTO DE ENTRADA: EVENTOS DE HISTÓRICOS Y BOOTSTRAP DE LA APP
 // =============================================================================
-import { API_BASE } from './constantes.js?v=5';
-import { estado } from './estado.js?v=5';
-import { formatearFechaISO } from './utilidades.js?v=5';
-import { segmentarRecorridos } from './historico/segmentacion.js?v=5';
+import { API_BASE } from './constantes.js';
+import { estado } from './estado.js';
+import { formatearFechaISO } from './utilidades.js';
+import { segmentarRecorridos } from './historico/segmentacion.js';
 import {
     mostrarListaRecorridos,
     iniciarReproduccion,
     detenerReproduccion,
     actualizarPuntoReproduccion
-} from './historico/lista-slidebar.js?v=5';
+} from './historico/lista-slidebar.js';
 import {
     renderCalendario,
     actualizarPillsFecha,
@@ -21,14 +21,14 @@ import {
     mostrarEstadoHistorico,
     alternarModoHistorico,
     actualizarVisibilidadTiempoReal
-} from './historico/calendario.js?v=5';
-import { initMap } from './mapa-vivo.js?v=5';
+} from './historico/calendario.js';
+import { initMap } from './mapa-vivo.js';
 import {
     initFiltroZona,
     activarModoSeleccionCentro,
     desactivarModoSeleccionCentro,
     registrarClickMapaZona
-} from './historico/filtro-zona.js?v=5';
+} from './historico/filtro-zona.js';
 
 if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.integrante) {
     document.title = APP_CONFIG.integrante;
@@ -222,7 +222,7 @@ function initHistoricos() {
 }
 
 async function bootstrap() {
-    console.log('[Locator] Inicializando aplicación (v5)...');
+    console.log('[Locator] Inicializando aplicación (v6)...');
     try {
         await initMap();
     } catch (err) {
