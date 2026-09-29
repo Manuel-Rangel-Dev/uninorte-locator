@@ -1,14 +1,6 @@
 // =============================================================================
 // MAPA EN VIVO: INICIALIZACIÓN Y TELEMETRÍA EN TIEMPO REAL
 // =============================================================================
-// Este archivo maneja todo lo relacionado con el mapa en vivo:
-// - Crear el mapa base con OpenStreetMap
-// - Obtener la ubicación actual del vehículo desde el backend
-// - Actualizar el marcador en el mapa cada 5 segundos
-// - Dibujar la ruta en vivo (línea roja)
-// - Manejar el modo de seguimiento automático del mapa
-// - Actualizar el panel de información (LAT, LONG, FECHA, HORA)
-// =============================================================================
 
 import { API_BASE, INTERVALO_MS, CENTRO_DEFAULT, ZOOM_CENTRADO } from './constantes.js';
 import { redondearCoord } from './utilidades.js';
@@ -23,12 +15,6 @@ import { estado } from './estado.js';
 // 1. Toma un nombre de campo (ej: 'lat', 'lng', 'fecha', 'hora')
 // 2. Busca ese dato en el backend (/api/{nombreCampo})
 // 3. Inserta el valor en el elemento HTML correspondiente
-// 
-// Ejemplo:
-//   refrescarCampo('lat', 'valorLat')
-//   → Hace fetch a /api/lat
-//   → Obtiene respuesta: { lat: 11.0195 }
-//   → Actualiza <span id="valorLat">11.0195</span>
 // =============================================================================
 export async function refrescarCampo(nombreCampo, idElemento) {
     // Busca el elemento HTML donde se mostrará el valor
@@ -68,19 +54,7 @@ export async function refrescarCampo(nombreCampo, idElemento) {
 // =============================================================================
 // FUNCIÓN: actualizarMarcador
 // =============================================================================
-// Propósito: Actualizar la posición del vehículo cada 5 segundos
-// 
-// Esta función es la "función del corazón" del mapa en vivo. Se ejecuta cada
-// 5 segundos (INTERVALO_MS) y hace lo siguiente:
-// 1. Obtiene lat, lng, fecha y hora actuales del backend
-// 2. Valida que los datos sean correctos
-// 3. Redondea las coordenadas para filtrar ruido GPS
-// 4. Mueve el marcador (punto rojo) a la nueva posición
-// 5. Centra el mapa si es la primera vez o está activo el tracking
-// 6. Evita duplicar puntos si la posición no cambió
-// 7. Dibuja la línea del recorrido en vivo
-// 8. Oculta la ruta en vivo si se está viendo un histórico
-// =============================================================================
+
 export async function actualizarMarcador() {
     // ─────────────────────────────────────────────────────────────────────
     // PASO 1: Obtener datos del backend
