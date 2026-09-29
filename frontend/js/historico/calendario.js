@@ -256,6 +256,7 @@ export function limpiarRecorridoHistorico() {
     mostrarEstadoHistorico('');
 
     estado.tipoFiltroHistorico = 'fecha';
+    estado.submodoFiltroZona = 'mapa';
     const btnFiltroFecha = document.getElementById('btnFiltroFecha');
     const btnFiltroZona = document.getElementById('btnFiltroZona');
     const vistaFiltroFecha = document.getElementById('vistaFiltroFecha');
@@ -264,4 +265,21 @@ export function limpiarRecorridoHistorico() {
     if (btnFiltroZona) btnFiltroZona.classList.remove('activo');
     if (vistaFiltroFecha) vistaFiltroFecha.style.display = 'flex';
     if (vistaFiltroZona) vistaFiltroZona.style.display = 'none';
+
+    const contenedorBusqueda = document.getElementById('contenedorBusquedaLugar');
+    if (contenedorBusqueda) contenedorBusqueda.style.display = 'none';
+    const inputBusqueda = document.getElementById('inputBusquedaLugar');
+    if (inputBusqueda) inputBusqueda.value = '';
+    const sugerencias = document.getElementById('sugerenciasBusquedaLugar');
+    if (sugerencias) {
+        sugerencias.style.display = 'none';
+        sugerencias.innerHTML = '';
+    }
+    const btnLimpiarBusqueda = document.getElementById('btnLimpiarBusquedaLugar');
+    if (btnLimpiarBusqueda) btnLimpiarBusqueda.style.display = 'none';
+
+    const btnSubmodoMapa = document.getElementById('btnSubmodoMapa');
+    const btnSubmodoLugar = document.getElementById('btnSubmodoLugar');
+    if (btnSubmodoMapa) btnSubmodoMapa.classList.add('activo');
+    if (btnSubmodoLugar) btnSubmodoLugar.classList.remove('activo');
 }

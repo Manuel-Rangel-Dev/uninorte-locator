@@ -2,7 +2,7 @@
 // HISTÓRICOS: FILTRO POR ZONA GEOGRÁFICA
 // =============================================================================
 import { estado } from '../estado.js';
-import { API_BASE, RADIO_DEFAULT_METROS } from '../constantes.js';
+import { API_BASE, RADIO_DEFAULT_METROS, NOMINATIM_URL } from '../constantes.js';
 import {
     formatearRadio,
     formatearFechaHoraCard,
@@ -14,6 +14,10 @@ import { seleccionarRecorrido, detenerReproduccion } from './lista-slidebar.js';
 import { actualizarVisibilidadTiempoReal } from './calendario.js';
 
 const COLORES_BARRA = ['#ec4899', '#06b6d4', '#f59e0b', '#10b981', '#8b5cf6', '#3b82f6'];
+
+let debounceTimer = null;
+let indiceSugerenciaSeleccionada = -1;
+let sugerenciasActuales = [];
 
 export function activarModoSeleccionCentro() {
     estado.modoSeleccionCentro = true;
@@ -35,7 +39,7 @@ export function desactivarModoSeleccionCentro() {
     }
 }
 
-export function establecerCentroZona(latlng) {
+export function establecerCentroZona(latlng, centrarMapa = false) {
     console.log('[Locator] Estableciendo centro de zona en:', latlng);
     estado.centroZona = { lat: latlng.lat, lng: latlng.lng };
 
@@ -75,6 +79,10 @@ export function establecerCentroZona(latlng) {
         });
     } else {
         estado.marcadorCentroZona.setLatLng(latlng);
+    }
+
+    if (centrarMapa && estado.mapa) {
+        estado.mapa.setView([latlng.lat, latlng.lng], 15);
     }
 
     const instruccion = document.getElementById('instruccionZona');
@@ -277,13 +285,26 @@ export function limpiarZona() {
     const reproductor = document.getElementById('reproductorHistorico');
     if (reproductor) reproductor.style.display = 'none';
 
+    const inputBusqueda = document.getElementById('inputBusquedaLugar');
+    if (inputBusqueda) inputBusqueda.value = '';
+    const btnLimpiarBusqueda = document.getElementById('btnLimpiarBusquedaLugar');
+    if (btnLimpiarBusqueda) btnLimpiarBusqueda.style.display = 'none';
+    cerrarSugerencias();
+
     const instruccion = document.getElementById('instruccionZona');
     if (instruccion) {
-        instruccion.textContent = 'Haz clic en el mapa para colocar el centro de búsqueda.';
-        instruccion.style.color = '#B3B3B3';
+        if (estado.submodoFiltroZona === 'lugar') {
+            instruccion.textContent = 'Usa la barra superior para buscar un lugar o dirección.';
+            instruccion.style.color = '#B3B3B3';
+            desactivarModoSeleccionCentro();
+        } else {
+            instruccion.textContent = 'Haz clic en el mapa para colocar el centro de búsqueda.';
+            instruccion.style.color = '#B3B3B3';
+            activarModoSeleccionCentro();
+        }
+    } else {
+        desactivarModoSeleccionCentro();
     }
-
-    desactivarModoSeleccionCentro();
 }
 
 export function registrarClickMapaZona() {
@@ -294,12 +315,233 @@ export function registrarClickMapaZona() {
                 document.getElementById('vistaFiltroZona').style.display !== 'none';
             const enModoZona = estado.tipoFiltroHistorico === 'zona' || vistaZonaVisible;
 
-            if (enModoZona && (estado.modoSeleccionCentro || !estado.centroZona)) {
-                establecerCentroZona(e.latlng);
+            if (enModoZona) {
+                if (estado.submodoFiltroZona === 'mapa' && (estado.modoSeleccionCentro || !estado.centroZona)) {
+                    establecerCentroZona(e.latlng);
+                } else if (estado.submodoFiltroZona === 'lugar' && estado.modoSeleccionCentro) {
+                    establecerCentroZona(e.latlng);
+                }
             }
         });
         estado.mapa._listenerZonaRegistrado = true;
     }
+}
+
+export function mostrarBarraBusquedaLugar() {
+    const contenedor = document.getElementById('contenedorBusquedaLugar');
+    if (contenedor) {
+        contenedor.style.display = 'flex';
+        const input = document.getElementById('inputBusquedaLugar');
+        if (input) input.focus();
+    }
+}
+
+export function ocultarBarraBusquedaLugar() {
+    const contenedor = document.getElementById('contenedorBusquedaLugar');
+    if (contenedor) {
+        contenedor.style.display = 'none';
+    }
+    cerrarSugerencias();
+}
+
+function cerrarSugerencias() {
+    const sugerenciasEl = document.getElementById('sugerenciasBusquedaLugar');
+    if (sugerenciasEl) {
+        sugerenciasEl.style.display = 'none';
+        sugerenciasEl.innerHTML = '';
+    }
+    indiceSugerenciaSeleccionada = -1;
+    sugerenciasActuales = [];
+}
+
+export function cambiarSubmodoZona(nuevoSubmodo) {
+    estado.submodoFiltroZona = nuevoSubmodo;
+
+    const btnMapa = document.getElementById('btnSubmodoMapa');
+    const btnLugar = document.getElementById('btnSubmodoLugar');
+    const instruccion = document.getElementById('instruccionZona');
+
+    if (btnMapa) btnMapa.classList.toggle('activo', nuevoSubmodo === 'mapa');
+    if (btnLugar) btnLugar.classList.toggle('activo', nuevoSubmodo === 'lugar');
+
+    if (nuevoSubmodo === 'mapa') {
+        ocultarBarraBusquedaLugar();
+        if (!estado.centroZona) {
+            activarModoSeleccionCentro();
+        } else {
+            desactivarModoSeleccionCentro();
+            if (instruccion) {
+                instruccion.textContent = 'Centro colocado. Ajusta el radio y presiona “Buscar en esta zona”.';
+                instruccion.style.color = '#B3B3B3';
+            }
+        }
+    } else {
+        desactivarModoSeleccionCentro();
+        mostrarBarraBusquedaLugar();
+        if (instruccion) {
+            if (!estado.centroZona) {
+                instruccion.textContent = 'Usa la barra superior para buscar un lugar o dirección.';
+                instruccion.style.color = '#B3B3B3';
+            } else {
+                instruccion.textContent = 'Centro colocado. Ajusta el radio y presiona “Buscar en esta zona”.';
+                instruccion.style.color = '#B3B3B3';
+            }
+        }
+    }
+}
+
+async function buscarLugares(query) {
+    const spinner = document.getElementById('spinnerBusquedaLugar');
+    const sugerenciasEl = document.getElementById('sugerenciasBusquedaLugar');
+    if (!sugerenciasEl) return;
+
+    if (!query || query.trim().length < 3) {
+        cerrarSugerencias();
+        return;
+    }
+
+    if (spinner) spinner.style.display = 'block';
+
+    try {
+        const url = `${NOMINATIM_URL}?format=json&q=${encodeURIComponent(query.trim())}&limit=5&addressdetails=1`;
+        const res = await fetch(url, {
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const resultados = await res.json();
+
+        sugerenciasEl.innerHTML = '';
+        sugerenciasActuales = resultados;
+        indiceSugerenciaSeleccionada = -1;
+
+        if (!resultados || resultados.length === 0) {
+            sugerenciasEl.innerHTML = '<div class="mensajeSugerencia">No se encontraron resultados</div>';
+            sugerenciasEl.style.display = 'flex';
+            return;
+        }
+
+        resultados.forEach((item, idx) => {
+            const partes = item.display_name.split(',');
+            const titulo = partes[0].trim();
+            const subtitulo = partes.slice(1).join(',').trim();
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'itemSugerencia';
+            btn.dataset.index = idx;
+            btn.innerHTML = `
+                <span class="tituloSugerencia">${titulo}</span>
+                ${subtitulo ? `<span class="subtituloSugerencia">${subtitulo}</span>` : ''}
+            `;
+
+            btn.addEventListener('click', () => {
+                seleccionarSugerencia(item);
+            });
+
+            sugerenciasEl.appendChild(btn);
+        });
+
+        sugerenciasEl.style.display = 'flex';
+    } catch (err) {
+        console.error('Error al geocodificar:', err);
+        sugerenciasEl.innerHTML = '<div class="mensajeSugerencia">Error al buscar ubicación</div>';
+        sugerenciasEl.style.display = 'flex';
+    } finally {
+        if (spinner) spinner.style.display = 'none';
+    }
+}
+
+function seleccionarSugerencia(item) {
+    const input = document.getElementById('inputBusquedaLugar');
+    if (input) {
+        const partes = item.display_name.split(',');
+        input.value = partes.slice(0, 2).join(',').trim();
+    }
+    cerrarSugerencias();
+
+    const lat = parseFloat(item.lat);
+    const lng = parseFloat(item.lon);
+
+    if (!isNaN(lat) && !isNaN(lng)) {
+        establecerCentroZona({ lat, lng }, true);
+    }
+}
+
+function actualizarSeleccionVisualSugerencias(items) {
+    items.forEach((it, idx) => {
+        it.classList.toggle('activo', idx === indiceSugerenciaSeleccionada);
+        if (idx === indiceSugerenciaSeleccionada) {
+            it.scrollIntoView({ block: 'nearest' });
+        }
+    });
+}
+
+export function initBusquedaLugar() {
+    const input = document.getElementById('inputBusquedaLugar');
+    const btnLimpiar = document.getElementById('btnLimpiarBusquedaLugar');
+    const contenedor = document.getElementById('contenedorBusquedaLugar');
+    const sugerenciasEl = document.getElementById('sugerenciasBusquedaLugar');
+
+    if (!input) return;
+
+    input.addEventListener('input', () => {
+        const val = input.value;
+        if (btnLimpiar) btnLimpiar.style.display = val ? 'block' : 'none';
+
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            buscarLugares(val);
+        }, 350);
+    });
+
+    if (btnLimpiar) {
+        btnLimpiar.addEventListener('click', () => {
+            input.value = '';
+            btnLimpiar.style.display = 'none';
+            cerrarSugerencias();
+            input.focus();
+        });
+    }
+
+    input.addEventListener('keydown', (e) => {
+        const items = sugerenciasEl ? sugerenciasEl.querySelectorAll('.itemSugerencia') : [];
+        if (!items || items.length === 0) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (debounceTimer) clearTimeout(debounceTimer);
+                buscarLugares(input.value);
+            }
+            return;
+        }
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            indiceSugerenciaSeleccionada = (indiceSugerenciaSeleccionada + 1) % items.length;
+            actualizarSeleccionVisualSugerencias(items);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            indiceSugerenciaSeleccionada = (indiceSugerenciaSeleccionada - 1 + items.length) % items.length;
+            actualizarSeleccionVisualSugerencias(items);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (indiceSugerenciaSeleccionada >= 0 && sugerenciasActuales[indiceSugerenciaSeleccionada]) {
+                seleccionarSugerencia(sugerenciasActuales[indiceSugerenciaSeleccionada]);
+            } else if (sugerenciasActuales.length > 0) {
+                seleccionarSugerencia(sugerenciasActuales[0]);
+            }
+        } else if (e.key === 'Escape') {
+            cerrarSugerencias();
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (contenedor && !contenedor.contains(e.target)) {
+            cerrarSugerencias();
+        }
+    });
 }
 
 export function initFiltroZona() {
@@ -332,5 +574,21 @@ export function initFiltroZona() {
         });
     }
 
+    const btnSubmodoMapa = document.getElementById('btnSubmodoMapa');
+    const btnSubmodoLugar = document.getElementById('btnSubmodoLugar');
+
+    if (btnSubmodoMapa) {
+        btnSubmodoMapa.addEventListener('click', () => {
+            cambiarSubmodoZona('mapa');
+        });
+    }
+
+    if (btnSubmodoLugar) {
+        btnSubmodoLugar.addEventListener('click', () => {
+            cambiarSubmodoZona('lugar');
+        });
+    }
+
+    initBusquedaLugar();
     registrarClickMapaZona();
 }

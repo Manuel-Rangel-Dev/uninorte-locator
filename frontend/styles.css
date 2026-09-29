@@ -592,6 +592,37 @@ html, body {
     gap: 10px;
 }
 
+.selectorSubmodoZona {
+    display: flex;
+    gap: 6px;
+}
+
+.tabSubmodoZona {
+    flex: 1;
+    background-color: #1a1a1a;
+    border: 1px solid #2A2A2A;
+    border-radius: 4px;
+    padding: 6px 3px;
+    color: #B3B3B3;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: bold;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.tabSubmodoZona:hover {
+    border-color: #555555;
+    color: #ffffff;
+}
+
+.tabSubmodoZona.activo {
+    border-color: #dc0303;
+    background-color: rgba(220, 3, 3, 0.15);
+    color: #ffffff;
+}
+
 .textoInstruccionZona {
     font-size: 11px;
     color: #B3B3B3;
@@ -754,4 +785,161 @@ html, body {
 .marcador-centro-zona {
     background: transparent !important;
     border: none !important;
+}
+
+/* ============================================================
+   BARRA DE BÚSQUEDA SUPERIOR DE LUGARES / DIRECCIONES
+   ============================================================ */
+.contenedorBusquedaLugar {
+    position: absolute;
+    top: 58px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(440px, calc(100vw - 320px));
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    pointer-events: auto;
+    font-family: monospace;
+}
+
+.campoBusquedaLugar {
+    display: flex;
+    align-items: center;
+    background-color: rgba(18, 18, 18, 0.95);
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    padding: 0 10px;
+    height: 38px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    gap: 8px;
+    box-sizing: border-box;
+}
+
+.campoBusquedaLugar:focus-within {
+    border-color: #dc0303;
+    box-shadow: 0 0 10px rgba(220, 3, 3, 0.35);
+}
+
+.iconoBusquedaLugar {
+    color: #888888;
+    flex-shrink: 0;
+}
+
+#inputBusquedaLugar {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #ffffff;
+    font-family: monospace;
+    font-size: 12px;
+    padding: 0;
+    min-width: 0;
+}
+
+#inputBusquedaLugar::placeholder {
+    color: #777777;
+}
+
+.btnLimpiarBusqueda {
+    background: transparent;
+    border: none;
+    color: #888888;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.btnLimpiarBusqueda:hover {
+    color: #ffffff;
+}
+
+.spinnerBusqueda {
+    width: 14px;
+    height: 14px;
+    border: 2px solid #444444;
+    border-top-color: #dc0303;
+    border-radius: 50%;
+    animation: rotarSpinnerBusqueda 0.7s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes rotarSpinnerBusqueda {
+    to { transform: rotate(360deg); }
+}
+
+.sugerenciasBusqueda {
+    margin-top: 5px;
+    background-color: rgba(18, 18, 18, 0.97);
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+}
+
+.sugerenciasBusqueda::-webkit-scrollbar {
+    width: 5px;
+}
+.sugerenciasBusqueda::-webkit-scrollbar-thumb {
+    background-color: #444;
+    border-radius: 3px;
+}
+
+.itemSugerencia {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px 10px;
+    border-bottom: 1px solid #242424;
+    cursor: pointer;
+    background: transparent;
+    text-align: left;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    width: 100%;
+    font-family: monospace;
+    transition: background-color 0.15s ease;
+    box-sizing: border-box;
+}
+
+.itemSugerencia:last-child {
+    border-bottom: none;
+}
+
+.itemSugerencia:hover,
+.itemSugerencia.activo {
+    background-color: rgba(220, 3, 3, 0.2);
+}
+
+.tituloSugerencia {
+    font-size: 12px;
+    font-weight: bold;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.subtituloSugerencia {
+    font-size: 10px;
+    color: #888888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mensajeSugerencia {
+    padding: 10px 12px;
+    font-size: 11px;
+    color: #888888;
+    text-align: center;
+    font-family: monospace;
 }

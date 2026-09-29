@@ -12,3 +12,4 @@ export const HISTORICO_MIN_ANIO = 2020;
 export const RADIO_DEFAULT_METROS = 300;
 export const RADIO_MIN_METROS = 50;
 export const RADIO_MAX_METROS = 3000;
+export const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';

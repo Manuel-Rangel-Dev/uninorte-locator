@@ -33,6 +33,7 @@ export const estado = {
     // Históricos: caché y filtro por zona
     cachePuntosHistoricos: null,
     tipoFiltroHistorico: 'fecha',
+    submodoFiltroZona: 'mapa',
     centroZona: null,
     radioZona: 300,
     circuloZona: null,

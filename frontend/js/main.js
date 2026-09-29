@@ -27,7 +27,9 @@ import {
     initFiltroZona,
     activarModoSeleccionCentro,
     desactivarModoSeleccionCentro,
-    registrarClickMapaZona
+    registrarClickMapaZona,
+    mostrarBarraBusquedaLugar,
+    ocultarBarraBusquedaLugar
 } from './historico/filtro-zona.js';
 
 if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.integrante) {
@@ -51,6 +53,7 @@ function initHistoricos() {
             if (vistaFiltroFecha) vistaFiltroFecha.style.display = 'flex';
             if (vistaFiltroZona) vistaFiltroZona.style.display = 'none';
             desactivarModoSeleccionCentro();
+            ocultarBarraBusquedaLugar();
         });
 
         btnFiltroZona.addEventListener('click', () => {
@@ -60,9 +63,16 @@ function initHistoricos() {
             btnFiltroFecha.classList.remove('activo');
             if (vistaFiltroFecha) vistaFiltroFecha.style.display = 'none';
             if (vistaFiltroZona) vistaFiltroZona.style.display = 'flex';
-            registrarClickMapaZona();
-            if (!estado.centroZona) {
-                activarModoSeleccionCentro();
+
+            if (estado.submodoFiltroZona === 'lugar') {
+                mostrarBarraBusquedaLugar();
+                desactivarModoSeleccionCentro();
+            } else {
+                ocultarBarraBusquedaLugar();
+                registrarClickMapaZona();
+                if (!estado.centroZona) {
+                    activarModoSeleccionCentro();
+                }
             }
         });
     }
