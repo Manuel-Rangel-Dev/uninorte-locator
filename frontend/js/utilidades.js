@@ -3,27 +3,32 @@
 // =============================================================================
 import { DECIMALES_COORDENADAS } from './constantes.js';
 
+// Redondea coordenadas GPS para quitar ruido del sensor.
 export function redondearCoord(coord, decimales = DECIMALES_COORDENADAS) {
     if (coord === null || coord === undefined || isNaN(Number(coord))) return coord;
     return Number(Number(coord).toFixed(decimales));
 }
 
+// Convierte fecha + hora de un punto a timestamp Unix.
 export function obtenerTimestampPunto(punto) {
     if (!punto || !punto.fecha || !punto.hora) return null;
     const dt = new Date(`${punto.fecha.trim()}T${punto.hora.trim()}`);
     return isNaN(dt.getTime()) ? null : dt.getTime();
 }
 
+// Normaliza una fecha para comparar solo el día.
 export function normalizarFecha(d) {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 }
 
+// Formatea fecha como "28 Sep 2026".
 export function formatearFechaCorta(d) {
     if (!d) return '--';
     const nombresMes = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
     return `${d.getDate()} ${nombresMes[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+// Convierte Date a formato ISO YYYY-MM-DD.
 export function formatearFechaISO(d) {
     const anio = d.getFullYear();
     const mes = String(d.getMonth() + 1).padStart(2, '0');
@@ -31,6 +36,7 @@ export function formatearFechaISO(d) {
     return `${anio}-${mes}-${dia}`;
 }
 
+// Formatea metros como "250 m" o "1.50 km".
 export function formatearDistancia(metros) {
     if (metros < 1000) {
         return `${Math.round(metros)} m`;
@@ -38,6 +44,7 @@ export function formatearDistancia(metros) {
     return `${(metros / 1000).toFixed(2)} km`;
 }
 
+// Formatea radio como "300 M" o "1.5 KM".
 export function formatearRadio(metros) {
     if (metros < 1000) {
         return `${Math.round(metros)} M`;
@@ -45,6 +52,7 @@ export function formatearRadio(metros) {
     return `${(metros / 1000).toFixed(1)} KM`;
 }
 
+// Formatea fecha y hora para tarjetas de recorrido.
 export function formatearFechaHoraCard(fechaStr, horaStr) {
     if (!fechaStr) return '--';
     const partesFecha = fechaStr.split('-');
@@ -58,6 +66,7 @@ export function formatearFechaHoraCard(fechaStr, horaStr) {
     return horaFmt ? `${fechaFmt} - ${horaFmt}` : fechaFmt;
 }
 
+// Calcula la distancia de un punto a un segmento de línea.
 export function distanciaSegmentoAPunto(p1, p2, centro) {
     const latRad = (centro.lat * Math.PI) / 180;
     const mPorGradoLat = 111132.92;
