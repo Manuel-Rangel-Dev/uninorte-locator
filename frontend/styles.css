@@ -1,13 +1,21 @@
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
 html, body {
     margin: 0;
     padding: 0;
+    width: 100%;
     height: 100%;
+    overflow: hidden;
     font-family: monospace;
     background-color: #121212;
     color: #ffffff;
 }
 
 #mapa {
+    position: fixed;    /* 👈 nuevo: siempre pantalla completa */
+    inset: 0;
     width: 100%;
     height: 100%;
     background-color: #121212;
@@ -110,6 +118,10 @@ html, body {
     position: absolute;
     top: 58px;
     right: 12px;
+    max-height: calc(100vh - 78px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
     z-index: 1000;
     background-color: rgba(18, 18, 18, 0.95);
     border: 1px solid #2A2A2A;
@@ -124,6 +136,14 @@ html, body {
     transform: translateY(-8px);
     pointer-events: none;
     transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
+}
+
+#panelHistoricos::-webkit-scrollbar {
+    width: 6px;
+}
+#panelHistoricos::-webkit-scrollbar-thumb {
+    background-color: #444;
+    border-radius: 3px;
 }
 
 #panelHistoricos.abierto {
@@ -394,4 +414,583 @@ html, body {
 .modoHistorico #btnHistoricos {
     display: flex;
     border-color: #dc0303;
+}
+
+.diaFuturo {
+    opacity: 0.35 !important;
+    cursor: not-allowed !important;
+    background-color: #2a2a2a !important;
+    color: #777777 !important;
+    pointer-events: none;
+}
+
+.diaFuturo:hover {
+    background-color: #2a2a2a !important;
+}
+
+/* ============================================================
+   SELECTOR DE RECORRIDOS
+   ============================================================ */
+
+#selectorRecorridos {
+    margin-top: 12px;
+}
+
+.tituloRecorridos {
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    opacity: 0.8;
+}
+
+#listaRecorridos {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.itemRecorrido {
+    width: 100%;
+    text-align: left;
+    padding: 10px;
+    border: 1px solid #444;
+    border-radius: 8px;
+    background: #222;
+    color: white;
+    cursor: pointer;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.itemRecorrido:hover {
+    background: #303030;
+}
+
+.itemRecorrido.seleccionado {
+    border-color: #4A90D9;
+    background: #26384a;
+}
+
+.numeroRecorrido {
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.datosRecorrido {
+    font-size: 11px;
+    line-height: 1.5;
+    opacity: 0.8;
+}
+
+
+/* ============================================================
+   REPRODUCTOR
+   ============================================================ */
+
+#reproductorHistorico {
+    margin-top: 12px;
+    padding: 10px;
+    border-radius: 8px;
+    background: #202020;
+}
+
+.infoReproduccion {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+#infoRecorridoSeleccionado {
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+#fechaHoraReproduccion {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.contenedorSlider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#sliderRecorrido {
+    flex: 1;
+}
+
+#tiempoInicioRecorrido,
+#tiempoFinRecorrido {
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+.controlesReproduccion {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.controlesReproduccion button,
+.controlesReproduccion select {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #555;
+    background: #2a2a2a;
+    color: white;
+    cursor: pointer;
+}
+
+/* ============================================================
+   SELECTOR DE TIPO DE FILTRO (Fila 2: Fecha / Zona)
+   ============================================================ */
+.selectorTipoFiltro {
+    display: flex;
+    gap: 6px;
+}
+
+.tabTipoFiltro {
+    flex: 1;
+    background-color: #1a1a1a;
+    border: 1px solid #2A2A2A;
+    border-radius: 4px;
+    padding: 7px 4px;
+    color: #B3B3B3;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: bold;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.tabTipoFiltro:hover {
+    border-color: #555555;
+    color: #ffffff;
+}
+
+.tabTipoFiltro.activo {
+    border-color: #dc0303;
+    background-color: rgba(220, 3, 3, 0.15);
+    color: #ffffff;
+}
+
+#vistaFiltroFecha {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* ============================================================
+   VISTA FILTRO POR ZONA
+   ============================================================ */
+#vistaFiltroZona {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.selectorSubmodoZona {
+    display: flex;
+    gap: 6px;
+}
+
+.tabSubmodoZona {
+    flex: 1;
+    background-color: #1a1a1a;
+    border: 1px solid #2A2A2A;
+    border-radius: 4px;
+    padding: 6px 3px;
+    color: #B3B3B3;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: bold;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.tabSubmodoZona:hover {
+    border-color: #555555;
+    color: #ffffff;
+}
+
+.tabSubmodoZona.activo {
+    border-color: #dc0303;
+    background-color: rgba(220, 3, 3, 0.15);
+    color: #ffffff;
+}
+
+.textoInstruccionZona {
+    font-size: 11px;
+    color: #B3B3B3;
+    line-height: 1.4;
+    font-family: monospace;
+    padding: 2px 0;
+}
+
+.filaRadioZona {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    font-family: monospace;
+}
+
+.etiquetaRadioZona {
+    color: #888888;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+.valorRadioZona {
+    color: #dc0303;
+    font-size: 12px;
+    font-weight: bold;
+    font-family: monospace;
+}
+
+.sliderZona {
+    width: 100%;
+    accent-color: #dc0303;
+    cursor: pointer;
+}
+
+.filaBotonesZona {
+    display: flex;
+    gap: 6px;
+}
+
+.btnSecundarioZona {
+    flex: 1;
+    background-color: #1a1a1a;
+    border: 1px solid #2A2A2A;
+    border-radius: 4px;
+    padding: 7px 4px;
+    color: #ffffff;
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.btnSecundarioZona:hover {
+    border-color: #dc0303;
+    background-color: rgba(220, 3, 3, 0.1);
+}
+
+.btnBuscarZona {
+    width: 100%;
+    background-color: #dc0303;
+    border: none;
+    color: #ffffff;
+    padding: 8px 0;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btnBuscarZona:hover {
+    background-color: #a80202;
+}
+
+.btnBuscarZona:disabled {
+    background-color: #555555;
+    cursor: not-allowed;
+}
+
+.estadoZona {
+    font-size: 11px;
+    text-align: center;
+    min-height: 14px;
+    color: #B3B3B3;
+    font-family: monospace;
+}
+
+#contenedorRutasZona {
+    margin-top: 4px;
+}
+
+#listaRutasZona {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.cardRutaZona {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    background-color: #222222;
+    border-radius: 6px;
+    border: 1px solid #444444;
+    border-left-width: 5px !important;
+    color: #ffffff;
+    font-family: monospace;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: all 0.15s ease;
+}
+
+.cardRutaZona:hover {
+    background-color: #303030;
+    border-color: #555555;
+}
+
+.cardRutaZona.seleccionada {
+    border-color: #dc0303;
+    background-color: rgba(220, 3, 3, 0.15);
+}
+
+.filaDatoZona {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+}
+
+.lblRutaZona {
+    font-weight: bold;
+    color: #888888;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+}
+
+.valRutaZona {
+    font-weight: bold;
+    color: #ffffff;
+    font-size: 11px;
+}
+
+.metaRutaZona {
+    font-size: 10px;
+    color: #B3B3B3;
+    margin-top: 2px;
+    border-top: 1px solid #333333;
+    padding-top: 4px;
+    display: flex;
+    gap: 4px;
+}
+
+.marcador-centro-zona {
+    background: transparent !important;
+    border: none !important;
+}
+
+/* ============================================================
+   BARRA DE BÚSQUEDA SUPERIOR DE LUGARES / DIRECCIONES
+   ============================================================ */
+.contenedorBusquedaLugar {
+    position: absolute;
+    top: 58px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(440px, calc(100vw - 320px));
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    pointer-events: auto;
+    font-family: monospace;
+}
+
+.campoBusquedaLugar {
+    display: flex;
+    align-items: center;
+    background-color: rgba(18, 18, 18, 0.95);
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    padding: 0 10px;
+    height: 38px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    gap: 8px;
+    box-sizing: border-box;
+}
+
+.campoBusquedaLugar:focus-within {
+    border-color: #dc0303;
+    box-shadow: 0 0 10px rgba(220, 3, 3, 0.35);
+}
+
+.iconoBusquedaLugar {
+    color: #888888;
+    flex-shrink: 0;
+}
+
+#inputBusquedaLugar {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #ffffff;
+    font-family: monospace;
+    font-size: 12px;
+    padding: 0;
+    min-width: 0;
+}
+
+#inputBusquedaLugar::placeholder {
+    color: #777777;
+}
+
+.btnLimpiarBusqueda {
+    background: transparent;
+    border: none;
+    color: #888888;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.btnLimpiarBusqueda:hover {
+    color: #ffffff;
+}
+
+.spinnerBusqueda {
+    width: 14px;
+    height: 14px;
+    border: 2px solid #444444;
+    border-top-color: #dc0303;
+    border-radius: 50%;
+    animation: rotarSpinnerBusqueda 0.7s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes rotarSpinnerBusqueda {
+    to { transform: rotate(360deg); }
+}
+
+.sugerenciasBusqueda {
+    margin-top: 5px;
+    background-color: rgba(18, 18, 18, 0.97);
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+}
+
+.sugerenciasBusqueda::-webkit-scrollbar {
+    width: 5px;
+}
+.sugerenciasBusqueda::-webkit-scrollbar-thumb {
+    background-color: #444;
+    border-radius: 3px;
+}
+
+.itemSugerencia {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px 10px;
+    border-bottom: 1px solid #242424;
+    cursor: pointer;
+    background: transparent;
+    text-align: left;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    width: 100%;
+    font-family: monospace;
+    transition: background-color 0.15s ease;
+    box-sizing: border-box;
+}
+
+.itemSugerencia:last-child {
+    border-bottom: none;
+}
+
+.itemSugerencia:hover,
+.itemSugerencia.activo {
+    background-color: rgba(220, 3, 3, 0.2);
+}
+
+.tituloSugerencia {
+    font-size: 12px;
+    font-weight: bold;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.subtituloSugerencia {
+    font-size: 10px;
+    color: #888888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mensajeSugerencia {
+    padding: 10px 12px;
+    font-size: 11px;
+    color: #888888;
+    text-align: center;
+    font-family: monospace;
+}
+
+.itemRecorrido {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 8px;
+    border-radius: 6px;
+}
+.checkRecorridoWrapper {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+.checkRecorrido {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+.infoRecorridoBtn {
+    flex: 1;
+    text-align: left;
+    background: none;
+    border: none;
+    color: inherit;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0;
+}
+.itemRecorrido.enReproduccion {
+    background-color: rgba(74, 144, 217, 0.15);
+    border: 1px solid #4A90D9;
+}
+.cardRutaZona {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.infoRutaZonaBtn {
+    flex: 1;
+    text-align: left;
+    background: none;
+    border: none;
+    color: inherit;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0;
+}
+.cardRutaZona.enReproduccion {
+    background-color: rgba(74, 144, 217, 0.15);
 }
