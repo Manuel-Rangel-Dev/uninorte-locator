@@ -218,7 +218,7 @@ function initHistoricos() {
 }
 
 async function bootstrap() {
-    console.log('[Locator] Inicializando aplicación (v9)...');
+    console.log('[Locator] Inicializando aplicación (v10)...');
     try {
         await initMap();
     } catch (err) {

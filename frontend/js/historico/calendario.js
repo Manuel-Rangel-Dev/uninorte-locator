@@ -282,4 +282,7 @@ export function limpiarRecorridoHistorico() {
     const btnSubmodoLugar = document.getElementById('btnSubmodoLugar');
     if (btnSubmodoMapa) btnSubmodoMapa.classList.add('activo');
     if (btnSubmodoLugar) btnSubmodoLugar.classList.remove('activo');
+
+    const btnMoverCentro = document.getElementById('btnMoverCentroZona');
+    if (btnMoverCentro) btnMoverCentro.style.display = '';
 }

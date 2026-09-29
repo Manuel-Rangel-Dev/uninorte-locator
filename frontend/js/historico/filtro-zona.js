@@ -40,10 +40,13 @@ export function desactivarModoSeleccionCentro() {
 }
 
 export function activarModoFiltroZonaUI() {
+    const btnMover = document.getElementById('btnMoverCentroZona');
     if (estado.submodoFiltroZona === 'lugar') {
+        if (btnMover) btnMover.style.display = 'none';
         mostrarBarraBusquedaLugar();
         desactivarModoSeleccionCentro();
     } else {
+        if (btnMover) btnMover.style.display = '';
         ocultarBarraBusquedaLugar();
         registrarClickMapaZona();
         if (!estado.centroZona) {
@@ -142,10 +145,16 @@ export async function buscarRutasEnZona() {
     if (!estado.centroZona) {
         const instruccion = document.getElementById('instruccionZona');
         if (instruccion) {
-            instruccion.textContent = '⚠️ Primero haz clic en el mapa para colocar el centro de búsqueda.';
-            instruccion.style.color = '#ff6b6b';
+            if (estado.submodoFiltroZona === 'lugar') {
+                instruccion.textContent = '⚠️ Primero busca una dirección o lugar en la barra superior.';
+                instruccion.style.color = '#ff6b6b';
+                mostrarBarraBusquedaLugar();
+            } else {
+                instruccion.textContent = '⚠️ Primero haz clic en el mapa para colocar el centro de búsqueda.';
+                instruccion.style.color = '#ff6b6b';
+                activarModoSeleccionCentro();
+            }
         }
-        activarModoSeleccionCentro();
         return;
     }
 
@@ -310,12 +319,15 @@ export function limpiarZona() {
     cerrarSugerencias();
 
     const instruccion = document.getElementById('instruccionZona');
+    const btnMover = document.getElementById('btnMoverCentroZona');
     if (instruccion) {
         if (estado.submodoFiltroZona === 'lugar') {
+            if (btnMover) btnMover.style.display = 'none';
             instruccion.textContent = 'Usa la barra superior para buscar un lugar o dirección.';
             instruccion.style.color = '#B3B3B3';
             desactivarModoSeleccionCentro();
         } else {
+            if (btnMover) btnMover.style.display = '';
             instruccion.textContent = 'Haz clic en el mapa para colocar el centro de búsqueda.';
             instruccion.style.color = '#B3B3B3';
             activarModoSeleccionCentro();
@@ -335,8 +347,6 @@ export function registrarClickMapaZona() {
 
             if (enModoZona) {
                 if (estado.submodoFiltroZona === 'mapa' && (estado.modoSeleccionCentro || !estado.centroZona)) {
-                    establecerCentroZona(e.latlng);
-                } else if (estado.submodoFiltroZona === 'lugar' && estado.modoSeleccionCentro) {
                     establecerCentroZona(e.latlng);
                 }
             }
@@ -378,11 +388,13 @@ export function cambiarSubmodoZona(nuevoSubmodo) {
     const btnMapa = document.getElementById('btnSubmodoMapa');
     const btnLugar = document.getElementById('btnSubmodoLugar');
     const instruccion = document.getElementById('instruccionZona');
+    const btnMover = document.getElementById('btnMoverCentroZona');
 
     if (btnMapa) btnMapa.classList.toggle('activo', nuevoSubmodo === 'mapa');
     if (btnLugar) btnLugar.classList.toggle('activo', nuevoSubmodo === 'lugar');
 
     if (nuevoSubmodo === 'mapa') {
+        if (btnMover) btnMover.style.display = '';
         ocultarBarraBusquedaLugar();
         if (!estado.centroZona) {
             activarModoSeleccionCentro();
@@ -394,6 +406,7 @@ export function cambiarSubmodoZona(nuevoSubmodo) {
             }
         }
     } else {
+        if (btnMover) btnMover.style.display = 'none';
         desactivarModoSeleccionCentro();
         mostrarBarraBusquedaLugar();
         if (instruccion) {
