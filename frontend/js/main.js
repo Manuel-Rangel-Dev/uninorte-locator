@@ -20,7 +20,8 @@ import {
     obtenerHora24,
     mostrarEstadoHistorico,
     alternarModoHistorico,
-    actualizarVisibilidadTiempoReal
+    actualizarVisibilidadTiempoReal,
+    limpiarRecorridoHistorico
 } from './historico/calendario.js';
 import { initMap } from './mapa-vivo.js';
 import {
@@ -218,7 +219,7 @@ function initHistoricos() {
 }
 
 async function bootstrap() {
-    console.log('[Locator] Inicializando aplicación (v10)...');
+    console.log('[Locator] Inicializando aplicación (v11)...');
     try {
         await initMap();
     } catch (err) {
