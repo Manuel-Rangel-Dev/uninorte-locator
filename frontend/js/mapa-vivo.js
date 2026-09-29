@@ -174,16 +174,6 @@ export async function actualizarMarcador() {
 // =============================================================================
 // FUNCIÓN: initMap
 // =============================================================================
-// Propósito: Inicializar completamente el mapa cuando carga la app
-// 
-// Esta es la primera función que se ejecuta. Hace lo siguiente:
-// 1. Crea el mapa de Leaflet con OpenStreetMap
-// 2. Coloca el marcador inicial del vehículo
-// 3. Crea la línea roja del recorrido en vivo
-// 4. Configura el botón "Centrar" con el evento de click
-// 5. Obtiene la última posición conocida del backend
-// 6. Inicia el ciclo de actualizaciones cada 5 segundos
-// =============================================================================
 export async function initMap() {
     // ─────────────────────────────────────────────────────────────────────
     // PARTE 1: Crear el mapa base
