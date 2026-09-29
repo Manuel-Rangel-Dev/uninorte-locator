@@ -1,0 +1,945 @@
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: monospace;
+    background-color: #121212;
+    color: #ffffff;
+}
+
+#mapa {
+    position: fixed;    /* 👈 nuevo: siempre pantalla completa */
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #121212;
+}
+
+#panelInfo {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    z-index: 1000;
+    background-color: rgba(18, 18, 18, 0.9);
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 13px;
+    min-width: 200px;
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+    transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
+}
+
+#panelInfo h1 {
+    color: #dc0303;
+    font-size: 14px;
+    margin: 0 0 8px 0;
+}
+
+.filaInfo {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.etiquetaInfo {
+    color: #B3B3B3;
+    margin-right: 12px;
+}
+
+#btnCentrar {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
+    z-index: 1000;
+    background-color: rgba(18, 18, 18, 0.9);
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    color: #ffffff;
+    width: 42px;
+    height: 42px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 0.25s ease, border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, visibility 0.25s ease;
+}
+
+#btnCentrar:hover {
+    border-color: #dc0303;
+}
+
+#btnCentrar.activo {
+    border-color: #dc0303;
+    background-color: rgba(220, 3, 3, 0.2);
+    color: #dc0303;
+    box-shadow: 0 0 10px rgba(220, 3, 3, 0.35);
+}
+
+#btnHistoricos {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 1000;
+    background-color: rgba(18, 18, 18, 0.9);
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    color: #ffffff;
+    height: 38px;
+    padding: 0 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: monospace;
+    font-size: 13px;
+    transition: border-color 0.2s ease;
+}
+
+#btnHistoricos:hover {
+    border-color: #dc0303;
+}
+
+#panelHistoricos {
+    display: flex;
+    position: absolute;
+    top: 58px;
+    right: 12px;
+    max-height: calc(100vh - 78px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    z-index: 1000;
+    background-color: rgba(18, 18, 18, 0.95);
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    padding: 12px;
+    width: 275px;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
+}
+
+#panelHistoricos::-webkit-scrollbar {
+    width: 6px;
+}
+#panelHistoricos::-webkit-scrollbar-thumb {
+    background-color: #444;
+    border-radius: 3px;
+}
+
+#panelHistoricos.abierto {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.selectorRangoFecha {
+    display: flex;
+    gap: 6px;
+}
+
+.tabRangoFecha {
+    flex: 1;
+    background-color: #1a1a1a;
+    border: 1px solid #2A2A2A;
+    border-radius: 4px;
+    padding: 6px 4px;
+    color: #ffffff;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-family: monospace;
+    transition: all 0.2s ease;
+}
+
+.tabRangoFecha:hover {
+    border-color: #555555;
+}
+
+.tabRangoFecha.activo {
+    border-color: #dc0303;
+    background-color: rgba(220, 3, 3, 0.15);
+}
+
+.etiquetaRango {
+    font-size: 9px;
+    color: #888888;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+.tabRangoFecha.activo .etiquetaRango {
+    color: #dc0303;
+}
+
+.fechaRango {
+    font-size: 11px;
+    font-weight: bold;
+}
+
+#calendarioHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+}
+
+.navCalendario {
+    background: none;
+    border: 1px solid #2A2A2A;
+    color: #ffffff;
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+}
+
+.navCalendario:disabled {
+    color: #555555;
+    cursor: not-allowed;
+}
+
+.navCalendario:not(:disabled):hover {
+    border-color: #dc0303;
+}
+
+#diasSemana, #gridCalendario {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-size: 11px;
+}
+
+#diasSemana {
+    color: #B3B3B3;
+    margin-bottom: 4px;
+}
+
+.diaCalendario {
+    padding: 5px 0;
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.diaCalendario:hover {
+    background-color: #2e2e2e;
+}
+
+.diaInicio {
+    background-color: #dc0303 !important;
+    color: #ffffff;
+    border-radius: 4px 0 0 4px;
+    font-weight: bold;
+}
+
+.diaFin {
+    background-color: #dc0303 !important;
+    color: #ffffff;
+    border-radius: 0 4px 4px 0;
+    font-weight: bold;
+}
+
+.diaInicio.diaFin {
+    border-radius: 4px !important;
+}
+
+.diaEnRango {
+    background-color: rgba(220, 3, 3, 0.25);
+    color: #ffffff;
+}
+
+.filaHora {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+}
+
+.etiquetaHora {
+    color: #B3B3B3;
+}
+
+.selectorHora {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.inputHora {
+    width: 24px;
+    background-color: #1c1c1c;
+    border: 1px solid #2A2A2A;
+    color: #ffffff;
+    text-align: center;
+    font-family: monospace;
+    font-size: 12px;
+    border-radius: 4px;
+    padding: 3px 0;
+}
+
+.dosPuntos {
+    color: #B3B3B3;
+}
+
+.toggleAmPm {
+    position: relative;
+    width: 54px;
+    height: 22px;
+    background-color: #1c1c1c;
+    border: 1px solid #2A2A2A;
+    border-radius: 11px;
+    display: flex;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.toggleOpcion {
+    flex: 1;
+    text-align: center;
+    font-size: 9px;
+    line-height: 20px;
+    z-index: 1;
+    color: #B3B3B3;
+}
+
+.toggleSlider {
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    width: 26px;
+    height: 18px;
+    background-color: #dc0303;
+    border-radius: 9px;
+    transition: transform 0.2s ease;
+}
+
+.toggleAmPm.activoPM .toggleSlider {
+    transform: translateX(26px);
+}
+
+#estadoHistorico {
+    font-size: 11px;
+    text-align: center;
+    min-height: 14px;
+    color: #B3B3B3;
+}
+
+.accionesHistoricos {
+    display: flex;
+    gap: 6px;
+}
+
+#btnVerRecorrido {
+    flex: 1;
+    background-color: #dc0303;
+    border: none;
+    color: #ffffff;
+    padding: 8px 0;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#btnVerRecorrido:hover {
+    background-color: #a80202;
+}
+
+#btnVerRecorrido:disabled {
+    background-color: #555555;
+    cursor: not-allowed;
+}
+
+.tooltipRecorrido {
+    background-color: rgba(18, 18, 18, 0.9);
+    border: 1px solid #2A2A2A;
+    color: #ffffff;
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.tooltipInicio {
+    border-color: #2ecc71;
+}
+
+.tooltipFin {
+    border-color: #dc0303;
+}
+
+.tooltipRecorrido::before {
+    display: none;
+}
+
+/* MODO HISTÓRICO */
+.modoHistorico #panelInfo {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(8px);
+    pointer-events: none;
+}
+
+.modoHistorico #btnCentrar {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.modoHistorico #btnHistoricos {
+    display: flex;
+    border-color: #dc0303;
+}
+
+.diaFuturo {
+    opacity: 0.35 !important;
+    cursor: not-allowed !important;
+    background-color: #2a2a2a !important;
+    color: #777777 !important;
+    pointer-events: none;
+}
+
+.diaFuturo:hover {
+    background-color: #2a2a2a !important;
+}
+
+/* ============================================================
+   SELECTOR DE RECORRIDOS
+   ============================================================ */
+
+#selectorRecorridos {
+    margin-top: 12px;
+}
+
+.tituloRecorridos {
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    opacity: 0.8;
+}
+
+#listaRecorridos {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.itemRecorrido {
+    width: 100%;
+    text-align: left;
+    padding: 10px;
+    border: 1px solid #444;
+    border-radius: 8px;
+    background: #222;
+    color: white;
+    cursor: pointer;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.itemRecorrido:hover {
+    background: #303030;
+}
+
+.itemRecorrido.seleccionado {
+    border-color: #4A90D9;
+    background: #26384a;
+}
+
+.numeroRecorrido {
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.datosRecorrido {
+    font-size: 11px;
+    line-height: 1.5;
+    opacity: 0.8;
+}
+
+
+/* ============================================================
+   REPRODUCTOR
+   ============================================================ */
+
+#reproductorHistorico {
+    margin-top: 12px;
+    padding: 10px;
+    border-radius: 8px;
+    background: #202020;
+}
+
+.infoReproduccion {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+#infoRecorridoSeleccionado {
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+#fechaHoraReproduccion {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.contenedorSlider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#sliderRecorrido {
+    flex: 1;
+}
+
+#tiempoInicioRecorrido,
+#tiempoFinRecorrido {
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+.controlesReproduccion {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.controlesReproduccion button,
+.controlesReproduccion select {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #555;
+    background: #2a2a2a;
+    color: white;
+    cursor: pointer;
+}
+
+/* ============================================================
+   SELECTOR DE TIPO DE FILTRO (Fila 2: Fecha / Zona)
+   ============================================================ */
+.selectorTipoFiltro {
+    display: flex;
+    gap: 6px;
+}
+
+.tabTipoFiltro {
+    flex: 1;
+    background-color: #1a1a1a;
+    border: 1px solid #2A2A2A;
+    border-radius: 4px;
+    padding: 7px 4px;
+    color: #B3B3B3;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: bold;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.tabTipoFiltro:hover {
+    border-color: #555555;
+    color: #ffffff;
+}
+
+.tabTipoFiltro.activo {
+    border-color: #dc0303;
+    background-color: rgba(220, 3, 3, 0.15);
+    color: #ffffff;
+}
+
+#vistaFiltroFecha {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* ============================================================
+   VISTA FILTRO POR ZONA
+   ============================================================ */
+#vistaFiltroZona {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.selectorSubmodoZona {
+    display: flex;
+    gap: 6px;
+}
+
+.tabSubmodoZona {
+    flex: 1;
+    background-color: #1a1a1a;
+    border: 1px solid #2A2A2A;
+    border-radius: 4px;
+    padding: 6px 3px;
+    color: #B3B3B3;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: bold;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.tabSubmodoZona:hover {
+    border-color: #555555;
+    color: #ffffff;
+}
+
+.tabSubmodoZona.activo {
+    border-color: #dc0303;
+    background-color: rgba(220, 3, 3, 0.15);
+    color: #ffffff;
+}
+
+.textoInstruccionZona {
+    font-size: 11px;
+    color: #B3B3B3;
+    line-height: 1.4;
+    font-family: monospace;
+    padding: 2px 0;
+}
+
+.filaRadioZona {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    font-family: monospace;
+}
+
+.etiquetaRadioZona {
+    color: #888888;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+.valorRadioZona {
+    color: #dc0303;
+    font-size: 12px;
+    font-weight: bold;
+    font-family: monospace;
+}
+
+.sliderZona {
+    width: 100%;
+    accent-color: #dc0303;
+    cursor: pointer;
+}
+
+.filaBotonesZona {
+    display: flex;
+    gap: 6px;
+}
+
+.btnSecundarioZona {
+    flex: 1;
+    background-color: #1a1a1a;
+    border: 1px solid #2A2A2A;
+    border-radius: 4px;
+    padding: 7px 4px;
+    color: #ffffff;
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.btnSecundarioZona:hover {
+    border-color: #dc0303;
+    background-color: rgba(220, 3, 3, 0.1);
+}
+
+.btnBuscarZona {
+    width: 100%;
+    background-color: #dc0303;
+    border: none;
+    color: #ffffff;
+    padding: 8px 0;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btnBuscarZona:hover {
+    background-color: #a80202;
+}
+
+.btnBuscarZona:disabled {
+    background-color: #555555;
+    cursor: not-allowed;
+}
+
+.estadoZona {
+    font-size: 11px;
+    text-align: center;
+    min-height: 14px;
+    color: #B3B3B3;
+    font-family: monospace;
+}
+
+#contenedorRutasZona {
+    margin-top: 4px;
+}
+
+#listaRutasZona {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.cardRutaZona {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    background-color: #222222;
+    border-radius: 6px;
+    border: 1px solid #444444;
+    border-left-width: 5px !important;
+    color: #ffffff;
+    font-family: monospace;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: all 0.15s ease;
+}
+
+.cardRutaZona:hover {
+    background-color: #303030;
+    border-color: #555555;
+}
+
+.cardRutaZona.seleccionada {
+    border-color: #dc0303;
+    background-color: rgba(220, 3, 3, 0.15);
+}
+
+.filaDatoZona {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+}
+
+.lblRutaZona {
+    font-weight: bold;
+    color: #888888;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+}
+
+.valRutaZona {
+    font-weight: bold;
+    color: #ffffff;
+    font-size: 11px;
+}
+
+.metaRutaZona {
+    font-size: 10px;
+    color: #B3B3B3;
+    margin-top: 2px;
+    border-top: 1px solid #333333;
+    padding-top: 4px;
+    display: flex;
+    gap: 4px;
+}
+
+.marcador-centro-zona {
+    background: transparent !important;
+    border: none !important;
+}
+
+/* ============================================================
+   BARRA DE BÚSQUEDA SUPERIOR DE LUGARES / DIRECCIONES
+   ============================================================ */
+.contenedorBusquedaLugar {
+    position: absolute;
+    top: 58px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(440px, calc(100vw - 320px));
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    pointer-events: auto;
+    font-family: monospace;
+}
+
+.campoBusquedaLugar {
+    display: flex;
+    align-items: center;
+    background-color: rgba(18, 18, 18, 0.95);
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    padding: 0 10px;
+    height: 38px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    gap: 8px;
+    box-sizing: border-box;
+}
+
+.campoBusquedaLugar:focus-within {
+    border-color: #dc0303;
+    box-shadow: 0 0 10px rgba(220, 3, 3, 0.35);
+}
+
+.iconoBusquedaLugar {
+    color: #888888;
+    flex-shrink: 0;
+}
+
+#inputBusquedaLugar {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #ffffff;
+    font-family: monospace;
+    font-size: 12px;
+    padding: 0;
+    min-width: 0;
+}
+
+#inputBusquedaLugar::placeholder {
+    color: #777777;
+}
+
+.btnLimpiarBusqueda {
+    background: transparent;
+    border: none;
+    color: #888888;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.btnLimpiarBusqueda:hover {
+    color: #ffffff;
+}
+
+.spinnerBusqueda {
+    width: 14px;
+    height: 14px;
+    border: 2px solid #444444;
+    border-top-color: #dc0303;
+    border-radius: 50%;
+    animation: rotarSpinnerBusqueda 0.7s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes rotarSpinnerBusqueda {
+    to { transform: rotate(360deg); }
+}
+
+.sugerenciasBusqueda {
+    margin-top: 5px;
+    background-color: rgba(18, 18, 18, 0.97);
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+}
+
+.sugerenciasBusqueda::-webkit-scrollbar {
+    width: 5px;
+}
+.sugerenciasBusqueda::-webkit-scrollbar-thumb {
+    background-color: #444;
+    border-radius: 3px;
+}
+
+.itemSugerencia {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px 10px;
+    border-bottom: 1px solid #242424;
+    cursor: pointer;
+    background: transparent;
+    text-align: left;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    width: 100%;
+    font-family: monospace;
+    transition: background-color 0.15s ease;
+    box-sizing: border-box;
+}
+
+.itemSugerencia:last-child {
+    border-bottom: none;
+}
+
+.itemSugerencia:hover,
+.itemSugerencia.activo {
+    background-color: rgba(220, 3, 3, 0.2);
+}
+
+.tituloSugerencia {
+    font-size: 12px;
+    font-weight: bold;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.subtituloSugerencia {
+    font-size: 10px;
+    color: #888888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mensajeSugerencia {
+    padding: 10px 12px;
+    font-size: 11px;
+    color: #888888;
+    text-align: center;
+    font-family: monospace;
+}

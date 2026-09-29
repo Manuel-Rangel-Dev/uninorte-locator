@@ -108,11 +108,16 @@ def historico():
     dt_hasta, hasta_tiene_segundos = _parsear_param_fecha_hora(fecha_hasta, hora_hasta, hasta_param)
 
     if not dt_desde or not dt_hasta:
-        return jsonify({
-            "error": "Parámetros de fecha/hora faltantes o con formato inválido. "
-                     "Usa fecha_desde/fecha_hasta (YYYY-MM-DD) y hora_desde/hora_hasta (HH:MM o HH:MM:SS), "
-                     "o desde/hasta con fecha y hora completa."
-        }), 400
+        if not fecha_desde and not fecha_hasta and not desde_param and not hasta_param and not fecha_global:
+            dt_desde = datetime(2020, 1, 1, 0, 0, 0)
+            dt_hasta = datetime.now().replace(year=datetime.now().year + 5)
+            hasta_tiene_segundos = True
+        else:
+            return jsonify({
+                "error": "Parámetros de fecha/hora faltantes o con formato inválido. "
+                         "Usa fecha_desde/fecha_hasta (YYYY-MM-DD) y hora_desde/hora_hasta (HH:MM o HH:MM:SS), "
+                         "o desde/hasta con fecha y hora completa."
+            }), 400
 
     # Si no se especificaron segundos en hasta, incluir el minuto completo (:59.999999).
     # Si se especificaron segundos, cubrir hasta el final de ese segundo (.999999) para abarcar registros intermedios.
