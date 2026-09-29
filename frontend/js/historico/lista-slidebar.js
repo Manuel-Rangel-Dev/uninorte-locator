@@ -107,6 +107,14 @@ export function alternarVisibilidadRecorrido(indice) {
 
     dibujarRecorridoEnMapa(indice);
     marcarCheckbox(indice, true);
+
+    const entradaNueva = buscarEntradaVisible(indice);
+    if (entradaNueva) {
+        estado.mapa.fitBounds(entradaNueva.linea.getBounds(), {
+            padding: [60, 50],
+            maxZoom: 17
+        });
+    }
 }
 
 function marcarCheckbox(indice, valor) {
