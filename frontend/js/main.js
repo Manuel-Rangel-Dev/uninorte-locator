@@ -25,11 +25,8 @@ import {
 import { initMap } from './mapa-vivo.js';
 import {
     initFiltroZona,
-    activarModoSeleccionCentro,
-    desactivarModoSeleccionCentro,
-    registrarClickMapaZona,
-    mostrarBarraBusquedaLugar,
-    ocultarBarraBusquedaLugar
+    activarModoFiltroZonaUI,
+    desactivarModoFiltroZonaUI
 } from './historico/filtro-zona.js';
 
 if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.integrante) {
@@ -52,8 +49,7 @@ function initHistoricos() {
             btnFiltroZona.classList.remove('activo');
             if (vistaFiltroFecha) vistaFiltroFecha.style.display = 'flex';
             if (vistaFiltroZona) vistaFiltroZona.style.display = 'none';
-            desactivarModoSeleccionCentro();
-            ocultarBarraBusquedaLugar();
+            desactivarModoFiltroZonaUI();
         });
 
         btnFiltroZona.addEventListener('click', () => {
@@ -63,17 +59,7 @@ function initHistoricos() {
             btnFiltroFecha.classList.remove('activo');
             if (vistaFiltroFecha) vistaFiltroFecha.style.display = 'none';
             if (vistaFiltroZona) vistaFiltroZona.style.display = 'flex';
-
-            if (estado.submodoFiltroZona === 'lugar') {
-                mostrarBarraBusquedaLugar();
-                desactivarModoSeleccionCentro();
-            } else {
-                ocultarBarraBusquedaLugar();
-                registrarClickMapaZona();
-                if (!estado.centroZona) {
-                    activarModoSeleccionCentro();
-                }
-            }
+            activarModoFiltroZonaUI();
         });
     }
     const btnPlayRecorrido = document.getElementById('btnPlayRecorrido');
@@ -232,7 +218,7 @@ function initHistoricos() {
 }
 
 async function bootstrap() {
-    console.log('[Locator] Inicializando aplicación (v7)...');
+    console.log('[Locator] Inicializando aplicación (v9)...');
     try {
         await initMap();
     } catch (err) {

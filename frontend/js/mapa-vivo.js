@@ -53,13 +53,41 @@ export async function actualizarMarcador() {
 }
 
 export async function initMap() {
-    let centroInicial = CENTRO_DEFAULT;
+    // 1. Inicializar el mapa de Leaflet inmediatamente con el centro por defecto
+    estado.mapa = L.map('mapa').setView(CENTRO_DEFAULT, 15);
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(estado.mapa);
+
+    estado.marcador = L.marker(CENTRO_DEFAULT).addTo(estado.mapa)
+        .bindPopup('Vehículo');
+
+    const btnCentrar = document.getElementById('btnCentrar');
+    if (btnCentrar) {
+        btnCentrar.addEventListener('click', () => {
+            estado.modoTracking = !estado.modoTracking;
+            btnCentrar.classList.toggle('activo', estado.modoTracking);
+            btnCentrar.title = estado.modoTracking ? 'Desactivar modo seguimiento' : 'Activar modo seguimiento';
+
+            if (estado.modoTracking && estado.marcador && estado.marcador.getLatLng()) {
+                estado.mapa.setView(estado.marcador.getLatLng(), ZOOM_CENTRADO);
+            }
+        });
+    }
+
+    estado.recorrido = L.polyline([], { color: '#C8102E', weight: 3 }).addTo(estado.mapa);
+
+    // 2. Intentar obtener la última posición para centrar el mapa sin bloquear
     try {
         const res = await fetch(`${API_BASE}/api/ultimo`);
         if (res.ok) {
             const datos = await res.json();
             if (datos.lat !== null && datos.lng !== null && !isNaN(Number(datos.lat)) && !isNaN(Number(datos.lng))) {
-                centroInicial = [redondearCoord(datos.lat), redondearCoord(datos.lng)];
+                const pos = [redondearCoord(datos.lat), redondearCoord(datos.lng)];
+                estado.marcador.setLatLng(pos);
+                estado.mapa.setView(pos, 15);
                 estado.mapaCentradoInicial = true;
             }
         }
@@ -67,29 +95,7 @@ export async function initMap() {
         console.warn('No se pudo obtener la posición inicial desde /api/ultimo, usando centro por defecto:', e);
     }
 
-    estado.mapa = L.map('mapa').setView(centroInicial, 15);
-
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(estado.mapa);
-
-    estado.marcador = L.marker(centroInicial).addTo(estado.mapa)
-        .bindPopup('Vehículo');
-
-    const btnCentrar = document.getElementById('btnCentrar');
-    btnCentrar.addEventListener('click', () => {
-        estado.modoTracking = !estado.modoTracking;
-        btnCentrar.classList.toggle('activo', estado.modoTracking);
-        btnCentrar.title = estado.modoTracking ? 'Desactivar modo seguimiento' : 'Activar modo seguimiento';
-
-        if (estado.modoTracking && estado.marcador && estado.marcador.getLatLng()) {
-            estado.mapa.setView(estado.marcador.getLatLng(), ZOOM_CENTRADO);
-        }
-    });
-
-    estado.recorrido = L.polyline([], { color: '#C8102E', weight: 3 }).addTo(estado.mapa);
-
+    // 3. Iniciar telemetría en tiempo real
     actualizarMarcador();
     setInterval(actualizarMarcador, INTERVALO_MS);
 }

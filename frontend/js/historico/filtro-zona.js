@@ -39,6 +39,24 @@ export function desactivarModoSeleccionCentro() {
     }
 }
 
+export function activarModoFiltroZonaUI() {
+    if (estado.submodoFiltroZona === 'lugar') {
+        mostrarBarraBusquedaLugar();
+        desactivarModoSeleccionCentro();
+    } else {
+        ocultarBarraBusquedaLugar();
+        registrarClickMapaZona();
+        if (!estado.centroZona) {
+            activarModoSeleccionCentro();
+        }
+    }
+}
+
+export function desactivarModoFiltroZonaUI() {
+    desactivarModoSeleccionCentro();
+    ocultarBarraBusquedaLugar();
+}
+
 export function establecerCentroZona(latlng, centrarMapa = false) {
     console.log('[Locator] Estableciendo centro de zona en:', latlng);
     estado.centroZona = { lat: latlng.lat, lng: latlng.lng };
