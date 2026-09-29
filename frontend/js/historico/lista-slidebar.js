@@ -5,6 +5,16 @@ import { estado } from '../estado.js';
 import { calcularDistanciaRecorrido } from './segmentacion.js';
 import { formatearDistancia } from '../utilidades.js';
 
+const PALETA_RECORRIDOS = ['#4A90D9', '#2ecc71', '#e67e22', '#9b59b6', '#e74c3c', '#1abc9c', '#f1c40f', '#e84393'];
+
+function obtenerColorRecorrido(indice) {
+    return PALETA_RECORRIDOS[indice % PALETA_RECORRIDOS.length];
+}
+
+function buscarEntradaVisible(indice) {
+    return estado.lineasHistoricas.find(entrada => entrada.indice === indice);
+}
+
 export function mostrarListaRecorridos(recorridos) {
     const contenedor = document.getElementById('selectorRecorridos');
     const lista = document.getElementById('listaRecorridos');
@@ -26,36 +36,44 @@ export function mostrarListaRecorridos(recorridos) {
         const fin = recorridoActual[recorridoActual.length - 1];
         const distancia = calcularDistanciaRecorrido(recorridoActual);
 
-        const elemento = document.createElement('button');
-        elemento.type = 'button';
+        const elemento = document.createElement('div');
         elemento.className = 'itemRecorrido';
         elemento.dataset.indice = index;
 
         elemento.innerHTML = `
-            <div class="numeroRecorrido">
-                Recorrido ${numero}
-            </div>
-            <div class="datosRecorrido">
-                <div>
-                    ${inicio.fecha || '--'}
-                    ·
-                    ${inicio.hora || '--'}
+            <label class="checkRecorridoWrapper">
+                <input type="checkbox" class="checkRecorrido" data-indice="${index}">
+            </label>
+            <button type="button" class="infoRecorridoBtn" data-indice="${index}">
+                <div class="numeroRecorrido">
+                    Recorrido ${numero}
                 </div>
-                <div>
-                    →
-                    ${fin.fecha || '--'}
-                    ·
-                    ${fin.hora || '--'}
+                <div class="datosRecorrido">
+                    <div>
+                        ${inicio.fecha || '--'}
+                        ·
+                        ${inicio.hora || '--'}
+                    </div>
+                    <div>
+                        →
+                        ${fin.fecha || '--'}
+                        ·
+                        ${fin.hora || '--'}
+                    </div>
+                    <div>
+                        ${recorridoActual.length} puntos
+                        ·
+                        ${formatearDistancia(distancia)}
+                    </div>
                 </div>
-                <div>
-                    ${recorridoActual.length} puntos
-                    ·
-                    ${formatearDistancia(distancia)}
-                </div>
-            </div>
+            </button>
         `;
 
-        elemento.addEventListener('click', () => {
+        elemento.querySelector('.checkRecorrido').addEventListener('change', () => {
+            alternarVisibilidadRecorrido(index);
+        });
+
+        elemento.querySelector('.infoRecorridoBtn').addEventListener('click', () => {
             seleccionarRecorrido(index);
         });
 
@@ -63,51 +81,60 @@ export function mostrarListaRecorridos(recorridos) {
     });
 }
 
-export function seleccionarRecorrido(indice) {
-    detenerReproduccion();
+export function alternarVisibilidadRecorrido(indice) {
+    const entradaExistente = buscarEntradaVisible(indice);
 
-    if (!estado.recorridosHistoricos || !estado.recorridosHistoricos[indice]) {
+    if (entradaExistente) {
+        estado.mapa.removeLayer(entradaExistente.linea);
+        estado.mapa.removeLayer(entradaExistente.marcadorInicio);
+        estado.mapa.removeLayer(entradaExistente.marcadorFin);
+        estado.lineasHistoricas = estado.lineasHistoricas.filter(entrada => entrada.indice !== indice);
+
+        if (estado.recorridoSeleccionado === estado.recorridosHistoricos[indice]) {
+            detenerReproduccion();
+            estado.recorridoSeleccionado = null;
+            if (estado.marcadorReproduccion) {
+                estado.mapa.removeLayer(estado.marcadorReproduccion);
+                estado.marcadorReproduccion = null;
+            }
+            const reproductor = document.getElementById('reproductorHistorico');
+            if (reproductor) reproductor.style.display = 'none';
+            const itemActual = document.querySelector(`.itemRecorrido[data-indice="${indice}"]`);
+            if (itemActual) itemActual.classList.remove('enReproduccion');
+        }
         return;
     }
 
-    estado.recorridoSeleccionado = estado.recorridosHistoricos[indice];
-    estado.indiceReproduccion = 0;
+    dibujarRecorridoEnMapa(indice);
+    marcarCheckbox(indice, true);
+}
 
-    document.querySelectorAll('.itemRecorrido').forEach(item => {
-        item.classList.remove('seleccionado');
-    });
+function marcarCheckbox(indice, valor) {
+    const checkbox = document.querySelector(`.checkRecorrido[data-indice="${indice}"]`);
+    if (checkbox) checkbox.checked = valor;
+}
 
-    const itemSeleccionado = document.querySelector(`.itemRecorrido[data-indice="${indice}"]`);
-    if (itemSeleccionado) {
-        itemSeleccionado.classList.add('seleccionado');
-    }
+function dibujarRecorridoEnMapa(indice) {
+    const recorrido = estado.recorridosHistoricos[indice];
+    if (!recorrido) return;
 
-    if (estado.lineaRecorridoSeleccionado) {
-        estado.mapa.removeLayer(estado.lineaRecorridoSeleccionado);
-        estado.lineaRecorridoSeleccionado = null;
-    }
+    const coordenadas = recorrido.map(punto => [punto.lat, punto.lng]);
+    const color = obtenerColorRecorrido(indice);
 
-    // Limpiar marcadores de inicio y fin previos si existían
-    estado.marcadoresHistoricos.forEach(marcador => estado.mapa.removeLayer(marcador));
-    estado.marcadoresHistoricos = [];
-
-    const coordenadas = estado.recorridoSeleccionado.map(punto => [punto.lat, punto.lng]);
-
-    estado.lineaRecorridoSeleccionado = L.polyline(coordenadas, {
-        color: '#4A90D9',
+    const linea = L.polyline(coordenadas, {
+        color,
         weight: 5,
         opacity: 0.9
-    }).addTo(estado.mapa);
+    }).addTo(estado.mapa).on('click', () => seleccionarRecorrido(indice));
 
     const numero = indice + 1;
-    const puntoInicio = estado.recorridoSeleccionado[0];
-    const puntoFin = estado.recorridoSeleccionado[estado.recorridoSeleccionado.length - 1];
+    const puntoInicio = recorrido[0];
+    const puntoFin = recorrido[recorrido.length - 1];
 
     const distInicioFin = L.latLng(puntoInicio.lat, puntoInicio.lng).distanceTo(L.latLng(puntoFin.lat, puntoFin.lng));
     const direccionFin = distInicioFin < 30 ? 'bottom' : 'top';
     const offsetFin = distInicioFin < 30 ? [0, 14] : [0, -14];
 
-    // Círculo verde de inicio recorrido
     const marcadorInicio = L.marker([puntoInicio.lat, puntoInicio.lng], {
         icon: crearIconoInicio(numero),
         zIndexOffset: 500
@@ -119,9 +146,9 @@ export function seleccionarRecorrido(indice) {
             offset: [0, -14],
             className: 'tooltipRecorrido tooltipInicio'
         })
-        .bindPopup(`Inicio recorrido ${numero}${puntoInicio.fecha ? ' — ' + puntoInicio.fecha + ' ' + (puntoInicio.hora || '') : ''}`);
+        .bindPopup(`Inicio recorrido ${numero}${puntoInicio.fecha ? ' — ' + puntoInicio.fecha + ' ' + (puntoInicio.hora || '') : ''}`)
+        .on('click', () => seleccionarRecorrido(indice));
 
-    // Círculo rojo de fin recorrido
     const marcadorFin = L.marker([puntoFin.lat, puntoFin.lng], {
         icon: crearIconoFin(numero),
         zIndexOffset: 500
@@ -133,9 +160,37 @@ export function seleccionarRecorrido(indice) {
             offset: offsetFin,
             className: 'tooltipRecorrido tooltipFin'
         })
-        .bindPopup(`Fin recorrido ${numero}${puntoFin.fecha ? ' — ' + puntoFin.fecha + ' ' + (puntoFin.hora || '') : ''}`);
+        .bindPopup(`Fin recorrido ${numero}${puntoFin.fecha ? ' — ' + puntoFin.fecha + ' ' + (puntoFin.hora || '') : ''}`)
+        .on('click', () => seleccionarRecorrido(indice));
 
-    estado.marcadoresHistoricos.push(marcadorInicio, marcadorFin);
+    estado.lineasHistoricas.push({ indice, linea, marcadorInicio, marcadorFin });
+}
+
+export function seleccionarRecorrido(indice) {
+    detenerReproduccion();
+
+    if (!estado.recorridosHistoricos || !estado.recorridosHistoricos[indice]) {
+        return;
+    }
+
+    let entrada = buscarEntradaVisible(indice);
+    if (!entrada) {
+        dibujarRecorridoEnMapa(indice);
+        marcarCheckbox(indice, true);
+        entrada = buscarEntradaVisible(indice);
+    }
+
+    estado.recorridoSeleccionado = estado.recorridosHistoricos[indice];
+    estado.indiceReproduccion = 0;
+
+    document.querySelectorAll('.itemRecorrido').forEach(item => {
+        item.classList.remove('enReproduccion');
+    });
+
+    const itemActual = document.querySelector(`.itemRecorrido[data-indice="${indice}"]`);
+    if (itemActual) {
+        itemActual.classList.add('enReproduccion');
+    }
 
     const slider = document.getElementById('sliderRecorrido');
     if (slider) {
@@ -164,8 +219,8 @@ export function seleccionarRecorrido(indice) {
 
     actualizarPuntoReproduccion(0);
 
-    if (coordenadas.length > 0) {
-        estado.mapa.fitBounds(estado.lineaRecorridoSeleccionado.getBounds(), {
+    if (entrada) {
+        estado.mapa.fitBounds(entrada.linea.getBounds(), {
             padding: [60, 50],
             maxZoom: 17
         });

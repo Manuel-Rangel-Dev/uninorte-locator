@@ -10,7 +10,7 @@ import {
     distanciaSegmentoAPunto
 } from '../utilidades.js';
 import { segmentarRecorridos, calcularDistanciaRecorrido } from './segmentacion.js';
-import { seleccionarRecorrido, detenerReproduccion } from './lista-slidebar.js';
+import { seleccionarRecorrido, detenerReproduccion, alternarVisibilidadRecorrido } from './lista-slidebar.js';
 import { actualizarVisibilidadTiempoReal } from './calendario.js';
 
 const COLORES_BARRA = ['#ec4899', '#06b6d4', '#f59e0b', '#10b981', '#8b5cf6', '#3b82f6'];
@@ -222,29 +222,35 @@ export async function buscarRutasEnZona() {
                 const distancia = calcularDistanciaRecorrido(rec);
                 const colorBarra = COLORES_BARRA[idx % COLORES_BARRA.length];
 
-                const card = document.createElement('button');
-                card.type = 'button';
+                const card = document.createElement('div');
                 card.className = 'cardRutaZona';
                 card.dataset.indice = idx;
                 card.style.borderLeft = `6px solid ${colorBarra}`;
 
                 card.innerHTML = `
-                    <div class="filaDatoZona">
-                        <span class="lblRutaZona">DESDE</span>
-                        <span class="valRutaZona">${formatearFechaHoraCard(inicio.fecha, inicio.hora)}</span>
-                    </div>
-                    <div class="filaDatoZona">
-                        <span class="lblRutaZona">HASTA</span>
-                        <span class="valRutaZona">${formatearFechaHoraCard(fin.fecha, fin.hora)}</span>
-                    </div>
-                    <div class="metaRutaZona">
-                        <span>Recorrido ${idx + 1}</span> · <span>${rec.length} pts</span> · <span>${formatearDistancia(distancia)}</span>
-                    </div>
+                    <label class="checkRecorridoWrapper">
+                        <input type="checkbox" class="checkRecorrido" data-indice="${idx}">
+                    </label>
+                    <button type="button" class="infoRutaZonaBtn" data-indice="${idx}">
+                        <div class="filaDatoZona">
+                            <span class="lblRutaZona">DESDE</span>
+                            <span class="valRutaZona">${formatearFechaHoraCard(inicio.fecha, inicio.hora)}</span>
+                        </div>
+                        <div class="filaDatoZona">
+                            <span class="lblRutaZona">HASTA</span>
+                            <span class="valRutaZona">${formatearFechaHoraCard(fin.fecha, fin.hora)}</span>
+                        </div>
+                        <div class="metaRutaZona">
+                            <span>Recorrido ${idx + 1}</span> · <span>${rec.length} pts</span> · <span>${formatearDistancia(distancia)}</span>
+                        </div>
+                    </button>
                 `;
 
-                card.addEventListener('click', () => {
-                    document.querySelectorAll('.cardRutaZona').forEach(c => c.classList.remove('seleccionada'));
-                    card.classList.add('seleccionada');
+                card.querySelector('.checkRecorrido').addEventListener('change', () => {
+                    alternarVisibilidadRecorrido(idx);
+                });
+
+                card.querySelector('.infoRutaZonaBtn').addEventListener('click', () => {
                     seleccionarRecorrido(idx);
                 });
 
@@ -256,7 +262,6 @@ export async function buscarRutasEnZona() {
             contenedorRutas.style.display = 'block';
         }
 
-        // Ajustar mapa para englobar el círculo de búsqueda
         if (estado.circuloZona && estado.mapa) {
             estado.mapa.fitBounds(estado.circuloZona.getBounds(), {
                 padding: [40, 40],
@@ -288,12 +293,12 @@ export function limpiarZona() {
     }
     estado.centroZona = null;
 
-    if (estado.lineaRecorridoSeleccionado && estado.mapa) {
-        estado.mapa.removeLayer(estado.lineaRecorridoSeleccionado);
-        estado.lineaRecorridoSeleccionado = null;
-    }
-    estado.marcadoresHistoricos.forEach(m => estado.mapa && estado.mapa.removeLayer(m));
-    estado.marcadoresHistoricos = [];
+    estado.lineasHistoricas.forEach(entrada => {
+        estado.mapa.removeLayer(entrada.linea);
+        estado.mapa.removeLayer(entrada.marcadorInicio);
+        estado.mapa.removeLayer(entrada.marcadorFin);
+    });
+    estado.lineasHistoricas = [];
 
     if (estado.marcadorReproduccion && estado.mapa) {
         estado.mapa.removeLayer(estado.marcadorReproduccion);

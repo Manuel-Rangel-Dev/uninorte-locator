@@ -174,11 +174,12 @@ function initHistoricos() {
             estado.hayRecorridoHistorico = true;
             estado.recorridosHistoricos = recorridos;
 
-            estado.lineasHistoricas.forEach(linea => estado.mapa.removeLayer(linea));
+            estado.lineasHistoricas.forEach(entrada => {
+                estado.mapa.removeLayer(entrada.linea);
+                estado.mapa.removeLayer(entrada.marcadorInicio);
+                estado.mapa.removeLayer(entrada.marcadorFin);
+            });
             estado.lineasHistoricas = [];
-
-            estado.marcadoresHistoricos.forEach(marcador => estado.mapa.removeLayer(marcador));
-            estado.marcadoresHistoricos = [];
 
             if (estado.lineaRecorridoSeleccionado) {
                 estado.mapa.removeLayer(estado.lineaRecorridoSeleccionado);

@@ -943,3 +943,54 @@ html, body {
     text-align: center;
     font-family: monospace;
 }
+
+.itemRecorrido {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 8px;
+    border-radius: 6px;
+}
+.checkRecorridoWrapper {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+.checkRecorrido {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+.infoRecorridoBtn {
+    flex: 1;
+    text-align: left;
+    background: none;
+    border: none;
+    color: inherit;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0;
+}
+.itemRecorrido.enReproduccion {
+    background-color: rgba(74, 144, 217, 0.15);
+    border: 1px solid #4A90D9;
+}
+.cardRutaZona {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.infoRutaZonaBtn {
+    flex: 1;
+    text-align: left;
+    background: none;
+    border: none;
+    color: inherit;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0;
+}
+.cardRutaZona.enReproduccion {
+    background-color: rgba(74, 144, 217, 0.15);
+}
