@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="" />
-    <link rel="stylesheet" href="styles.css?v=11">
+    <link rel="stylesheet" href="styles.css?v=19">
     <script src="config.js"></script>
     <script>
         if (typeof APP_CONFIG === 'undefined') {
@@ -70,11 +70,22 @@
         <div id="sugerenciasBusquedaLugar" class="sugerenciasBusqueda" style="display: none;"></div>
     </div>
 
+    <button id="btnRestaurarPanel" type="button" aria-label="Mostrar panel de históricos">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M7 10L12 5L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M7 14L12 19L17 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Mostrar panel</span>
+    </button>
+
     <div id="panelHistoricos">
-        <!-- Selector de Tipo de Filtro (Fecha / Zona) -->
-        <div class="selectorTipoFiltro">
-            <button id="btnFiltroFecha" class="tabTipoFiltro activo" type="button">Filtrar por fecha</button>
-            <button id="btnFiltroZona" class="tabTipoFiltro" type="button">Filtrar por zona</button>
+        <div class="cabeceraPanelHistoricos">
+            <span class="tituloPanelHistoricos">HISTÓRICOS</span>
+            <button id="btnMinimizarPanel" type="button" aria-label="Minimizar históricos" title="Minimizar históricos">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </button>
         </div>
 
         <!-- SECCIÓN 1: FILTRAR POR FECHA (Mantiene exactamente lo existente) -->
@@ -136,16 +147,13 @@
             </div>
 
             <div id="estadoHistorico"></div>
-
-            <div id="selectorRecorridos" style="display: none;">
-                <div class="tituloRecorridos">
-                    RECORRIDOS ENCONTRADOS
-                </div>
-                <div id="listaRecorridos"></div>
-            </div>
         </div>
 
-        <!-- SECCIÓN 2: FILTRAR POR ZONA (Basado en img4.png) -->
+        <button id="btnFiltrarPorZona" class="btnFiltrarPorZona" type="button" style="display: none;">
+            Filtrar estas rutas por zona
+        </button>
+
+        <!-- SECCIÓN 2: FILTRAR POR ZONA -->
         <div id="vistaFiltroZona" style="display: none;">
             <!-- Sub-selector de Modo de Zona (En Mapa / Buscar Lugar) -->
             <div class="selectorSubmodoZona">
@@ -169,16 +177,15 @@
                 <button id="btnLimpiarZona" class="btnSecundarioZona" type="button">Limpiar</button>
             </div>
 
-            <button id="btnBuscarZona" class="btnBuscarZona" type="button">Buscar en esta zona</button>
-
             <div id="estadoZona" class="estadoZona"></div>
 
-            <div id="contenedorRutasZona" style="display: none;">
-                <div class="tituloRecorridos">
-                    RUTAS POR EL ÁREA
-                </div>
-                <div id="listaRutasZona"></div>
+        </div>
+
+        <div id="selectorRecorridos" style="display: none;">
+            <div class="tituloRecorridos">
+                RECORRIDOS ENCONTRADOS
             </div>
+            <div id="listaRecorridos"></div>
         </div>
 
         <!-- REPRODUCTOR COMPARTIDO (Se muestra al elegir un recorrido en fecha o zona) -->
@@ -224,6 +231,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
-    <script type="module" src="js/main.js?v=11"></script>
+    <script type="module" src="js/main.js?v=19"></script>
 </body>
 </html>

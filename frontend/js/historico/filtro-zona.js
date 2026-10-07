@@ -2,23 +2,103 @@
 // HISTÓRICOS: FILTRO POR ZONA GEOGRÁFICA
 // =============================================================================
 import { estado } from '../estado.js';
-import { API_BASE, RADIO_DEFAULT_METROS, NOMINATIM_URL } from '../constantes.js';
+import { RADIO_DEFAULT_METROS, NOMINATIM_URL } from '../constantes.js';
 import {
     formatearRadio,
-    formatearFechaHoraCard,
-    formatearDistancia,
     distanciaSegmentoAPunto
 } from '../utilidades.js';
-import { segmentarRecorridos, calcularDistanciaRecorrido } from './segmentacion.js';
-import { seleccionarRecorrido, detenerReproduccion, alternarVisibilidadRecorrido } from './lista-slidebar.js';
-import { actualizarVisibilidadTiempoReal } from './calendario.js';
-
-const COLORES_BARRA = ['#ec4899', '#06b6d4', '#f59e0b', '#10b981', '#8b5cf6', '#3b82f6'];
+import {
+    removerCapasHistoricas,
+    mostrarListaRecorridos
+} from './lista-slidebar.js';
 
 let debounceTimer = null;
 let indiceSugerenciaSeleccionada = -1;
 let sugerenciasActuales = [];
+let temporizadorArrastreZona = null;
+let temporizadorFiltroZona = null;
 
+function alTerminarMoverZona() {
+    estado.arrastrandoZona = true;
+    if (temporizadorArrastreZona) {
+        clearTimeout(temporizadorArrastreZona);
+    }
+    temporizadorArrastreZona = setTimeout(() => {
+        estado.arrastrandoZona = false;
+        temporizadorArrastreZona = null;
+    }, 150);
+    console.log('[Locator] Centro de zona movido:', estado.centroZona);
+    aplicarFiltroZonaAutomatico();
+}
+
+function obtenerPuntoContenedorPuntero(evento) {
+    const contenedor = estado.mapa.getContainer();
+    const rectangulo = contenedor.getBoundingClientRect();
+    return estado.mapa.containerPointToLatLng([
+        evento.clientX - rectangulo.left,
+        evento.clientY - rectangulo.top
+    ]);
+}
+
+function configurarArrastreCirculo() {
+    const elemento = estado.circuloZona && estado.circuloZona.getElement();
+    if (!elemento || elemento.dataset.arrastreConfigurado === 'true') return;
+
+    elemento.dataset.arrastreConfigurado = 'true';
+    elemento.addEventListener('pointerdown', (evento) => {
+        if (!estado.zonaActiva || !estado.mapa || !estado.circuloZona) return;
+
+        evento.preventDefault();
+        evento.stopPropagation();
+        estado.arrastrandoZona = true;
+        elemento.classList.add('arrastrando');
+
+        const centroActual = estado.circuloZona.getLatLng();
+        const puntoCentro = estado.mapa.latLngToContainerPoint(centroActual);
+        const contenedor = estado.mapa.getContainer();
+        const rectangulo = contenedor.getBoundingClientRect();
+        const puntoPuntero = {
+            x: evento.clientX - rectangulo.left,
+            y: evento.clientY - rectangulo.top
+        };
+        const desplazamiento = {
+            x: puntoPuntero.x - puntoCentro.x,
+            y: puntoPuntero.y - puntoCentro.y
+        };
+
+        elemento.setPointerCapture(evento.pointerId);
+        estado.mapa.dragging.disable();
+
+        const moverCirculo = (movimiento) => {
+            const puntoActual = obtenerPuntoContenedorPuntero(movimiento);
+            const puntoActualContenedor = estado.mapa.latLngToContainerPoint(puntoActual);
+            const nuevoCentro = estado.mapa.containerPointToLatLng([
+                puntoActualContenedor.x - desplazamiento.x,
+                puntoActualContenedor.y - desplazamiento.y
+            ]);
+            establecerCentroZona(nuevoCentro, false, false);
+            estado.arrastrandoZona = true;
+        };
+
+        const finalizarArrastre = (movimiento) => {
+            elemento.removeEventListener('pointermove', moverCirculo);
+            elemento.removeEventListener('pointerup', finalizarArrastre);
+            elemento.removeEventListener('pointercancel', finalizarArrastre);
+            if (elemento.hasPointerCapture(movimiento.pointerId)) {
+                elemento.releasePointerCapture(movimiento.pointerId);
+            }
+            elemento.classList.remove('arrastrando');
+            estado.mapa.dragging.enable();
+            alTerminarMoverZona();
+        };
+
+        elemento.addEventListener('pointermove', moverCirculo);
+        elemento.addEventListener('pointerup', finalizarArrastre);
+        elemento.addEventListener('pointercancel', finalizarArrastre);
+    });
+}
+
+// Activa el modo para seleccionar el centro de la zona haciendo clic en el mapa
 export function activarModoSeleccionCentro() {
     estado.modoSeleccionCentro = true;
     if (estado.mapa && estado.mapa.getContainer()) {
@@ -32,6 +112,7 @@ export function activarModoSeleccionCentro() {
     registrarClickMapaZona();
 }
 
+// Desactiva el modo de selección de centro
 export function desactivarModoSeleccionCentro() {
     estado.modoSeleccionCentro = false;
     if (estado.mapa && estado.mapa.getContainer()) {
@@ -39,8 +120,10 @@ export function desactivarModoSeleccionCentro() {
     }
 }
 
+// Activa la interfaz del filtro por zona según el submodo actual
 export function activarModoFiltroZonaUI() {
     const btnMover = document.getElementById('btnMoverCentroZona');
+
     if (estado.submodoFiltroZona === 'lugar') {
         if (btnMover) btnMover.style.display = 'none';
         mostrarBarraBusquedaLugar();
@@ -55,17 +138,20 @@ export function activarModoFiltroZonaUI() {
     }
 }
 
+// Cierra los elementos del filtro por zona
 export function desactivarModoFiltroZonaUI() {
     desactivarModoSeleccionCentro();
     ocultarBarraBusquedaLugar();
 }
 
-export function establecerCentroZona(latlng, centrarMapa = false) {
+// Guarda el centro de la zona y dibuja el círculo del radio en el mapa
+export function establecerCentroZona(latlng, centrarMapa = false, aplicarFiltro = true) {
     console.log('[Locator] Estableciendo centro de zona en:', latlng);
     estado.centroZona = { lat: latlng.lat, lng: latlng.lng };
 
     const radio = estado.radioZona || 300;
 
+    // Crea el círculo si no existe
     if (!estado.circuloZona) {
         estado.circuloZona = L.circle([latlng.lat, latlng.lng], {
             radius: radio,
@@ -73,13 +159,16 @@ export function establecerCentroZona(latlng, centrarMapa = false) {
             weight: 2,
             fillColor: '#dc0303',
             fillOpacity: 0.15,
-            dashArray: '5,5'
+            dashArray: '5,5',
+            className: 'circulo-zona-arrastrable'
         }).addTo(estado.mapa);
+        configurarArrastreCirculo();
     } else {
         estado.circuloZona.setLatLng(latlng);
         estado.circuloZona.setRadius(radio);
     }
 
+    // Crea o mueve el marcador central
     if (!estado.marcadorCentroZona) {
         estado.marcadorCentroZona = L.marker([latlng.lat, latlng.lng], {
             draggable: true,
@@ -98,6 +187,12 @@ export function establecerCentroZona(latlng, centrarMapa = false) {
                 estado.circuloZona.setLatLng(nuevaPos);
             }
         });
+        estado.marcadorCentroZona.on('dragstart', () => {
+            estado.arrastrandoZona = true;
+        });
+        estado.marcadorCentroZona.on('dragend', () => {
+            alTerminarMoverZona();
+        });
     } else {
         estado.marcadorCentroZona.setLatLng(latlng);
     }
@@ -108,13 +203,17 @@ export function establecerCentroZona(latlng, centrarMapa = false) {
 
     const instruccion = document.getElementById('instruccionZona');
     if (instruccion) {
-        instruccion.textContent = 'Centro colocado. Ajusta el radio y presiona “Buscar en esta zona”.';
+        instruccion.textContent = 'Centro colocado. Arrastra el círculo o ajusta el radio y las rutas se actualizan solas.';
         instruccion.style.color = '#B3B3B3';
     }
 
     desactivarModoSeleccionCentro();
+    if (aplicarFiltro) {
+        aplicarFiltroZonaAutomatico();
+    }
 }
 
+// Actualiza el radio de la zona y lo refleja en la interfaz
 export function actualizarRadioZona(nuevoRadio) {
     estado.radioZona = nuevoRadio;
     const txt = document.getElementById('valorRadioZona');
@@ -124,165 +223,59 @@ export function actualizarRadioZona(nuevoRadio) {
     if (estado.circuloZona) {
         estado.circuloZona.setRadius(nuevoRadio);
     }
+    if (temporizadorFiltroZona) {
+        clearTimeout(temporizadorFiltroZona);
+    }
+    temporizadorFiltroZona = setTimeout(() => {
+        temporizadorFiltroZona = null;
+        aplicarFiltroZonaAutomatico();
+    }, 250);
 }
 
-export async function obtenerPuntosHistoricosCompletos() {
-    if (estado.cachePuntosHistoricos && estado.cachePuntosHistoricos.length > 0) {
-        return estado.cachePuntosHistoricos;
-    }
-    const url = `${API_BASE}/api/historico?fecha_desde=2020-01-01&hora_desde=00:00:00&fecha_hasta=2030-01-01&hora_hasta=23:59:59`;
-    const res = await fetch(url);
-    if (!res.ok) {
-        const err = await res.json().catch(() => null);
-        throw new Error(err && err.error ? err.error : `HTTP ${res.status}`);
-    }
-    const puntos = await res.json();
-    estado.cachePuntosHistoricos = puntos;
-    return puntos;
-}
-
-export async function buscarRutasEnZona() {
-    if (!estado.centroZona) {
-        const instruccion = document.getElementById('instruccionZona');
-        if (instruccion) {
-            if (estado.submodoFiltroZona === 'lugar') {
-                instruccion.textContent = '⚠️ Primero busca una dirección o lugar en la barra superior.';
-                instruccion.style.color = '#ff6b6b';
-                mostrarBarraBusquedaLugar();
-            } else {
-                instruccion.textContent = '⚠️ Primero haz clic en el mapa para colocar el centro de búsqueda.';
-                instruccion.style.color = '#ff6b6b';
-                activarModoSeleccionCentro();
-            }
-        }
-        return;
-    }
+// Filtra localmente las rutas base según el centro y radio actuales
+export function aplicarFiltroZonaAutomatico() {
+    if (!estado.centroZona || estado.recorridosBase.length === 0) return;
 
     const estadoEl = document.getElementById('estadoZona');
-    const btnBuscar = document.getElementById('btnBuscarZona');
-    const contenedorRutas = document.getElementById('contenedorRutasZona');
-    const listaRutas = document.getElementById('listaRutasZona');
 
     if (estadoEl) {
-        estadoEl.textContent = 'Buscando rutas en la zona...';
+        estadoEl.textContent = 'Filtrando rutas en la zona...';
         estadoEl.style.color = '#B3B3B3';
     }
-    if (btnBuscar) btnBuscar.disabled = true;
 
-    try {
-        const puntos = await obtenerPuntosHistoricosCompletos();
-        if (!puntos || puntos.length === 0) {
-            if (estadoEl) {
-                estadoEl.textContent = 'No hay datos históricos disponibles.';
-                estadoEl.style.color = '#e5a50a';
+    const centro = L.latLng(estado.centroZona.lat, estado.centroZona.lng);
+    const radio = estado.radioZona;
+    const rutasFiltradas = estado.recorridosBase.filter(recorrido => {
+        const puntoDentro = recorrido.some(p => L.latLng(p.lat, p.lng).distanceTo(centro) <= radio);
+        if (puntoDentro) return true;
+        for (let i = 1; i < recorrido.length; i++) {
+            if (distanciaSegmentoAPunto(recorrido[i - 1], recorrido[i], centro) <= radio) {
+                return true;
             }
-            if (contenedorRutas) contenedorRutas.style.display = 'none';
-            return;
         }
+        return false;
+    });
 
-        const recorridos = segmentarRecorridos(puntos);
-        const centro = L.latLng(estado.centroZona.lat, estado.centroZona.lng);
-        const radio = estado.radioZona;
+    estado.recorridosHistoricos = rutasFiltradas;
+    estado.recorridoSeleccionado = null;
+    estado.indiceReproduccion = 0;
+    removerCapasHistoricas();
+    mostrarListaRecorridos(rutasFiltradas);
+    if (rutasFiltradas.length === 0) {
+        const contenedorRecorridos = document.getElementById('selectorRecorridos');
+        if (contenedorRecorridos) contenedorRecorridos.style.display = 'block';
+    }
 
-        const rutasFiltradas = recorridos.filter(recorrido => {
-            const puntoDentro = recorrido.some(p => L.latLng(p.lat, p.lng).distanceTo(centro) <= radio);
-            if (puntoDentro) return true;
-
-            for (let i = 1; i < recorrido.length; i++) {
-                if (distanciaSegmentoAPunto(recorrido[i - 1], recorrido[i], centro) <= radio) {
-                    return true;
-                }
-            }
-            return false;
-        });
-
-        estado.hayRecorridoHistorico = true;
-        estado.recorridosHistoricos = rutasFiltradas;
-        actualizarVisibilidadTiempoReal();
-
-        if (rutasFiltradas.length === 0) {
-            if (estadoEl) {
-                estadoEl.textContent = 'No se encontraron rutas que pasen por esta zona.';
-                estadoEl.style.color = '#e5a50a';
-            }
-            if (contenedorRutas) contenedorRutas.style.display = 'none';
-            return;
-        }
-
-        if (estadoEl) {
-            estadoEl.textContent = `${rutasFiltradas.length} ruta(s) encontrada(s) en la zona`;
-            estadoEl.style.color = '#4cd964';
-        }
-
-        if (listaRutas) {
-            listaRutas.innerHTML = '';
-            rutasFiltradas.forEach((rec, idx) => {
-                const inicio = rec[0];
-                const fin = rec[rec.length - 1];
-                const distancia = calcularDistanciaRecorrido(rec);
-                const colorBarra = COLORES_BARRA[idx % COLORES_BARRA.length];
-
-                const card = document.createElement('div');
-                card.className = 'cardRutaZona';
-                card.dataset.indice = idx;
-                card.style.borderLeft = `6px solid ${colorBarra}`;
-
-                card.innerHTML = `
-                    <label class="checkRecorridoWrapper">
-                        <input type="checkbox" class="checkRecorrido" data-indice="${idx}">
-                    </label>
-                    <button type="button" class="infoRutaZonaBtn" data-indice="${idx}">
-                        <div class="filaDatoZona">
-                            <span class="lblRutaZona">DESDE</span>
-                            <span class="valRutaZona">${formatearFechaHoraCard(inicio.fecha, inicio.hora)}</span>
-                        </div>
-                        <div class="filaDatoZona">
-                            <span class="lblRutaZona">HASTA</span>
-                            <span class="valRutaZona">${formatearFechaHoraCard(fin.fecha, fin.hora)}</span>
-                        </div>
-                        <div class="metaRutaZona">
-                            <span>Recorrido ${idx + 1}</span> · <span>${rec.length} pts</span> · <span>${formatearDistancia(distancia)}</span>
-                        </div>
-                    </button>
-                `;
-
-                card.querySelector('.checkRecorrido').addEventListener('change', () => {
-                    alternarVisibilidadRecorrido(idx);
-                });
-
-                card.querySelector('.infoRutaZonaBtn').addEventListener('click', () => {
-                    seleccionarRecorrido(idx);
-                });
-
-                listaRutas.appendChild(card);
-            });
-        }
-
-        if (contenedorRutas) {
-            contenedorRutas.style.display = 'block';
-        }
-
-        if (estado.circuloZona && estado.mapa) {
-            estado.mapa.fitBounds(estado.circuloZona.getBounds(), {
-                padding: [40, 40],
-                maxZoom: 16
-            });
-        }
-
-    } catch (error) {
-        console.error('Error al buscar en zona:', error);
-        if (estadoEl) {
-            estadoEl.textContent = error.message || 'Error al buscar en la zona';
-            estadoEl.style.color = '#ff6b6b';
-        }
-    } finally {
-        if (btnBuscar) btnBuscar.disabled = false;
+    if (estadoEl) {
+        estadoEl.textContent = rutasFiltradas.length
+            ? `${rutasFiltradas.length} ruta(s) en la zona`
+            : 'Sin rutas en esta zona';
+        estadoEl.style.color = rutasFiltradas.length ? '#4cd964' : '#e5a50a';
     }
 }
 
+// Limpia la zona de búsqueda y elimina los elementos del mapa
 export function limpiarZona() {
-    detenerReproduccion();
-
     if (estado.circuloZona && estado.mapa) {
         estado.mapa.removeLayer(estado.circuloZona);
         estado.circuloZona = null;
@@ -293,29 +286,12 @@ export function limpiarZona() {
     }
     estado.centroZona = null;
 
-    estado.lineasHistoricas.forEach(entrada => {
-        estado.mapa.removeLayer(entrada.linea);
-        estado.mapa.removeLayer(entrada.marcadorInicio);
-        estado.mapa.removeLayer(entrada.marcadorFin);
-    });
-    estado.lineasHistoricas = [];
-
-    if (estado.marcadorReproduccion && estado.mapa) {
-        estado.mapa.removeLayer(estado.marcadorReproduccion);
-        estado.marcadorReproduccion = null;
-    }
-
-    const contenedorRutas = document.getElementById('contenedorRutasZona');
-    if (contenedorRutas) contenedorRutas.style.display = 'none';
-
-    const listaRutas = document.getElementById('listaRutasZona');
-    if (listaRutas) listaRutas.innerHTML = '';
+    removerCapasHistoricas();
+    estado.recorridosHistoricos = estado.recorridosBase;
+    mostrarListaRecorridos(estado.recorridosHistoricos);
 
     const estadoEl = document.getElementById('estadoZona');
     if (estadoEl) estadoEl.textContent = '';
-
-    const reproductor = document.getElementById('reproductorHistorico');
-    if (reproductor) reproductor.style.display = 'none';
 
     const inputBusqueda = document.getElementById('inputBusquedaLugar');
     if (inputBusqueda) inputBusqueda.value = '';
@@ -335,22 +311,24 @@ export function limpiarZona() {
             if (btnMover) btnMover.style.display = '';
             instruccion.textContent = 'Haz clic en el mapa para colocar el centro de búsqueda.';
             instruccion.style.color = '#B3B3B3';
-            activarModoSeleccionCentro();
+            if (estado.zonaActiva) {
+                activarModoSeleccionCentro();
+            } else {
+                desactivarModoSeleccionCentro();
+            }
         }
     } else {
         desactivarModoSeleccionCentro();
     }
 }
 
+// Registra el clic en el mapa para elegir el centro de la zona
 export function registrarClickMapaZona() {
     if (estado.mapa && !estado.mapa._listenerZonaRegistrado) {
         estado.mapa.on('click', (e) => {
             console.log('[Locator] Clic en mapa detectado:', e.latlng);
-            const vistaZonaVisible = document.getElementById('vistaFiltroZona') &&
-                document.getElementById('vistaFiltroZona').style.display !== 'none';
-            const enModoZona = estado.tipoFiltroHistorico === 'zona' || vistaZonaVisible;
-
-            if (enModoZona) {
+            if (estado.arrastrandoZona) return;
+            if (estado.zonaActiva) {
                 if (estado.submodoFiltroZona === 'mapa' && (estado.modoSeleccionCentro || !estado.centroZona)) {
                     establecerCentroZona(e.latlng);
                 }
@@ -360,6 +338,7 @@ export function registrarClickMapaZona() {
     }
 }
 
+// Muestra la barra para buscar por lugar o dirección
 export function mostrarBarraBusquedaLugar() {
     const contenedor = document.getElementById('contenedorBusquedaLugar');
     if (contenedor) {
@@ -369,6 +348,7 @@ export function mostrarBarraBusquedaLugar() {
     }
 }
 
+// Oculta la barra de búsqueda y cierra sugerencias
 export function ocultarBarraBusquedaLugar() {
     const contenedor = document.getElementById('contenedorBusquedaLugar');
     if (contenedor) {
@@ -377,6 +357,7 @@ export function ocultarBarraBusquedaLugar() {
     cerrarSugerencias();
 }
 
+// Cierra las sugerencias actuales de búsqueda
 function cerrarSugerencias() {
     const sugerenciasEl = document.getElementById('sugerenciasBusquedaLugar');
     if (sugerenciasEl) {
@@ -387,6 +368,7 @@ function cerrarSugerencias() {
     sugerenciasActuales = [];
 }
 
+// Cambia entre buscar por mapa o por lugar
 export function cambiarSubmodoZona(nuevoSubmodo) {
     estado.submodoFiltroZona = nuevoSubmodo;
 
@@ -406,7 +388,7 @@ export function cambiarSubmodoZona(nuevoSubmodo) {
         } else {
             desactivarModoSeleccionCentro();
             if (instruccion) {
-                instruccion.textContent = 'Centro colocado. Ajusta el radio y presiona “Buscar en esta zona”.';
+                instruccion.textContent = 'Centro colocado. Arrastra el círculo o ajusta el radio y las rutas se actualizan solas.';
                 instruccion.style.color = '#B3B3B3';
             }
         }
@@ -419,13 +401,14 @@ export function cambiarSubmodoZona(nuevoSubmodo) {
                 instruccion.textContent = 'Usa la barra superior para buscar un lugar o dirección.';
                 instruccion.style.color = '#B3B3B3';
             } else {
-                instruccion.textContent = 'Centro colocado. Ajusta el radio y presiona “Buscar en esta zona”.';
+                instruccion.textContent = 'Centro colocado. Arrastra el círculo o ajusta el radio y las rutas se actualizan solas.';
                 instruccion.style.color = '#B3B3B3';
             }
         }
     }
 }
 
+// Consulta lugares con Nominatim según el texto ingresado
 async function buscarLugares(query) {
     const spinner = document.getElementById('spinnerBusquedaLugar');
     const sugerenciasEl = document.getElementById('sugerenciasBusquedaLugar');
@@ -490,6 +473,7 @@ async function buscarLugares(query) {
     }
 }
 
+// Selecciona una sugerencia y centra la vista en ese lugar
 function seleccionarSugerencia(item) {
     const input = document.getElementById('inputBusquedaLugar');
     if (input) {
@@ -506,6 +490,7 @@ function seleccionarSugerencia(item) {
     }
 }
 
+// Marca visualmente la sugerencia activa en el teclado
 function actualizarSeleccionVisualSugerencias(items) {
     items.forEach((it, idx) => {
         it.classList.toggle('activo', idx === indiceSugerenciaSeleccionada);
@@ -515,6 +500,7 @@ function actualizarSeleccionVisualSugerencias(items) {
     });
 }
 
+// Configura la búsqueda por lugar en el input
 export function initBusquedaLugar() {
     const input = document.getElementById('inputBusquedaLugar');
     const btnLimpiar = document.getElementById('btnLimpiarBusquedaLugar');
@@ -580,6 +566,7 @@ export function initBusquedaLugar() {
     });
 }
 
+// Inicializa el filtro por zona y sus eventos
 export function initFiltroZona() {
     const slider = document.getElementById('sliderRadioZona');
     if (slider) {
@@ -600,13 +587,6 @@ export function initFiltroZona() {
     if (btnLimpiar) {
         btnLimpiar.addEventListener('click', () => {
             limpiarZona();
-        });
-    }
-
-    const btnBuscar = document.getElementById('btnBuscarZona');
-    if (btnBuscar) {
-        btnBuscar.addEventListener('click', () => {
-            buscarRutasEnZona();
         });
     }
 

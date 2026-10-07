@@ -113,6 +113,41 @@ html, body {
     border-color: #dc0303;
 }
 
+#btnRestaurarPanel {
+    position: absolute;
+    top: 58px;
+    right: 12px;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    height: 34px;
+    padding: 0 10px;
+    background-color: rgba(18, 18, 18, 0.95);
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    color: #ffffff;
+    font-family: monospace;
+    font-size: 11px;
+    cursor: pointer;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-8px);
+    transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease, border-color 0.2s ease;
+}
+
+#btnRestaurarPanel.visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+#btnRestaurarPanel:hover {
+    border-color: #dc0303;
+}
+
 #panelHistoricos {
     display: flex;
     position: absolute;
@@ -135,7 +170,8 @@ html, body {
     visibility: hidden;
     transform: translateY(-8px);
     pointer-events: none;
-    transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
+    transform-origin: top right;
+    transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease;
 }
 
 #panelHistoricos::-webkit-scrollbar {
@@ -151,6 +187,49 @@ html, body {
     visibility: visible;
     transform: translateY(0);
     pointer-events: auto;
+}
+
+#panelHistoricos.minimizado {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px) scale(0.84);
+    pointer-events: none;
+}
+
+.cabeceraPanelHistoricos {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 20px;
+    margin: -2px 0 0;
+}
+
+.tituloPanelHistoricos {
+    color: #B3B3B3;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 0.6px;
+}
+
+#btnMinimizarPanel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: #B3B3B3;
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+}
+
+#btnMinimizarPanel:hover {
+    border-color: #dc0303;
+    background-color: rgba(220, 3, 3, 0.1);
+    color: #ffffff;
 }
 
 .selectorRangoFecha {
@@ -373,6 +452,26 @@ html, body {
     cursor: not-allowed;
 }
 
+.btnFiltrarPorZona {
+    width: 100%;
+    background-color: #1a1a1a;
+    border: 1px solid #2A2A2A;
+    color: #ffffff;
+    padding: 8px 0;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.btnFiltrarPorZona:hover,
+.btnFiltrarPorZona.activo {
+    border-color: #dc0303;
+    background-color: rgba(220, 3, 3, 0.15);
+}
+
 .tooltipRecorrido {
     background-color: rgba(18, 18, 18, 0.9);
     border: 1px solid #2A2A2A;
@@ -449,6 +548,56 @@ html, body {
     gap: 6px;
 }
 
+.encabezadoSemana {
+    color: #B3B3B3;
+    font-size: 10px;
+    line-height: 1.4;
+    margin-bottom: 2px;
+}
+
+.checkTodasLasRutasWrapper {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 8px;
+    border: 1px solid #333333;
+    border-radius: 5px;
+    color: #B3B3B3;
+    font-size: 10px;
+    cursor: pointer;
+}
+
+.checkTodasLasRutasWrapper:hover {
+    border-color: #555555;
+    color: #ffffff;
+}
+
+.checkTodasLasRutas {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: #dc0303;
+    cursor: pointer;
+}
+
+.btnAlternarListaRutas {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #444444;
+    border-radius: 5px;
+    background: #1a1a1a;
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 10px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.btnAlternarListaRutas:hover {
+    border-color: #dc0303;
+    background-color: rgba(220, 3, 3, 0.12);
+}
+
 .itemRecorrido {
     width: 100%;
     text-align: left;
@@ -492,6 +641,17 @@ html, body {
     padding: 10px;
     border-radius: 8px;
     background: #202020;
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    transform: translateY(-6px);
+    transition: opacity 0.25s ease, max-height 0.25s ease, transform 0.25s ease;
+}
+
+#reproductorHistorico.visible {
+    opacity: 1;
+    max-height: 220px;
+    transform: translateY(0);
 }
 
 .infoReproduccion {
@@ -541,40 +701,6 @@ html, body {
     background: #2a2a2a;
     color: white;
     cursor: pointer;
-}
-
-/* ============================================================
-   SELECTOR DE TIPO DE FILTRO (Fila 2: Fecha / Zona)
-   ============================================================ */
-.selectorTipoFiltro {
-    display: flex;
-    gap: 6px;
-}
-
-.tabTipoFiltro {
-    flex: 1;
-    background-color: #1a1a1a;
-    border: 1px solid #2A2A2A;
-    border-radius: 4px;
-    padding: 7px 4px;
-    color: #B3B3B3;
-    cursor: pointer;
-    font-family: monospace;
-    font-size: 11px;
-    font-weight: bold;
-    text-align: center;
-    transition: all 0.2s ease;
-}
-
-.tabTipoFiltro:hover {
-    border-color: #555555;
-    color: #ffffff;
-}
-
-.tabTipoFiltro.activo {
-    border-color: #dc0303;
-    background-color: rgba(220, 3, 3, 0.15);
-    color: #ffffff;
 }
 
 #vistaFiltroFecha {
@@ -683,28 +809,6 @@ html, body {
     background-color: rgba(220, 3, 3, 0.1);
 }
 
-.btnBuscarZona {
-    width: 100%;
-    background-color: #dc0303;
-    border: none;
-    color: #ffffff;
-    padding: 8px 0;
-    border-radius: 4px;
-    font-family: monospace;
-    font-size: 12px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.btnBuscarZona:hover {
-    background-color: #a80202;
-}
-
-.btnBuscarZona:disabled {
-    background-color: #555555;
-    cursor: not-allowed;
-}
-
 .estadoZona {
     font-size: 11px;
     text-align: center;
@@ -713,78 +817,18 @@ html, body {
     font-family: monospace;
 }
 
-#contenedorRutasZona {
-    margin-top: 4px;
-}
-
-#listaRutasZona {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-top: 6px;
-}
-
-.cardRutaZona {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    width: 100%;
-    text-align: left;
-    padding: 8px 10px;
-    background-color: #222222;
-    border-radius: 6px;
-    border: 1px solid #444444;
-    border-left-width: 5px !important;
-    color: #ffffff;
-    font-family: monospace;
-    cursor: pointer;
-    box-sizing: border-box;
-    transition: all 0.15s ease;
-}
-
-.cardRutaZona:hover {
-    background-color: #303030;
-    border-color: #555555;
-}
-
-.cardRutaZona.seleccionada {
-    border-color: #dc0303;
-    background-color: rgba(220, 3, 3, 0.15);
-}
-
-.filaDatoZona {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 11px;
-}
-
-.lblRutaZona {
-    font-weight: bold;
-    color: #888888;
-    font-size: 10px;
-    letter-spacing: 0.5px;
-}
-
-.valRutaZona {
-    font-weight: bold;
-    color: #ffffff;
-    font-size: 11px;
-}
-
-.metaRutaZona {
-    font-size: 10px;
-    color: #B3B3B3;
-    margin-top: 2px;
-    border-top: 1px solid #333333;
-    padding-top: 4px;
-    display: flex;
-    gap: 4px;
-}
-
 .marcador-centro-zona {
     background: transparent !important;
     border: none !important;
+}
+
+.circulo-zona-arrastrable {
+    cursor: grab;
+    touch-action: none;
+}
+
+.circulo-zona-arrastrable.arrastrando {
+    cursor: grabbing;
 }
 
 /* ============================================================
@@ -975,22 +1019,4 @@ html, body {
 .itemRecorrido.enReproduccion {
     background-color: rgba(74, 144, 217, 0.15);
     border: 1px solid #4A90D9;
-}
-.cardRutaZona {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.infoRutaZonaBtn {
-    flex: 1;
-    text-align: left;
-    background: none;
-    border: none;
-    color: inherit;
-    font-family: inherit;
-    cursor: pointer;
-    padding: 0;
-}
-.cardRutaZona.enReproduccion {
-    background-color: rgba(74, 144, 217, 0.15);
 }

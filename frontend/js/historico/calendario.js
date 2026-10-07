@@ -4,8 +4,9 @@
 import { HISTORICO_MIN_ANIO, ZOOM_CENTRADO } from '../constantes.js';
 import { normalizarFecha, formatearFechaCorta } from '../utilidades.js';
 import { estado } from '../estado.js';
-import { detenerReproduccion } from './lista-slidebar.js';
+import { removerCapasHistoricas } from './lista-slidebar.js';
 
+// Muestra el mensaje de estado del histórico en la interfaz
 export function mostrarEstadoHistorico(mensaje, color = '#B3B3B3') {
     const el = document.getElementById('estadoHistorico');
     if (el) {
@@ -14,6 +15,7 @@ export function mostrarEstadoHistorico(mensaje, color = '#B3B3B3') {
     }
 }
 
+// Actualiza los textos y el estado visual de los tabs de fecha
 export function actualizarPillsFecha() {
     document.getElementById('txtFechaDesde').textContent = formatearFechaCorta(estado.fechaDesde);
     document.getElementById('txtFechaHasta').textContent = formatearFechaCorta(estado.fechaHasta);
@@ -21,18 +23,23 @@ export function actualizarPillsFecha() {
     document.getElementById('tabHasta').classList.toggle('activo', estado.modoSeleccion === 'hasta');
 }
 
+// Dibuja el calendario mensual con los días seleccionados y los rangos
 export function renderCalendario() {
     const anio = estado.fechaCalendario.getFullYear();
     const mes = estado.fechaCalendario.getMonth();
     const nombresMes = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+    // Título del mes visible en la UI
     document.getElementById('tituloMesAnio').textContent = `${nombresMes[mes]} ${anio}`;
 
     const grid = document.getElementById('gridCalendario');
     grid.innerHTML = '';
 
+    // Calcula la posición inicial según el día de la semana
     const primerDiaSemana = new Date(anio, mes, 1).getDay();
     const diasEnMes = new Date(anio, mes + 1, 0).getDate();
 
+    // Agrega espacios vacíos para alinear los días del calendario
     for (let i = 0; i < primerDiaSemana; i++) {
         grid.appendChild(document.createElement('span'));
     }
@@ -43,6 +50,7 @@ export function renderCalendario() {
     const hoy = new Date();
     const tiempoHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()).getTime();
 
+    // Dibuja cada día del mes
     for (let dia = 1; dia <= diasEnMes; dia++) {
         const celda = document.createElement('span');
         celda.textContent = dia;
@@ -50,6 +58,7 @@ export function renderCalendario() {
 
         const tActual = new Date(anio, mes, dia).getTime();
 
+        // Marca los días futuros para impedir seleccionar fechas posteriores a hoy
         const esFuturo = tActual > tiempoHoy;
         if (esFuturo) {
             celda.classList.add('diaFuturo');
@@ -63,6 +72,7 @@ export function renderCalendario() {
         if (esFin) celda.classList.add('diaFin');
         if (enRango) celda.classList.add('diaEnRango');
 
+        // Al hacer clic en un día se selecciona la fecha de inicio o fin según el modo
         celda.addEventListener('click', () => {
             if (esFuturo) return;
             const diaClick = new Date(anio, mes, dia);
@@ -80,6 +90,7 @@ export function renderCalendario() {
                     estado.fechaHasta = diaClick;
                 }
             }
+
             actualizarPillsFecha();
             renderCalendario();
         });
@@ -87,20 +98,25 @@ export function renderCalendario() {
         grid.appendChild(celda);
     }
 
+    // Desactiva el botón para ir al mes anterior si ya llegó al mínimo permitido
     document.getElementById('btnMesAnterior').disabled = (anio === HISTORICO_MIN_ANIO && mes === 0);
 }
 
+// Cambia de mes en el calendario
 export function cambiarMes(delta) {
     const nuevaFecha = new Date(estado.fechaCalendario.getFullYear(), estado.fechaCalendario.getMonth() + delta, 1);
     if (nuevaFecha.getFullYear() < HISTORICO_MIN_ANIO) return;
+
     estado.fechaCalendario = nuevaFecha;
     renderCalendario();
 }
 
+// Limita el valor máximo de un input de hora
 export function limitarInputHora(input, max) {
     input.addEventListener('input', () => {
         input.value = input.value.replace(/[^0-9]/g, '').slice(0, 2);
     });
+
     input.addEventListener('blur', () => {
         let valor = parseInt(input.value, 10);
         if (isNaN(valor)) valor = 0;
@@ -109,6 +125,7 @@ export function limitarInputHora(input, max) {
     });
 }
 
+// Configura el toggle de AM/PM para cambiar el valor del botón
 export function configurarToggleAmPm(idToggle) {
     const toggle = document.getElementById(idToggle);
     toggle.addEventListener('click', () => {
@@ -118,9 +135,11 @@ export function configurarToggleAmPm(idToggle) {
     });
 }
 
+// Convierte la hora de entrada a formato 24 horas
 export function obtenerHora24(idHH, idMM, idSS, idToggle) {
     let hh = parseInt(document.getElementById(idHH).value, 10);
     if (isNaN(hh)) hh = 0;
+
     const mm = (document.getElementById(idMM).value || '00').padStart(2, '0');
     const ss = (document.getElementById(idSS).value || '00').padStart(2, '0');
     const esPM = document.getElementById(idToggle).dataset.valor === 'PM';
@@ -131,6 +150,7 @@ export function obtenerHora24(idHH, idMM, idSS, idToggle) {
     return `${String(hh).padStart(2, '0')}:${mm}:${ss}`;
 }
 
+// Cambia el texto e ícono del botón principal según el modo actual
 export function actualizarBotonModo(enModoHistorico) {
     const btn = document.getElementById('btnHistoricos');
     const txt = document.getElementById('textoBtnHistoricos');
@@ -150,10 +170,9 @@ export function actualizarBotonModo(enModoHistorico) {
     }
 }
 
+// Controla la visibilidad del recorrido en vivo y del modo histórico
 export function actualizarVisibilidadTiempoReal() {
-    const panelHistoricos = document.getElementById('panelHistoricos');
-    const panelAbierto = panelHistoricos && panelHistoricos.classList.contains('abierto');
-    const debeOcultar = panelAbierto || estado.hayRecorridoHistorico;
+    const debeOcultar = estado.modoHistoricoActivo;
 
     document.body.classList.toggle('modoHistorico', debeOcultar);
 
@@ -165,42 +184,83 @@ export function actualizarVisibilidadTiempoReal() {
     }
 }
 
+// Abre el panel de históricos
 export function abrirHistoricos() {
     const panel = document.getElementById('panelHistoricos');
-    if (panel) panel.classList.add('abierto');
+    estado.modoHistoricoActivo = true;
+    estado.panelMinimizado = false;
+    if (panel) {
+        panel.classList.remove('minimizado');
+        panel.classList.add('abierto');
+    }
+    actualizarBotonRestaurarPanel();
     actualizarBotonModo(true);
     actualizarVisibilidadTiempoReal();
 }
 
+// Minimiza el panel sin cerrar el modo histórico ni alterar sus datos o capas.
+export function minimizarPanelHistoricos() {
+    if (!estado.modoHistoricoActivo) return;
+
+    estado.panelMinimizado = true;
+    const panel = document.getElementById('panelHistoricos');
+    if (panel) panel.classList.add('minimizado');
+    actualizarBotonRestaurarPanel();
+}
+
+// Restaura el panel histórico conservando filtros, capas y reproducción.
+export function restaurarPanelHistoricos() {
+    if (!estado.modoHistoricoActivo) return;
+
+    estado.panelMinimizado = false;
+    const panel = document.getElementById('panelHistoricos');
+    if (panel) panel.classList.remove('minimizado');
+    actualizarBotonRestaurarPanel();
+}
+
+function actualizarBotonRestaurarPanel() {
+    const boton = document.getElementById('btnRestaurarPanel');
+    if (boton) {
+        boton.classList.toggle(
+            'visible',
+            estado.modoHistoricoActivo && estado.panelMinimizado
+        );
+    }
+}
+
+// Vuelve al modo de recorrido en vivo y limpia todo lo histórico
 export function volverARecorridoEnVivo() {
     const panel = document.getElementById('panelHistoricos');
-    if (panel) panel.classList.remove('abierto');
+    estado.modoHistoricoActivo = false;
+    estado.panelMinimizado = false;
+    if (panel) {
+        panel.classList.remove('abierto', 'minimizado');
+    }
+    actualizarBotonRestaurarPanel();
     limpiarRecorridoHistorico();
     actualizarBotonModo(false);
     actualizarVisibilidadTiempoReal();
+
     if (estado.marcador && estado.marcador.getLatLng()) {
         estado.mapa.setView(estado.marcador.getLatLng(), ZOOM_CENTRADO);
     }
 }
 
+// Alterna entre vista histórica y vista en vivo
 export function alternarModoHistorico() {
-    const panel = document.getElementById('panelHistoricos');
-    const enModoHistorico = (panel && panel.classList.contains('abierto')) || estado.hayRecorridoHistorico;
-
-    if (enModoHistorico) {
+    if (estado.modoHistoricoActivo) {
         volverARecorridoEnVivo();
     } else {
         abrirHistoricos();
     }
 }
 
+// Limpia completamente el recorrido histórico y reinicia la interfaz
 export function limpiarRecorridoHistorico() {
     estado.hayRecorridoHistorico = false;
-    detenerReproduccion();
+    removerCapasHistoricas();
 
-    estado.lineasHistoricas.forEach(linea => estado.mapa.removeLayer(linea));
-    estado.lineasHistoricas = [];
-
+    // Elimina marcadores asociados
     estado.marcadoresHistoricos.forEach(marcador => estado.mapa.removeLayer(marcador));
     estado.marcadoresHistoricos = [];
 
@@ -209,11 +269,7 @@ export function limpiarRecorridoHistorico() {
         estado.lineaRecorridoSeleccionado = null;
     }
 
-    if (estado.marcadorReproduccion) {
-        estado.mapa.removeLayer(estado.marcadorReproduccion);
-        estado.marcadorReproduccion = null;
-    }
-
+    // Quita la zona de búsqueda del mapa
     if (estado.circuloZona && estado.mapa) {
         estado.mapa.removeLayer(estado.circuloZona);
         estado.circuloZona = null;
@@ -224,24 +280,20 @@ export function limpiarRecorridoHistorico() {
     }
     estado.centroZona = null;
     estado.modoSeleccionCentro = false;
+
     if (estado.mapa && estado.mapa.getContainer()) {
         estado.mapa.getContainer().style.cursor = '';
     }
 
-    const contenedorRutasZona = document.getElementById('contenedorRutasZona');
-    if (contenedorRutasZona) {
-        contenedorRutasZona.style.display = 'none';
-    }
-    const listaRutasZona = document.getElementById('listaRutasZona');
-    if (listaRutasZona) {
-        listaRutasZona.innerHTML = '';
-    }
     const estadoZona = document.getElementById('estadoZona');
     if (estadoZona) {
         estadoZona.textContent = '';
     }
 
     estado.recorridosHistoricos = [];
+    estado.recorridosBase = [];
+    estado.mostrarTodasLasRutas = false;
+    estado.zonaActiva = false;
     estado.recorridoSeleccionado = null;
     estado.indiceReproduccion = 0;
 
@@ -255,26 +307,31 @@ export function limpiarRecorridoHistorico() {
     }
     mostrarEstadoHistorico('');
 
-    estado.tipoFiltroHistorico = 'fecha';
+    // Reinicia el filtro de zona a su estado base
     estado.submodoFiltroZona = 'mapa';
-    const btnFiltroFecha = document.getElementById('btnFiltroFecha');
-    const btnFiltroZona = document.getElementById('btnFiltroZona');
-    const vistaFiltroFecha = document.getElementById('vistaFiltroFecha');
+
+    const btnFiltrarPorZona = document.getElementById('btnFiltrarPorZona');
     const vistaFiltroZona = document.getElementById('vistaFiltroZona');
-    if (btnFiltroFecha) btnFiltroFecha.classList.add('activo');
-    if (btnFiltroZona) btnFiltroZona.classList.remove('activo');
-    if (vistaFiltroFecha) vistaFiltroFecha.style.display = 'flex';
+
+    if (btnFiltrarPorZona) {
+        btnFiltrarPorZona.style.display = 'none';
+        btnFiltrarPorZona.classList.remove('activo');
+    }
     if (vistaFiltroZona) vistaFiltroZona.style.display = 'none';
 
+    // Oculta la barra de búsqueda por lugar
     const contenedorBusqueda = document.getElementById('contenedorBusquedaLugar');
     if (contenedorBusqueda) contenedorBusqueda.style.display = 'none';
+
     const inputBusqueda = document.getElementById('inputBusquedaLugar');
     if (inputBusqueda) inputBusqueda.value = '';
+
     const sugerencias = document.getElementById('sugerenciasBusquedaLugar');
     if (sugerencias) {
         sugerencias.style.display = 'none';
         sugerencias.innerHTML = '';
     }
+
     const btnLimpiarBusqueda = document.getElementById('btnLimpiarBusquedaLugar');
     if (btnLimpiarBusqueda) btnLimpiarBusqueda.style.display = 'none';
 

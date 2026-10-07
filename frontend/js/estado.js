@@ -13,6 +13,8 @@ export const estado = {
     modoTracking: false,
 
     // Históricos: recorridos y reproductor
+    modoHistoricoActivo: false,
+    panelMinimizado: false,
     hayRecorridoHistorico: false,
     lineasHistoricas: [],
     marcadoresHistoricos: [],
@@ -30,14 +32,15 @@ export const estado = {
     fechaHasta: new Date(),
     modoSeleccion: 'desde',
 
-    // Históricos: caché y filtro por zona
-    cachePuntosHistoricos: null,
-    tipoFiltroHistorico: 'fecha',
+    // Históricos: filtro por zona
+    recorridosBase: [],
+    mostrarTodasLasRutas: false,
+    zonaActiva: false,
     submodoFiltroZona: 'mapa',
     centroZona: null,
     radioZona: 300,
     circuloZona: null,
     marcadorCentroZona: null,
     modoSeleccionCentro: false,
-    rutasZona: []
+    arrastrandoZona: false
 };
