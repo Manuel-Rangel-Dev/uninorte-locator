@@ -555,6 +555,31 @@ html, body {
     margin-bottom: 2px;
 }
 
+.checkTodasLasRutasWrapper {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 8px;
+    border: 1px solid #333333;
+    border-radius: 5px;
+    color: #B3B3B3;
+    font-size: 10px;
+    cursor: pointer;
+}
+
+.checkTodasLasRutasWrapper:hover {
+    border-color: #555555;
+    color: #ffffff;
+}
+
+.checkTodasLasRutas {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: #dc0303;
+    cursor: pointer;
+}
+
 .btnAlternarListaRutas {
     width: 100%;
     padding: 6px 8px;

@@ -90,6 +90,21 @@ function removerCapasFueraDeLista(recorridos) {
     }
 }
 
+function limpiarSeleccionReproductor() {
+    detenerReproduccion();
+    estado.recorridoSeleccionado = null;
+
+    if (estado.marcadorReproduccion) {
+        estado.mapa.removeLayer(estado.marcadorReproduccion);
+        estado.marcadorReproduccion = null;
+    }
+
+    ocultarReproductor();
+    document.querySelectorAll('.itemRecorrido.enReproduccion').forEach(item => {
+        item.classList.remove('enReproduccion');
+    });
+}
+
 // Elimina todas las capas y el estado visual asociado a recorridos históricos
 export function removerCapasHistoricas() {
     detenerReproduccion();
@@ -130,6 +145,18 @@ export function mostrarListaRecorridos(recorridos) {
     const recorridosListados = obtenerRecorridosListados(recorridos);
     const hayLimiteSemanal = recorridosListados.length < recorridos.length;
     let botonAlternar = null;
+    const checkboxMaestro = document.createElement('input');
+    checkboxMaestro.type = 'checkbox';
+    checkboxMaestro.id = 'checkTodasLasRutas';
+    checkboxMaestro.className = 'checkTodasLasRutas';
+
+    const etiquetaMaestra = document.createElement('label');
+    etiquetaMaestra.className = 'checkTodasLasRutasWrapper';
+    etiquetaMaestra.htmlFor = checkboxMaestro.id;
+    etiquetaMaestra.append(checkboxMaestro, document.createTextNode(
+        `Seleccionar todas las rutas (${recorridosListados.length})`
+    ));
+
     if (hayLimiteSemanal) {
         const encabezado = document.createElement('div');
         encabezado.className = 'encabezadoSemana';
@@ -152,6 +179,10 @@ export function mostrarListaRecorridos(recorridos) {
             mostrarListaRecorridos(recorridos);
         });
     }
+    lista.appendChild(etiquetaMaestra);
+    checkboxMaestro.addEventListener('change', () => {
+        alternarTodasLasRutas(recorridosListados, checkboxMaestro.checked);
+    });
 
     recorridosListados.forEach(({ recorrido: recorridoActual, indice: indiceGlobal }, indiceVisible) => {
         const numero = indiceVisible + 1;
@@ -218,6 +249,59 @@ export function mostrarListaRecorridos(recorridos) {
     if (botonAlternar) {
         lista.appendChild(botonAlternar);
     }
+    actualizarCheckboxMaestro();
+}
+
+// Sincroniza la casilla maestra con las rutas visibles actualmente en el mapa
+export function actualizarCheckboxMaestro() {
+    const checkboxMaestro = document.getElementById('checkTodasLasRutas');
+    if (!checkboxMaestro) return;
+
+    const checkboxes = [...document.querySelectorAll('.checkRecorrido')];
+    const visibles = checkboxes.filter(checkbox => checkbox.checked);
+    checkboxMaestro.checked = checkboxes.length > 0 && visibles.length === checkboxes.length;
+    checkboxMaestro.indeterminate = visibles.length > 0 && visibles.length < checkboxes.length;
+}
+
+function alternarTodasLasRutas(recorridosListados, debeMostrar) {
+    const indices = recorridosListados.map(({ indice }) => indice);
+
+    if (debeMostrar) {
+        const lineas = [];
+        recorridosListados.forEach(({ indice }) => {
+            if (!buscarEntradaVisible(indice)) {
+                dibujarRecorridoEnMapa(indice, indices.length <= 20);
+            }
+            const entrada = buscarEntradaVisible(indice);
+            if (entrada) lineas.push(entrada.linea);
+            marcarCheckbox(indice, true);
+        });
+
+        if (lineas.length > 0) {
+            const grupoLineas = L.featureGroup(lineas);
+            const limites = grupoLineas.getBounds();
+            if (limites.isValid()) {
+                estado.mapa.fitBounds(limites, {
+                    padding: [60, 50],
+                    maxZoom: 17
+                });
+            }
+        }
+        actualizarCheckboxMaestro();
+        return;
+    }
+
+    indices.forEach(indice => removerEntradaVisible(indice));
+    if (estado.recorridoSeleccionado && indices.includes(
+        estado.recorridosHistoricos.indexOf(estado.recorridoSeleccionado)
+    )) {
+        limpiarSeleccionReproductor();
+    } else {
+        ocultarReproductor();
+    }
+
+    indices.forEach(indice => marcarCheckbox(indice, false));
+    actualizarCheckboxMaestro();
 }
 
 // Muestra u oculta un recorrido en el mapa según su estado actual
@@ -246,6 +330,7 @@ export function alternarVisibilidadRecorrido(indice, debeMostrar = null) {
             const itemActual = document.querySelector(`.itemRecorrido[data-indice="${indice}"]`);
             if (itemActual) itemActual.classList.remove('enReproduccion');
         }
+        actualizarCheckboxMaestro();
         return;
     }
 
@@ -266,6 +351,7 @@ export function alternarVisibilidadRecorrido(indice, debeMostrar = null) {
             maxZoom: 17
         });
     }
+    actualizarCheckboxMaestro();
 }
 
 // Actualiza el estado del checkbox de un recorrido
@@ -275,7 +361,7 @@ function marcarCheckbox(indice, valor) {
 }
 
 // Dibuja la línea y los marcadores de inicio y fin del recorrido
-function dibujarRecorridoEnMapa(indice) {
+function dibujarRecorridoEnMapa(indice, mostrarTooltipsPermanentes = true) {
     const recorrido = estado.recorridosHistoricos[indice];
     if (!recorrido) return;
 
@@ -305,7 +391,7 @@ function dibujarRecorridoEnMapa(indice) {
     })
         .addTo(estado.mapa)
         .bindTooltip(`Inicio recorrido ${numero}`, {
-            permanent: true,
+            permanent: mostrarTooltipsPermanentes,
             direction: 'top',
             offset: [0, -14],
             className: 'tooltipRecorrido tooltipInicio'
@@ -320,7 +406,7 @@ function dibujarRecorridoEnMapa(indice) {
     })
         .addTo(estado.mapa)
         .bindTooltip(`Fin recorrido ${numero}`, {
-            permanent: true,
+            permanent: mostrarTooltipsPermanentes,
             direction: direccionFin,
             offset: offsetFin,
             className: 'tooltipRecorrido tooltipFin'
