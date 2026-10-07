@@ -285,20 +285,14 @@ export function limpiarRecorridoHistorico() {
         estado.mapa.getContainer().style.cursor = '';
     }
 
-    const contenedorRutasZona = document.getElementById('contenedorRutasZona');
-    if (contenedorRutasZona) {
-        contenedorRutasZona.style.display = 'none';
-    }
-    const listaRutasZona = document.getElementById('listaRutasZona');
-    if (listaRutasZona) {
-        listaRutasZona.innerHTML = '';
-    }
     const estadoZona = document.getElementById('estadoZona');
     if (estadoZona) {
         estadoZona.textContent = '';
     }
 
     estado.recorridosHistoricos = [];
+    estado.recorridosBase = [];
+    estado.zonaActiva = false;
     estado.recorridoSeleccionado = null;
     estado.indiceReproduccion = 0;
 
@@ -312,18 +306,16 @@ export function limpiarRecorridoHistorico() {
     }
     mostrarEstadoHistorico('');
 
-    // Reinicia los filtros de fecha y zona a su estado base
-    estado.tipoFiltroHistorico = 'fecha';
+    // Reinicia el filtro de zona a su estado base
     estado.submodoFiltroZona = 'mapa';
 
-    const btnFiltroFecha = document.getElementById('btnFiltroFecha');
-    const btnFiltroZona = document.getElementById('btnFiltroZona');
-    const vistaFiltroFecha = document.getElementById('vistaFiltroFecha');
+    const btnFiltrarPorZona = document.getElementById('btnFiltrarPorZona');
     const vistaFiltroZona = document.getElementById('vistaFiltroZona');
 
-    if (btnFiltroFecha) btnFiltroFecha.classList.add('activo');
-    if (btnFiltroZona) btnFiltroZona.classList.remove('activo');
-    if (vistaFiltroFecha) vistaFiltroFecha.style.display = 'flex';
+    if (btnFiltrarPorZona) {
+        btnFiltrarPorZona.style.display = 'none';
+        btnFiltrarPorZona.classList.remove('activo');
+    }
     if (vistaFiltroZona) vistaFiltroZona.style.display = 'none';
 
     // Oculta la barra de búsqueda por lugar

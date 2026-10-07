@@ -2,23 +2,15 @@
 // HISTÓRICOS: FILTRO POR ZONA GEOGRÁFICA
 // =============================================================================
 import { estado } from '../estado.js';
-import { API_BASE, RADIO_DEFAULT_METROS, NOMINATIM_URL } from '../constantes.js';
+import { RADIO_DEFAULT_METROS, NOMINATIM_URL } from '../constantes.js';
 import {
     formatearRadio,
-    formatearFechaHoraCard,
-    formatearDistancia,
     distanciaSegmentoAPunto
 } from '../utilidades.js';
-import { segmentarRecorridos, calcularDistanciaRecorrido } from './segmentacion.js';
 import {
-    seleccionarRecorrido,
     removerCapasHistoricas,
-    alternarVisibilidadRecorrido
+    mostrarListaRecorridos
 } from './lista-slidebar.js';
-import { actualizarVisibilidadTiempoReal } from './calendario.js';
-
-// Colores para diferenciar cada ruta encontrada en la zona
-const COLORES_BARRA = ['#ec4899', '#06b6d4', '#f59e0b', '#10b981', '#8b5cf6', '#3b82f6'];
 
 let debounceTimer = null;
 let indiceSugerenciaSeleccionada = -1;
@@ -140,27 +132,8 @@ export function actualizarRadioZona(nuevoRadio) {
     }
 }
 
-// Obtiene todos los puntos históricos o usa el caché si ya existe
-export async function obtenerPuntosHistoricosCompletos() {
-    if (estado.cachePuntosHistoricos && estado.cachePuntosHistoricos.length > 0) {
-        return estado.cachePuntosHistoricos;
-    }
-
-    const url = `${API_BASE}/api/historico?fecha_desde=2020-01-01&hora_desde=00:00:00&fecha_hasta=2030-01-01&hora_hasta=23:59:59`;
-    const res = await fetch(url);
-
-    if (!res.ok) {
-        const err = await res.json().catch(() => null);
-        throw new Error(err && err.error ? err.error : `HTTP ${res.status}`);
-    }
-
-    const puntos = await res.json();
-    estado.cachePuntosHistoricos = puntos;
-    return puntos;
-}
-
 // Busca rutas que pasen por la zona seleccionada
-export async function buscarRutasEnZona() {
+export function buscarRutasEnZona() {
     if (!estado.centroZona) {
         const instruccion = document.getElementById('instruccionZona');
         if (instruccion) {
@@ -178,128 +151,34 @@ export async function buscarRutasEnZona() {
     }
 
     const estadoEl = document.getElementById('estadoZona');
-    const btnBuscar = document.getElementById('btnBuscarZona');
-    const contenedorRutas = document.getElementById('contenedorRutasZona');
-    const listaRutas = document.getElementById('listaRutasZona');
 
     if (estadoEl) {
-        estadoEl.textContent = 'Buscando rutas en la zona...';
+        estadoEl.textContent = 'Filtrando rutas en la zona...';
         estadoEl.style.color = '#B3B3B3';
     }
-    if (btnBuscar) btnBuscar.disabled = true;
 
-    try {
-        const puntos = await obtenerPuntosHistoricosCompletos();
-        if (!puntos || puntos.length === 0) {
-            if (estadoEl) {
-                estadoEl.textContent = 'No hay datos históricos disponibles.';
-                estadoEl.style.color = '#e5a50a';
+    const centro = L.latLng(estado.centroZona.lat, estado.centroZona.lng);
+    const radio = estado.radioZona;
+    const rutasFiltradas = estado.recorridosBase.filter(recorrido => {
+        const puntoDentro = recorrido.some(p => L.latLng(p.lat, p.lng).distanceTo(centro) <= radio);
+        if (puntoDentro) return true;
+        for (let i = 1; i < recorrido.length; i++) {
+            if (distanciaSegmentoAPunto(recorrido[i - 1], recorrido[i], centro) <= radio) {
+                return true;
             }
-            if (contenedorRutas) contenedorRutas.style.display = 'none';
-            return;
         }
+        return false;
+    });
 
-        // Segmenta los puntos en recorridos reales antes de filtrar por zona
-        const recorridos = segmentarRecorridos(puntos);
-        const centro = L.latLng(estado.centroZona.lat, estado.centroZona.lng);
-        const radio = estado.radioZona;
+    estado.recorridosHistoricos = rutasFiltradas;
+    removerCapasHistoricas();
+    mostrarListaRecorridos(rutasFiltradas);
 
-        // Conserva solo los recorridos que cruzan la zona o pasan cerca de ella
-        const rutasFiltradas = recorridos.filter(recorrido => {
-            const puntoDentro = recorrido.some(p => L.latLng(p.lat, p.lng).distanceTo(centro) <= radio);
-            if (puntoDentro) return true;
-
-            for (let i = 1; i < recorrido.length; i++) {
-                if (distanciaSegmentoAPunto(recorrido[i - 1], recorrido[i], centro) <= radio) {
-                    return true;
-                }
-            }
-            return false;
-        });
-
-        estado.hayRecorridoHistorico = true;
-        estado.recorridosHistoricos = rutasFiltradas;
-        actualizarVisibilidadTiempoReal();
-
-        if (rutasFiltradas.length === 0) {
-            if (estadoEl) {
-                estadoEl.textContent = 'No se encontraron rutas que pasen por esta zona.';
-                estadoEl.style.color = '#e5a50a';
-            }
-            if (contenedorRutas) contenedorRutas.style.display = 'none';
-            return;
-        }
-
-        if (estadoEl) {
-            estadoEl.textContent = `${rutasFiltradas.length} ruta(s) encontrada(s) en la zona`;
-            estadoEl.style.color = '#4cd964';
-        }
-
-        // Crea la lista visual de rutas encontradas
-        if (listaRutas) {
-            listaRutas.innerHTML = '';
-            rutasFiltradas.forEach((rec, idx) => {
-                const inicio = rec[0];
-                const fin = rec[rec.length - 1];
-                const distancia = calcularDistanciaRecorrido(rec);
-                const colorBarra = COLORES_BARRA[idx % COLORES_BARRA.length];
-
-                const card = document.createElement('div');
-                card.className = 'cardRutaZona';
-                card.dataset.indice = idx;
-                card.style.borderLeft = `6px solid ${colorBarra}`;
-
-                card.innerHTML = `
-                    <label class="checkRecorridoWrapper">
-                        <input type="checkbox" class="checkRecorrido" data-indice="${idx}">
-                    </label>
-                    <button type="button" class="infoRutaZonaBtn" data-indice="${idx}">
-                        <div class="filaDatoZona">
-                            <span class="lblRutaZona">DESDE</span>
-                            <span class="valRutaZona">${formatearFechaHoraCard(inicio.fecha, inicio.hora)}</span>
-                        </div>
-                        <div class="filaDatoZona">
-                            <span class="lblRutaZona">HASTA</span>
-                            <span class="valRutaZona">${formatearFechaHoraCard(fin.fecha, fin.hora)}</span>
-                        </div>
-                        <div class="metaRutaZona">
-                            <span>Recorrido ${idx + 1}</span> · <span>${rec.length} pts</span> · <span>${formatearDistancia(distancia)}</span>
-                        </div>
-                    </button>
-                `;
-
-                card.querySelector('.checkRecorrido').addEventListener('change', () => {
-                    alternarVisibilidadRecorrido(idx);
-                });
-
-                card.querySelector('.infoRutaZonaBtn').addEventListener('click', () => {
-                    seleccionarRecorrido(idx);
-                });
-
-                listaRutas.appendChild(card);
-            });
-        }
-
-        if (contenedorRutas) {
-            contenedorRutas.style.display = 'block';
-        }
-
-        // Ajusta la vista para mostrar toda la zona buscada
-        if (estado.circuloZona && estado.mapa) {
-            estado.mapa.fitBounds(estado.circuloZona.getBounds(), {
-                padding: [40, 40],
-                maxZoom: 16
-            });
-        }
-
-    } catch (error) {
-        console.error('Error al buscar en zona:', error);
-        if (estadoEl) {
-            estadoEl.textContent = error.message || 'Error al buscar en la zona';
-            estadoEl.style.color = '#ff6b6b';
-        }
-    } finally {
-        if (btnBuscar) btnBuscar.disabled = false;
+    if (estadoEl) {
+        estadoEl.textContent = rutasFiltradas.length
+            ? `${rutasFiltradas.length} ruta(s) encontrada(s) en la zona`
+            : 'No se encontraron rutas que pasen por esta zona.';
+        estadoEl.style.color = rutasFiltradas.length ? '#4cd964' : '#e5a50a';
     }
 }
 
@@ -316,18 +195,11 @@ export function limpiarZona() {
     estado.centroZona = null;
 
     removerCapasHistoricas();
-
-    const contenedorRutas = document.getElementById('contenedorRutasZona');
-    if (contenedorRutas) contenedorRutas.style.display = 'none';
-
-    const listaRutas = document.getElementById('listaRutasZona');
-    if (listaRutas) listaRutas.innerHTML = '';
+    estado.recorridosHistoricos = estado.recorridosBase;
+    mostrarListaRecorridos(estado.recorridosHistoricos);
 
     const estadoEl = document.getElementById('estadoZona');
     if (estadoEl) estadoEl.textContent = '';
-
-    const reproductor = document.getElementById('reproductorHistorico');
-    if (reproductor) reproductor.style.display = 'none';
 
     const inputBusqueda = document.getElementById('inputBusquedaLugar');
     if (inputBusqueda) inputBusqueda.value = '';
@@ -347,7 +219,11 @@ export function limpiarZona() {
             if (btnMover) btnMover.style.display = '';
             instruccion.textContent = 'Haz clic en el mapa para colocar el centro de búsqueda.';
             instruccion.style.color = '#B3B3B3';
-            activarModoSeleccionCentro();
+            if (estado.zonaActiva) {
+                activarModoSeleccionCentro();
+            } else {
+                desactivarModoSeleccionCentro();
+            }
         }
     } else {
         desactivarModoSeleccionCentro();
@@ -359,11 +235,7 @@ export function registrarClickMapaZona() {
     if (estado.mapa && !estado.mapa._listenerZonaRegistrado) {
         estado.mapa.on('click', (e) => {
             console.log('[Locator] Clic en mapa detectado:', e.latlng);
-            const vistaZonaVisible = document.getElementById('vistaFiltroZona') &&
-                document.getElementById('vistaFiltroZona').style.display !== 'none';
-            const enModoZona = estado.tipoFiltroHistorico === 'zona' || vistaZonaVisible;
-
-            if (enModoZona) {
+            if (estado.zonaActiva) {
                 if (estado.submodoFiltroZona === 'mapa' && (estado.modoSeleccionCentro || !estado.centroZona)) {
                     establecerCentroZona(e.latlng);
                 }
@@ -626,11 +498,7 @@ export function initFiltroZona() {
     }
 
     const btnBuscar = document.getElementById('btnBuscarZona');
-    if (btnBuscar) {
-        btnBuscar.addEventListener('click', () => {
-            buscarRutasEnZona();
-        });
-    }
+    if (btnBuscar) btnBuscar.addEventListener('click', buscarRutasEnZona);
 
     const btnSubmodoMapa = document.getElementById('btnSubmodoMapa');
     const btnSubmodoLugar = document.getElementById('btnSubmodoLugar');

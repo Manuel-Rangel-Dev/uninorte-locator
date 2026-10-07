@@ -28,7 +28,9 @@ import { initMap } from './mapa-vivo.js';
 import {
     initFiltroZona,
     activarModoFiltroZonaUI,
-    desactivarModoFiltroZonaUI
+    desactivarModoFiltroZonaUI,
+    limpiarZona,
+    buscarRutasEnZona
 } from './historico/filtro-zona.js';
 
 // Configura el título de la página con el nombre del integrante si está disponible
@@ -41,36 +43,22 @@ function initHistoricos() {
     // Inicia la funcionalidad de filtro por zona
     initFiltroZona();
 
-    // Obtiene referencias a los elementos del DOM necesarios para los filtros
-    const btnFiltroFecha = document.getElementById('btnFiltroFecha');
-    const btnFiltroZona = document.getElementById('btnFiltroZona');
-    const vistaFiltroFecha = document.getElementById('vistaFiltroFecha');
+    // Configura el botón para abrir o cerrar el filtro por zona
+    const btnFiltrarPorZona = document.getElementById('btnFiltrarPorZona');
     const vistaFiltroZona = document.getElementById('vistaFiltroZona');
-
-    // Configura los eventos de los botones de filtro
-    if (btnFiltroFecha && btnFiltroZona) {
-        // Listener para cambiar al filtro por fecha
-        btnFiltroFecha.addEventListener('click', () => {
-            console.log('[Locator] Modo: Filtrar por fecha');
-            estado.tipoFiltroHistorico = 'fecha';
-            // Marca el botón como activo y oculta el filtro de zona
-            btnFiltroFecha.classList.add('activo');
-            btnFiltroZona.classList.remove('activo');
-            if (vistaFiltroFecha) vistaFiltroFecha.style.display = 'flex';
-            if (vistaFiltroZona) vistaFiltroZona.style.display = 'none';
-            desactivarModoFiltroZonaUI();
-        });
-
-        // Listener para cambiar al filtro por zona
-        btnFiltroZona.addEventListener('click', () => {
-            console.log('[Locator] Modo: Filtrar por zona');
-            estado.tipoFiltroHistorico = 'zona';
-            // Marca el botón como activo y oculta el filtro de fecha
-            btnFiltroZona.classList.add('activo');
-            btnFiltroFecha.classList.remove('activo');
-            if (vistaFiltroFecha) vistaFiltroFecha.style.display = 'none';
-            if (vistaFiltroZona) vistaFiltroZona.style.display = 'flex';
-            activarModoFiltroZonaUI();
+    if (btnFiltrarPorZona) {
+        btnFiltrarPorZona.addEventListener('click', () => {
+            estado.zonaActiva = !estado.zonaActiva;
+            btnFiltrarPorZona.classList.toggle('activo', estado.zonaActiva);
+            if (vistaFiltroZona) {
+                vistaFiltroZona.style.display = estado.zonaActiva ? 'flex' : 'none';
+            }
+            if (estado.zonaActiva) {
+                activarModoFiltroZonaUI();
+            } else {
+                desactivarModoFiltroZonaUI();
+                limpiarZona();
+            }
         });
     }
 
@@ -188,6 +176,8 @@ function initHistoricos() {
         // Muestra mensaje de carga y desactiva el botón
         mostrarEstadoHistorico('Cargando recorrido...', '#B3B3B3');
         document.getElementById('btnVerRecorrido').disabled = true;
+        estado.zonaActiva = false;
+        limpiarZona();
 
         try {
             // Construye la URL de la API con los parámetros de fecha y hora
@@ -200,8 +190,6 @@ function initHistoricos() {
             }
             // Obtiene los puntos del recorrido histórico
             const puntos = await respuesta.json();
-            estado.cachePuntosHistoricos = puntos;
-
             // Si no hay puntos, muestra un mensaje y sale
             if (!puntos || puntos.length === 0) {
                 limpiarRecorridoHistorico();
@@ -221,6 +209,7 @@ function initHistoricos() {
 
             // Actualiza el estado con los recorridos encontrados
             estado.hayRecorridoHistorico = true;
+            estado.recorridosBase = recorridos;
             estado.recorridosHistoricos = recorridos;
 
             // Elimina todas las capas históricas anteriores del mapa
@@ -239,11 +228,13 @@ function initHistoricos() {
             // Muestra la lista de recorridos encontrados
             mostrarListaRecorridos(estado.recorridosHistoricos);
 
-            // Oculta el reproductor histórico
-            const reproductor = document.getElementById('reproductorHistorico');
-            if (reproductor) {
-                reproductor.style.display = 'none';
+            const botonZona = document.getElementById('btnFiltrarPorZona');
+            if (botonZona) {
+                botonZona.style.display = 'block';
+                botonZona.classList.remove('activo');
             }
+            const vistaZona = document.getElementById('vistaFiltroZona');
+            if (vistaZona) vistaZona.style.display = 'none';
 
             // Muestra mensaje de éxito con la cantidad de recorridos encontrados
             mostrarEstadoHistorico(`${recorridos.length} recorrido(s) encontrado(s)`, '#4cd964');

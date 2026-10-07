@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="" />
-    <link rel="stylesheet" href="styles.css?v=13">
+    <link rel="stylesheet" href="styles.css?v=14">
     <script src="config.js"></script>
     <script>
         if (typeof APP_CONFIG === 'undefined') {
@@ -88,12 +88,6 @@
             </button>
         </div>
 
-        <!-- Selector de Tipo de Filtro (Fecha / Zona) -->
-        <div class="selectorTipoFiltro">
-            <button id="btnFiltroFecha" class="tabTipoFiltro activo" type="button">Filtrar por fecha</button>
-            <button id="btnFiltroZona" class="tabTipoFiltro" type="button">Filtrar por zona</button>
-        </div>
-
         <!-- SECCIÓN 1: FILTRAR POR FECHA (Mantiene exactamente lo existente) -->
         <div id="vistaFiltroFecha">
             <div class="selectorRangoFecha">
@@ -153,16 +147,13 @@
             </div>
 
             <div id="estadoHistorico"></div>
-
-            <div id="selectorRecorridos" style="display: none;">
-                <div class="tituloRecorridos">
-                    RECORRIDOS ENCONTRADOS
-                </div>
-                <div id="listaRecorridos"></div>
-            </div>
         </div>
 
-        <!-- SECCIÓN 2: FILTRAR POR ZONA (Basado en img4.png) -->
+        <button id="btnFiltrarPorZona" class="btnFiltrarPorZona" type="button" style="display: none;">
+            Filtrar estas rutas por zona
+        </button>
+
+        <!-- SECCIÓN 2: FILTRAR POR ZONA -->
         <div id="vistaFiltroZona" style="display: none;">
             <!-- Sub-selector de Modo de Zona (En Mapa / Buscar Lugar) -->
             <div class="selectorSubmodoZona">
@@ -190,12 +181,13 @@
 
             <div id="estadoZona" class="estadoZona"></div>
 
-            <div id="contenedorRutasZona" style="display: none;">
-                <div class="tituloRecorridos">
-                    RUTAS POR EL ÁREA
-                </div>
-                <div id="listaRutasZona"></div>
+        </div>
+
+        <div id="selectorRecorridos" style="display: none;">
+            <div class="tituloRecorridos">
+                RECORRIDOS ENCONTRADOS
             </div>
+            <div id="listaRecorridos"></div>
         </div>
 
         <!-- REPRODUCTOR COMPARTIDO (Se muestra al elegir un recorrido en fecha o zona) -->
@@ -241,6 +233,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
-    <script type="module" src="js/main.js?v=13"></script>
+    <script type="module" src="js/main.js?v=14"></script>
 </body>
 </html>

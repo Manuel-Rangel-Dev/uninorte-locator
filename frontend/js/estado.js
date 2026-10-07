@@ -32,14 +32,13 @@ export const estado = {
     fechaHasta: new Date(),
     modoSeleccion: 'desde',
 
-    // Históricos: caché y filtro por zona
-    cachePuntosHistoricos: null,
-    tipoFiltroHistorico: 'fecha',
+    // Históricos: filtro por zona
+    recorridosBase: [],
+    zonaActiva: false,
     submodoFiltroZona: 'mapa',
     centroZona: null,
     radioZona: 300,
     circuloZona: null,
     marcadorCentroZona: null,
-    modoSeleccionCentro: false,
-    rutasZona: []
+    modoSeleccionCentro: false
 };
