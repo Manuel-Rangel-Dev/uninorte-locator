@@ -18,6 +18,26 @@ function buscarEntradaVisible(indice) {
     return estado.lineasHistoricas.find(entrada => entrada.indice === indice);
 }
 
+function prepararReproductorParaRender() {
+    const reproductor = document.getElementById('reproductorHistorico');
+    const panel = document.getElementById('panelHistoricos');
+    if (!reproductor || !panel) return;
+
+    panel.appendChild(reproductor);
+    reproductor.style.display = 'none';
+    reproductor.classList.remove('visible');
+}
+
+function ocultarReproductor() {
+    const reproductor = document.getElementById('reproductorHistorico');
+    const panel = document.getElementById('panelHistoricos');
+    if (!reproductor || !panel) return;
+
+    panel.appendChild(reproductor);
+    reproductor.style.display = 'none';
+    reproductor.classList.remove('visible');
+}
+
 // Elimina todas las capas y el estado visual asociado a recorridos históricos
 export function removerCapasHistoricas() {
     detenerReproduccion();
@@ -34,10 +54,7 @@ export function removerCapasHistoricas() {
         estado.marcadorReproduccion = null;
     }
 
-    const reproductor = document.getElementById('reproductorHistorico');
-    if (reproductor) {
-        reproductor.style.display = 'none';
-    }
+    ocultarReproductor();
 }
 
 // Crea la lista de recorridos con su información resumida
@@ -47,6 +64,7 @@ export function mostrarListaRecorridos(recorridos) {
 
     if (!contenedor || !lista) return;
 
+    prepararReproductorParaRender();
     lista.innerHTML = '';
 
     // Si no hay recorridos, oculta el panel
@@ -97,13 +115,18 @@ export function mostrarListaRecorridos(recorridos) {
             </button>
         `;
 
-        // Cuando se activa o desactiva el checkbox, muestra o elimina el recorrido del mapa
-        elemento.querySelector('.checkRecorrido').addEventListener('change', () => {
-            alternarVisibilidadRecorrido(index);
+        // El checkbox controla la visibilidad y selecciona la ruta cuando se marca
+        const checkbox = elemento.querySelector('.checkRecorrido');
+        checkbox.addEventListener('click', (evento) => {
+            evento.stopPropagation();
+        });
+        checkbox.addEventListener('change', () => {
+            alternarVisibilidadRecorrido(index, checkbox.checked);
         });
 
-        // Al hacer clic en la tarjeta, se selecciona ese recorrido para reproducirlo
-        elemento.querySelector('.infoRecorridoBtn').addEventListener('click', () => {
+        // Cualquier otra parte de la tarjeta selecciona el recorrido
+        elemento.addEventListener('click', (evento) => {
+            if (evento.target.closest('.checkRecorridoWrapper')) return;
             seleccionarRecorrido(index);
         });
 
@@ -112,11 +135,14 @@ export function mostrarListaRecorridos(recorridos) {
 }
 
 // Muestra u oculta un recorrido en el mapa según su estado actual
-export function alternarVisibilidadRecorrido(indice) {
+export function alternarVisibilidadRecorrido(indice, debeMostrar = null) {
     const entradaExistente = buscarEntradaVisible(indice);
 
-    // Si ya está visible, se elimina del mapa
-    if (entradaExistente) {
+    const quitarRecorrido = debeMostrar === false
+        || (debeMostrar === null && Boolean(entradaExistente));
+
+    // Si debe ocultarse y está visible, se elimina del mapa
+    if (entradaExistente && quitarRecorrido) {
         estado.mapa.removeLayer(entradaExistente.linea);
         estado.mapa.removeLayer(entradaExistente.marcadorInicio);
         estado.mapa.removeLayer(entradaExistente.marcadorFin);
@@ -130,17 +156,22 @@ export function alternarVisibilidadRecorrido(indice) {
                 estado.mapa.removeLayer(estado.marcadorReproduccion);
                 estado.marcadorReproduccion = null;
             }
-            const reproductor = document.getElementById('reproductorHistorico');
-            if (reproductor) reproductor.style.display = 'none';
+            ocultarReproductor();
             const itemActual = document.querySelector(`.itemRecorrido[data-indice="${indice}"]`);
             if (itemActual) itemActual.classList.remove('enReproduccion');
         }
         return;
     }
 
+    if (entradaExistente) {
+        seleccionarRecorrido(indice);
+        return;
+    }
+
     // Si no está visible, se dibuja en el mapa
     dibujarRecorridoEnMapa(indice);
     marcarCheckbox(indice, true);
+    seleccionarRecorrido(indice);
 
     const entradaNueva = buscarEntradaVisible(indice);
     if (entradaNueva) {
@@ -268,7 +299,18 @@ export function seleccionarRecorrido(indice) {
 
     const reproductor = document.getElementById('reproductorHistorico');
     if (reproductor) {
+        const panel = document.getElementById('panelHistoricos');
+        if (panel && reproductor.parentElement !== panel) {
+            panel.appendChild(reproductor);
+        }
+        if (itemActual) {
+            itemActual.after(reproductor);
+        }
         reproductor.style.display = 'block';
+        reproductor.classList.remove('visible');
+        void reproductor.offsetWidth;
+        reproductor.classList.add('visible');
+        reproductor.scrollIntoView({ block: 'nearest' });
     }
 
     // Muestra el primer punto del recorrido
