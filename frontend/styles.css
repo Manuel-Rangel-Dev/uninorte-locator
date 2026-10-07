@@ -809,28 +809,6 @@ html, body {
     background-color: rgba(220, 3, 3, 0.1);
 }
 
-.btnBuscarZona {
-    width: 100%;
-    background-color: #dc0303;
-    border: none;
-    color: #ffffff;
-    padding: 8px 0;
-    border-radius: 4px;
-    font-family: monospace;
-    font-size: 12px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.btnBuscarZona:hover {
-    background-color: #a80202;
-}
-
-.btnBuscarZona:disabled {
-    background-color: #555555;
-    cursor: not-allowed;
-}
-
 .estadoZona {
     font-size: 11px;
     text-align: center;

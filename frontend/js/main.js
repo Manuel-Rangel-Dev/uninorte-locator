@@ -29,8 +29,7 @@ import {
     initFiltroZona,
     activarModoFiltroZonaUI,
     desactivarModoFiltroZonaUI,
-    limpiarZona,
-    buscarRutasEnZona
+    limpiarZona
 } from './historico/filtro-zona.js';
 
 // Configura el título de la página con el nombre del integrante si está disponible
