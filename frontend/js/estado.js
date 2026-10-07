@@ -41,5 +41,6 @@ export const estado = {
     radioZona: 300,
     circuloZona: null,
     marcadorCentroZona: null,
-    modoSeleccionCentro: false
+    modoSeleccionCentro: false,
+    arrastrandoZona: false
 };

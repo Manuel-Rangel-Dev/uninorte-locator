@@ -15,6 +15,86 @@ import {
 let debounceTimer = null;
 let indiceSugerenciaSeleccionada = -1;
 let sugerenciasActuales = [];
+let temporizadorArrastreZona = null;
+
+function alTerminarMoverZona() {
+    estado.arrastrandoZona = true;
+    if (temporizadorArrastreZona) {
+        clearTimeout(temporizadorArrastreZona);
+    }
+    temporizadorArrastreZona = setTimeout(() => {
+        estado.arrastrandoZona = false;
+        temporizadorArrastreZona = null;
+    }, 150);
+    console.log('[Locator] Centro de zona movido:', estado.centroZona);
+}
+
+function obtenerPuntoContenedorPuntero(evento) {
+    const contenedor = estado.mapa.getContainer();
+    const rectangulo = contenedor.getBoundingClientRect();
+    return estado.mapa.containerPointToLatLng([
+        evento.clientX - rectangulo.left,
+        evento.clientY - rectangulo.top
+    ]);
+}
+
+function configurarArrastreCirculo() {
+    const elemento = estado.circuloZona && estado.circuloZona.getElement();
+    if (!elemento || elemento.dataset.arrastreConfigurado === 'true') return;
+
+    elemento.dataset.arrastreConfigurado = 'true';
+    elemento.addEventListener('pointerdown', (evento) => {
+        if (!estado.zonaActiva || !estado.mapa || !estado.circuloZona) return;
+
+        evento.preventDefault();
+        evento.stopPropagation();
+        estado.arrastrandoZona = true;
+        elemento.classList.add('arrastrando');
+
+        const centroActual = estado.circuloZona.getLatLng();
+        const puntoCentro = estado.mapa.latLngToContainerPoint(centroActual);
+        const contenedor = estado.mapa.getContainer();
+        const rectangulo = contenedor.getBoundingClientRect();
+        const puntoPuntero = {
+            x: evento.clientX - rectangulo.left,
+            y: evento.clientY - rectangulo.top
+        };
+        const desplazamiento = {
+            x: puntoPuntero.x - puntoCentro.x,
+            y: puntoPuntero.y - puntoCentro.y
+        };
+
+        elemento.setPointerCapture(evento.pointerId);
+        estado.mapa.dragging.disable();
+
+        const moverCirculo = (movimiento) => {
+            const puntoActual = obtenerPuntoContenedorPuntero(movimiento);
+            const puntoActualContenedor = estado.mapa.latLngToContainerPoint(puntoActual);
+            const nuevoCentro = estado.mapa.containerPointToLatLng([
+                puntoActualContenedor.x - desplazamiento.x,
+                puntoActualContenedor.y - desplazamiento.y
+            ]);
+            establecerCentroZona(nuevoCentro);
+            estado.arrastrandoZona = true;
+        };
+
+        const finalizarArrastre = (movimiento) => {
+            elemento.removeEventListener('pointermove', moverCirculo);
+            elemento.removeEventListener('pointerup', finalizarArrastre);
+            elemento.removeEventListener('pointercancel', finalizarArrastre);
+            if (elemento.hasPointerCapture(movimiento.pointerId)) {
+                elemento.releasePointerCapture(movimiento.pointerId);
+            }
+            elemento.classList.remove('arrastrando');
+            estado.mapa.dragging.enable();
+            alTerminarMoverZona();
+        };
+
+        elemento.addEventListener('pointermove', moverCirculo);
+        elemento.addEventListener('pointerup', finalizarArrastre);
+        elemento.addEventListener('pointercancel', finalizarArrastre);
+    });
+}
 
 // Activa el modo para seleccionar el centro de la zona haciendo clic en el mapa
 export function activarModoSeleccionCentro() {
@@ -77,8 +157,10 @@ export function establecerCentroZona(latlng, centrarMapa = false) {
             weight: 2,
             fillColor: '#dc0303',
             fillOpacity: 0.15,
-            dashArray: '5,5'
+            dashArray: '5,5',
+            className: 'circulo-zona-arrastrable'
         }).addTo(estado.mapa);
+        configurarArrastreCirculo();
     } else {
         estado.circuloZona.setLatLng(latlng);
         estado.circuloZona.setRadius(radio);
@@ -102,6 +184,12 @@ export function establecerCentroZona(latlng, centrarMapa = false) {
             if (estado.circuloZona) {
                 estado.circuloZona.setLatLng(nuevaPos);
             }
+        });
+        estado.marcadorCentroZona.on('dragstart', () => {
+            estado.arrastrandoZona = true;
+        });
+        estado.marcadorCentroZona.on('dragend', () => {
+            alTerminarMoverZona();
         });
     } else {
         estado.marcadorCentroZona.setLatLng(latlng);
@@ -235,6 +323,7 @@ export function registrarClickMapaZona() {
     if (estado.mapa && !estado.mapa._listenerZonaRegistrado) {
         estado.mapa.on('click', (e) => {
             console.log('[Locator] Clic en mapa detectado:', e.latlng);
+            if (estado.arrastrandoZona) return;
             if (estado.zonaActiva) {
                 if (estado.submodoFiltroZona === 'mapa' && (estado.modoSeleccionCentro || !estado.centroZona)) {
                     establecerCentroZona(e.latlng);

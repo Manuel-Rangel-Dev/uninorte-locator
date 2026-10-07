@@ -844,6 +844,15 @@ html, body {
     border: none !important;
 }
 
+.circulo-zona-arrastrable {
+    cursor: grab;
+    touch-action: none;
+}
+
+.circulo-zona-arrastrable.arrastrando {
+    cursor: grabbing;
+}
+
 /* ============================================================
    BARRA DE BÚSQUEDA SUPERIOR DE LUGARES / DIRECCIONES
    ============================================================ */
