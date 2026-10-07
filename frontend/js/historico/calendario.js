@@ -292,6 +292,7 @@ export function limpiarRecorridoHistorico() {
 
     estado.recorridosHistoricos = [];
     estado.recorridosBase = [];
+    estado.mostrarTodasLasRutas = false;
     estado.zonaActiva = false;
     estado.recorridoSeleccionado = null;
     estado.indiceReproduccion = 0;

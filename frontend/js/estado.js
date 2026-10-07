@@ -34,6 +34,7 @@ export const estado = {
 
     // Históricos: filtro por zona
     recorridosBase: [],
+    mostrarTodasLasRutas: false,
     zonaActiva: false,
     submodoFiltroZona: 'mapa',
     centroZona: null,

@@ -3,7 +3,7 @@
 // =============================================================================
 import { estado } from '../estado.js';
 import { calcularDistanciaRecorrido } from './segmentacion.js';
-import { formatearDistancia } from '../utilidades.js';
+import { formatearDistancia, obtenerTimestampPunto } from '../utilidades.js';
 
 // Colores usados para distinguir cada recorrido en el mapa
 const PALETA_RECORRIDOS = ['#4A90D9', '#2ecc71', '#e67e22', '#9b59b6', '#e74c3c', '#1abc9c', '#f1c40f', '#e84393'];
@@ -36,6 +36,58 @@ function ocultarReproductor() {
     panel.appendChild(reproductor);
     reproductor.style.display = 'none';
     reproductor.classList.remove('visible');
+}
+
+function obtenerRecorridosListados(recorridos) {
+    if (estado.mostrarTodasLasRutas || recorridos.length === 0) {
+        return recorridos.map((recorrido, indice) => ({ recorrido, indice }));
+    }
+
+    const ultimoRecorrido = recorridos[recorridos.length - 1];
+    const ultimoPunto = ultimoRecorrido[ultimoRecorrido.length - 1];
+    const timestampFinal = obtenerTimestampPunto(ultimoPunto);
+    if (timestampFinal === null) {
+        return recorridos.map((recorrido, indice) => ({ recorrido, indice }));
+    }
+
+    const corte = timestampFinal - (7 * 24 * 60 * 60 * 1000);
+    return recorridos
+        .map((recorrido, indice) => ({ recorrido, indice }))
+        .filter(({ recorrido }) => {
+            const puntoFinal = recorrido[recorrido.length - 1];
+            const timestamp = obtenerTimestampPunto(puntoFinal);
+            return timestamp !== null && timestamp >= corte;
+        });
+}
+
+function removerEntradaVisible(indice) {
+    const entrada = buscarEntradaVisible(indice);
+    if (!entrada) return;
+
+    estado.mapa.removeLayer(entrada.linea);
+    estado.mapa.removeLayer(entrada.marcadorInicio);
+    estado.mapa.removeLayer(entrada.marcadorFin);
+    estado.lineasHistoricas = estado.lineasHistoricas.filter(item => item.indice !== indice);
+}
+
+function removerCapasFueraDeLista(recorridos) {
+    const listados = new Set(obtenerRecorridosListados(recorridos).map(item => item.indice));
+    estado.lineasHistoricas
+        .filter(entrada => !listados.has(entrada.indice))
+        .forEach(entrada => removerEntradaVisible(entrada.indice));
+
+    if (estado.recorridoSeleccionado) {
+        const indiceSeleccionado = recorridos.indexOf(estado.recorridoSeleccionado);
+        if (!listados.has(indiceSeleccionado)) {
+            detenerReproduccion();
+            estado.recorridoSeleccionado = null;
+            if (estado.marcadorReproduccion) {
+                estado.mapa.removeLayer(estado.marcadorReproduccion);
+                estado.marcadorReproduccion = null;
+            }
+            ocultarReproductor();
+        }
+    }
 }
 
 // Elimina todas las capas y el estado visual asociado a recorridos históricos
@@ -75,22 +127,48 @@ export function mostrarListaRecorridos(recorridos) {
 
     contenedor.style.display = 'block';
 
-    recorridos.forEach((recorridoActual, index) => {
-        const numero = index + 1;
+    const recorridosListados = obtenerRecorridosListados(recorridos);
+    const hayLimiteSemanal = recorridosListados.length < recorridos.length;
+    let botonAlternar = null;
+    if (hayLimiteSemanal) {
+        const encabezado = document.createElement('div');
+        encabezado.className = 'encabezadoSemana';
+        encabezado.textContent = estado.mostrarTodasLasRutas
+            ? `Mostrando todas las rutas (${recorridos.length})`
+            : `Mostrando solo las rutas de la última semana (${recorridosListados.length} de ${recorridos.length})`;
+        lista.appendChild(encabezado);
+
+        botonAlternar = document.createElement('button');
+        botonAlternar.type = 'button';
+        botonAlternar.className = 'btnAlternarListaRutas';
+        botonAlternar.textContent = estado.mostrarTodasLasRutas
+            ? `Ver solo la última semana`
+            : `Ver todas las rutas (${recorridos.length})`;
+        botonAlternar.addEventListener('click', () => {
+            estado.mostrarTodasLasRutas = !estado.mostrarTodasLasRutas;
+            if (!estado.mostrarTodasLasRutas) {
+                removerCapasFueraDeLista(recorridos);
+            }
+            mostrarListaRecorridos(recorridos);
+        });
+    }
+
+    recorridosListados.forEach(({ recorrido: recorridoActual, indice: indiceGlobal }, indiceVisible) => {
+        const numero = indiceVisible + 1;
         const inicio = recorridoActual[0];
         const fin = recorridoActual[recorridoActual.length - 1];
         const distancia = calcularDistanciaRecorrido(recorridoActual);
 
         const elemento = document.createElement('div');
         elemento.className = 'itemRecorrido';
-        elemento.dataset.indice = index;
+        elemento.dataset.indice = indiceGlobal;
 
         // Construye el contenido visual del recorrido
         elemento.innerHTML = `
             <label class="checkRecorridoWrapper">
-                <input type="checkbox" class="checkRecorrido" data-indice="${index}">
+                <input type="checkbox" class="checkRecorrido" data-indice="${indiceGlobal}">
             </label>
-            <button type="button" class="infoRecorridoBtn" data-indice="${index}">
+            <button type="button" class="infoRecorridoBtn" data-indice="${indiceGlobal}">
                 <div class="numeroRecorrido">
                     Recorrido ${numero}
                 </div>
@@ -120,18 +198,26 @@ export function mostrarListaRecorridos(recorridos) {
         checkbox.addEventListener('click', (evento) => {
             evento.stopPropagation();
         });
+        checkbox.checked = Boolean(buscarEntradaVisible(indiceGlobal));
         checkbox.addEventListener('change', () => {
-            alternarVisibilidadRecorrido(index, checkbox.checked);
+            alternarVisibilidadRecorrido(indiceGlobal, checkbox.checked);
         });
 
         // Cualquier otra parte de la tarjeta selecciona el recorrido
         elemento.addEventListener('click', (evento) => {
             if (evento.target.closest('.checkRecorridoWrapper')) return;
-            seleccionarRecorrido(index);
+            seleccionarRecorrido(indiceGlobal);
         });
 
+        if (estado.recorridoSeleccionado === recorridoActual) {
+            elemento.classList.add('enReproduccion');
+        }
         lista.appendChild(elemento);
     });
+
+    if (botonAlternar) {
+        lista.appendChild(botonAlternar);
+    }
 }
 
 // Muestra u oculta un recorrido en el mapa según su estado actual

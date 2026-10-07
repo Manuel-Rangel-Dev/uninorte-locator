@@ -177,6 +177,7 @@ function initHistoricos() {
         mostrarEstadoHistorico('Cargando recorrido...', '#B3B3B3');
         document.getElementById('btnVerRecorrido').disabled = true;
         estado.zonaActiva = false;
+        estado.mostrarTodasLasRutas = false;
         limpiarZona();
 
         try {
