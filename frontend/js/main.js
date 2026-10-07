@@ -7,7 +7,8 @@ import {
     mostrarListaRecorridos,
     iniciarReproduccion,
     detenerReproduccion,
-    actualizarPuntoReproduccion
+    actualizarPuntoReproduccion,
+    removerCapasHistoricas
 } from './historico/lista-slidebar.js';
 import {
     renderCalendario,
@@ -209,28 +210,14 @@ function initHistoricos() {
             estado.hayRecorridoHistorico = true;
             estado.recorridosHistoricos = recorridos;
 
-            // Elimina todas las líneas históricas anteriores del mapa
-            estado.lineasHistoricas.forEach(entrada => {
-                estado.mapa.removeLayer(entrada.linea);
-                estado.mapa.removeLayer(entrada.marcadorInicio);
-                estado.mapa.removeLayer(entrada.marcadorFin);
-            });
-            estado.lineasHistoricas = [];
+            // Elimina todas las capas históricas anteriores del mapa
+            removerCapasHistoricas();
 
             // Elimina la línea del recorrido seleccionado si existe
             if (estado.lineaRecorridoSeleccionado) {
                 estado.mapa.removeLayer(estado.lineaRecorridoSeleccionado);
                 estado.lineaRecorridoSeleccionado = null;
             }
-
-            // Elimina el marcador de reproducción si existe
-            if (estado.marcadorReproduccion) {
-                estado.mapa.removeLayer(estado.marcadorReproduccion);
-                estado.marcadorReproduccion = null;
-            }
-
-            // Detiene cualquier reproducción en curso
-            detenerReproduccion();
 
             // Reinicia los índices de reproducción
             estado.recorridoSeleccionado = null;

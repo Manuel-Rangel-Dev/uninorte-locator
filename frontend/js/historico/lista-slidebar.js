@@ -18,6 +18,28 @@ function buscarEntradaVisible(indice) {
     return estado.lineasHistoricas.find(entrada => entrada.indice === indice);
 }
 
+// Elimina todas las capas y el estado visual asociado a recorridos históricos
+export function removerCapasHistoricas() {
+    detenerReproduccion();
+
+    estado.lineasHistoricas.forEach(entrada => {
+        estado.mapa.removeLayer(entrada.linea);
+        estado.mapa.removeLayer(entrada.marcadorInicio);
+        estado.mapa.removeLayer(entrada.marcadorFin);
+    });
+    estado.lineasHistoricas = [];
+
+    if (estado.marcadorReproduccion) {
+        estado.mapa.removeLayer(estado.marcadorReproduccion);
+        estado.marcadorReproduccion = null;
+    }
+
+    const reproductor = document.getElementById('reproductorHistorico');
+    if (reproductor) {
+        reproductor.style.display = 'none';
+    }
+}
+
 // Crea la lista de recorridos con su información resumida
 export function mostrarListaRecorridos(recorridos) {
     const contenedor = document.getElementById('selectorRecorridos');

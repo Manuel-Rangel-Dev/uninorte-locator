@@ -4,7 +4,7 @@
 import { HISTORICO_MIN_ANIO, ZOOM_CENTRADO } from '../constantes.js';
 import { normalizarFecha, formatearFechaCorta } from '../utilidades.js';
 import { estado } from '../estado.js';
-import { detenerReproduccion } from './lista-slidebar.js';
+import { removerCapasHistoricas } from './lista-slidebar.js';
 
 // Muestra el mensaje de estado del histórico en la interfaz
 export function mostrarEstadoHistorico(mensaje, color = '#B3B3B3') {
@@ -222,11 +222,7 @@ export function alternarModoHistorico() {
 // Limpia completamente el recorrido histórico y reinicia la interfaz
 export function limpiarRecorridoHistorico() {
     estado.hayRecorridoHistorico = false;
-    detenerReproduccion();
-
-    // Elimina líneas históricas del mapa
-    estado.lineasHistoricas.forEach(linea => estado.mapa.removeLayer(linea));
-    estado.lineasHistoricas = [];
+    removerCapasHistoricas();
 
     // Elimina marcadores asociados
     estado.marcadoresHistoricos.forEach(marcador => estado.mapa.removeLayer(marcador));
@@ -235,11 +231,6 @@ export function limpiarRecorridoHistorico() {
     if (estado.lineaRecorridoSeleccionado) {
         estado.mapa.removeLayer(estado.lineaRecorridoSeleccionado);
         estado.lineaRecorridoSeleccionado = null;
-    }
-
-    if (estado.marcadorReproduccion) {
-        estado.mapa.removeLayer(estado.marcadorReproduccion);
-        estado.marcadorReproduccion = null;
     }
 
     // Quita la zona de búsqueda del mapa

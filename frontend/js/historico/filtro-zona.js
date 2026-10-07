@@ -10,7 +10,11 @@ import {
     distanciaSegmentoAPunto
 } from '../utilidades.js';
 import { segmentarRecorridos, calcularDistanciaRecorrido } from './segmentacion.js';
-import { seleccionarRecorrido, detenerReproduccion, alternarVisibilidadRecorrido } from './lista-slidebar.js';
+import {
+    seleccionarRecorrido,
+    removerCapasHistoricas,
+    alternarVisibilidadRecorrido
+} from './lista-slidebar.js';
 import { actualizarVisibilidadTiempoReal } from './calendario.js';
 
 // Colores para diferenciar cada ruta encontrada en la zona
@@ -301,8 +305,6 @@ export async function buscarRutasEnZona() {
 
 // Limpia la zona de búsqueda y elimina los elementos del mapa
 export function limpiarZona() {
-    detenerReproduccion();
-
     if (estado.circuloZona && estado.mapa) {
         estado.mapa.removeLayer(estado.circuloZona);
         estado.circuloZona = null;
@@ -313,17 +315,7 @@ export function limpiarZona() {
     }
     estado.centroZona = null;
 
-    estado.lineasHistoricas.forEach(entrada => {
-        estado.mapa.removeLayer(entrada.linea);
-        estado.mapa.removeLayer(entrada.marcadorInicio);
-        estado.mapa.removeLayer(entrada.marcadorFin);
-    });
-    estado.lineasHistoricas = [];
-
-    if (estado.marcadorReproduccion && estado.mapa) {
-        estado.mapa.removeLayer(estado.marcadorReproduccion);
-        estado.marcadorReproduccion = null;
-    }
+    removerCapasHistoricas();
 
     const contenedorRutas = document.getElementById('contenedorRutasZona');
     if (contenedorRutas) contenedorRutas.style.display = 'none';
