@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="" />
-    <link rel="stylesheet" href="styles.css?v=12">
+    <link rel="stylesheet" href="styles.css?v=13">
     <script src="config.js"></script>
     <script>
         if (typeof APP_CONFIG === 'undefined') {
@@ -70,7 +70,24 @@
         <div id="sugerenciasBusquedaLugar" class="sugerenciasBusqueda" style="display: none;"></div>
     </div>
 
+    <button id="btnRestaurarPanel" type="button" aria-label="Mostrar panel de históricos">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M7 10L12 5L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M7 14L12 19L17 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Mostrar panel</span>
+    </button>
+
     <div id="panelHistoricos">
+        <div class="cabeceraPanelHistoricos">
+            <span class="tituloPanelHistoricos">HISTÓRICOS</span>
+            <button id="btnMinimizarPanel" type="button" aria-label="Minimizar históricos" title="Minimizar históricos">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </button>
+        </div>
+
         <!-- Selector de Tipo de Filtro (Fecha / Zona) -->
         <div class="selectorTipoFiltro">
             <button id="btnFiltroFecha" class="tabTipoFiltro activo" type="button">Filtrar por fecha</button>
@@ -224,6 +241,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
-    <script type="module" src="js/main.js?v=12"></script>
+    <script type="module" src="js/main.js?v=13"></script>
 </body>
 </html>

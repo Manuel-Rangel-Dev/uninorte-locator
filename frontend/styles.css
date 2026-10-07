@@ -113,6 +113,41 @@ html, body {
     border-color: #dc0303;
 }
 
+#btnRestaurarPanel {
+    position: absolute;
+    top: 58px;
+    right: 12px;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    height: 34px;
+    padding: 0 10px;
+    background-color: rgba(18, 18, 18, 0.95);
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    color: #ffffff;
+    font-family: monospace;
+    font-size: 11px;
+    cursor: pointer;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-8px);
+    transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease, border-color 0.2s ease;
+}
+
+#btnRestaurarPanel.visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+#btnRestaurarPanel:hover {
+    border-color: #dc0303;
+}
+
 #panelHistoricos {
     display: flex;
     position: absolute;
@@ -135,7 +170,8 @@ html, body {
     visibility: hidden;
     transform: translateY(-8px);
     pointer-events: none;
-    transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
+    transform-origin: top right;
+    transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease;
 }
 
 #panelHistoricos::-webkit-scrollbar {
@@ -151,6 +187,49 @@ html, body {
     visibility: visible;
     transform: translateY(0);
     pointer-events: auto;
+}
+
+#panelHistoricos.minimizado {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px) scale(0.84);
+    pointer-events: none;
+}
+
+.cabeceraPanelHistoricos {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 20px;
+    margin: -2px 0 0;
+}
+
+.tituloPanelHistoricos {
+    color: #B3B3B3;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 0.6px;
+}
+
+#btnMinimizarPanel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: #B3B3B3;
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+}
+
+#btnMinimizarPanel:hover {
+    border-color: #dc0303;
+    background-color: rgba(220, 3, 3, 0.1);
+    color: #ffffff;
 }
 
 .selectorRangoFecha {

@@ -13,6 +13,8 @@ export const estado = {
     modoTracking: false,
 
     // Históricos: recorridos y reproductor
+    modoHistoricoActivo: false,
+    panelMinimizado: false,
     hayRecorridoHistorico: false,
     lineasHistoricas: [],
     marcadoresHistoricos: [],

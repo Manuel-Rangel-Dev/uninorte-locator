@@ -172,9 +172,7 @@ export function actualizarBotonModo(enModoHistorico) {
 
 // Controla la visibilidad del recorrido en vivo y del modo histórico
 export function actualizarVisibilidadTiempoReal() {
-    const panelHistoricos = document.getElementById('panelHistoricos');
-    const panelAbierto = panelHistoricos && panelHistoricos.classList.contains('abierto');
-    const debeOcultar = panelAbierto || estado.hayRecorridoHistorico;
+    const debeOcultar = estado.modoHistoricoActivo;
 
     document.body.classList.toggle('modoHistorico', debeOcultar);
 
@@ -189,15 +187,56 @@ export function actualizarVisibilidadTiempoReal() {
 // Abre el panel de históricos
 export function abrirHistoricos() {
     const panel = document.getElementById('panelHistoricos');
-    if (panel) panel.classList.add('abierto');
+    estado.modoHistoricoActivo = true;
+    estado.panelMinimizado = false;
+    if (panel) {
+        panel.classList.remove('minimizado');
+        panel.classList.add('abierto');
+    }
+    actualizarBotonRestaurarPanel();
     actualizarBotonModo(true);
     actualizarVisibilidadTiempoReal();
+}
+
+// Minimiza el panel sin cerrar el modo histórico ni alterar sus datos o capas.
+export function minimizarPanelHistoricos() {
+    if (!estado.modoHistoricoActivo) return;
+
+    estado.panelMinimizado = true;
+    const panel = document.getElementById('panelHistoricos');
+    if (panel) panel.classList.add('minimizado');
+    actualizarBotonRestaurarPanel();
+}
+
+// Restaura el panel histórico conservando filtros, capas y reproducción.
+export function restaurarPanelHistoricos() {
+    if (!estado.modoHistoricoActivo) return;
+
+    estado.panelMinimizado = false;
+    const panel = document.getElementById('panelHistoricos');
+    if (panel) panel.classList.remove('minimizado');
+    actualizarBotonRestaurarPanel();
+}
+
+function actualizarBotonRestaurarPanel() {
+    const boton = document.getElementById('btnRestaurarPanel');
+    if (boton) {
+        boton.classList.toggle(
+            'visible',
+            estado.modoHistoricoActivo && estado.panelMinimizado
+        );
+    }
 }
 
 // Vuelve al modo de recorrido en vivo y limpia todo lo histórico
 export function volverARecorridoEnVivo() {
     const panel = document.getElementById('panelHistoricos');
-    if (panel) panel.classList.remove('abierto');
+    estado.modoHistoricoActivo = false;
+    estado.panelMinimizado = false;
+    if (panel) {
+        panel.classList.remove('abierto', 'minimizado');
+    }
+    actualizarBotonRestaurarPanel();
     limpiarRecorridoHistorico();
     actualizarBotonModo(false);
     actualizarVisibilidadTiempoReal();
@@ -209,10 +248,7 @@ export function volverARecorridoEnVivo() {
 
 // Alterna entre vista histórica y vista en vivo
 export function alternarModoHistorico() {
-    const panel = document.getElementById('panelHistoricos');
-    const enModoHistorico = (panel && panel.classList.contains('abierto')) || estado.hayRecorridoHistorico;
-
-    if (enModoHistorico) {
+    if (estado.modoHistoricoActivo) {
         volverARecorridoEnVivo();
     } else {
         abrirHistoricos();

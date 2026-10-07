@@ -19,6 +19,8 @@ import {
     obtenerHora24,
     mostrarEstadoHistorico,
     alternarModoHistorico,
+    minimizarPanelHistoricos,
+    restaurarPanelHistoricos,
     actualizarVisibilidadTiempoReal,
     limpiarRecorridoHistorico
 } from './historico/calendario.js';
@@ -108,6 +110,17 @@ function initHistoricos() {
 
     // Listener para alternar entre modo histórico y modo en vivo
     document.getElementById('btnHistoricos').addEventListener('click', alternarModoHistorico);
+
+    // Listeners para minimizar y restaurar el panel sin salir del modo histórico
+    const btnMinimizarPanel = document.getElementById('btnMinimizarPanel');
+    if (btnMinimizarPanel) {
+        btnMinimizarPanel.addEventListener('click', minimizarPanelHistoricos);
+    }
+
+    const btnRestaurarPanel = document.getElementById('btnRestaurarPanel');
+    if (btnRestaurarPanel) {
+        btnRestaurarPanel.addEventListener('click', restaurarPanelHistoricos);
+    }
 
     // Listener para seleccionar la fecha inicial del rango
     document.getElementById('tabDesde').addEventListener('click', () => {
