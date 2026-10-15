@@ -8,6 +8,7 @@ export const DECIMALES_COORDENADAS = 4; // ~11m de resolución: filtra el ruido 
 export const ZOOM_CENTRADO = 17; // Nivel de zoom específico al centrar en el vehículo
 export const UMBRAL_SEGMENTACION_MINUTOS = 30; // Diferencia mínima para considerar un nuevo recorrido (30 min)
 export const UMBRAL_SEGMENTACION_METROS = 2000; // Salto de distancia para considerar un nuevo recorrido (2 km)
+export const UMBRAL_ESTACIONADO_METROS = 50; // Radio del área en que el vehículo se considera detenido (absorbe el jitter del GPS); si permanece dentro ≥ UMBRAL_SEGMENTACION_MINUTOS, al salir empieza otro recorrido
 export const HISTORICO_MIN_ANIO = 2020; // Año minimo desde el que se pueden buscar recorridos
 export const RADIO_DEFAULT_METROS = 300; //Radio default del area de busqueda por lugar
 export const RADIO_MIN_METROS = 50; //Radio minimo del area de busqueda por lugar

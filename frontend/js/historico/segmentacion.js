@@ -3,7 +3,7 @@
 // =============================================================================
 
 // Importa los umbrales configurados para decidir cuándo separar un recorrido
-import { UMBRAL_SEGMENTACION_MINUTOS, UMBRAL_SEGMENTACION_METROS } from '../constantes.js';
+import { UMBRAL_SEGMENTACION_MINUTOS, UMBRAL_SEGMENTACION_METROS, UMBRAL_ESTACIONADO_METROS } from '../constantes.js';
 // Importa utilidades para normalizar coordenadas y convertir fechas a timestamp
 import { redondearCoord, obtenerTimestampPunto } from '../utilidades.js';
 
@@ -35,8 +35,9 @@ export function segmentarRecorridos(puntos) {
     const recorridos = [];
     // Recorrido que se está armando en este momento
     let recorridoActual = [puntosValidos[0]];
-    // Primer timestamp del tramo actual para detectar si el vehículo estuvo detenido
-    let primerTimestampEnPosicion = puntosValidos[0].timestamp;
+    // Punto ancla y momento en que el vehículo empezó a permanecer en esa área (criterio 3)
+    let puntoAncla = puntosValidos[0];
+    let timestampAncla = puntosValidos[0].timestamp;
 
     // Recorre los puntos desde el segundo en adelante
     for (let i = 1; i < puntosValidos.length; i++) {
@@ -66,11 +67,25 @@ export function segmentarRecorridos(puntos) {
         // Se compara si la posición cambió o si el punto quedó igual
         const esMismaPosicion = puntoAnterior.lat === puntoActual.lat && puntoAnterior.lng === puntoActual.lng;
 
-        // Criterio 3: si el vehículo estuvo parado en una posición por más de 30 minutos, se considera fin de recorrido
-        if (!cortaRecorrido && !esMismaPosicion && primerTimestampEnPosicion && puntoActual.timestamp) {
-            const minutosEstacionado = (puntoActual.timestamp - primerTimestampEnPosicion) / (1000 * 60);
-            if (minutosEstacionado >= UMBRAL_SEGMENTACION_MINUTOS) {
-                cortaRecorrido = true;
+        // Criterio 3: si el vehículo permaneció ≥30 min dentro de un área de UMBRAL_ESTACIONADO_METROS
+        // alrededor del punto ancla (aunque el GPS reporte posiciones cercanas distintas), al salir
+        // del área empieza un nuevo recorrido. Mientras siga dentro del área, el ancla no cambia.
+        if (!cortaRecorrido) {
+            const distAncla = L.latLng(puntoAncla.lat, puntoAncla.lng)
+                               .distanceTo(L.latLng(puntoActual.lat, puntoActual.lng));
+            if (distAncla > UMBRAL_ESTACIONADO_METROS) {
+                // Salió del área: el último punto dentro del área es puntoAnterior
+                if (timestampAncla && puntoAnterior.timestamp) {
+                    const minutosEstacionado = (puntoAnterior.timestamp - timestampAncla) / (1000 * 60);
+                    if (minutosEstacionado >= UMBRAL_SEGMENTACION_MINUTOS) {
+                        cortaRecorrido = true;
+                    }
+                }
+                // Si no estuvo detenido el tiempo suficiente, el nuevo punto pasa a ser el ancla
+                if (!cortaRecorrido) {
+                    puntoAncla = puntoActual;
+                    timestampAncla = puntoActual.timestamp;
+                }
             }
         }
 
@@ -80,12 +95,12 @@ export function segmentarRecorridos(puntos) {
                 recorridos.push(recorridoActual);
             }
             recorridoActual = [puntoActual];
-            primerTimestampEnPosicion = puntoActual.timestamp;
+            puntoAncla = puntoActual;
+            timestampAncla = puntoActual.timestamp;
         } else {
             // Si el punto no cambió de posición, se actualiza la información del último punto del recorrido
             if (!esMismaPosicion) {
                 recorridoActual.push(puntoActual);
-                primerTimestampEnPosicion = puntoActual.timestamp;
             } else {
                 const ultimoEnRecorrido = recorridoActual[recorridoActual.length - 1];
                 ultimoEnRecorrido.fecha = puntoActual.fecha;
