@@ -184,8 +184,9 @@ export function mostrarListaRecorridos(recorridos) {
         alternarTodasLasRutas(recorridosListados, checkboxMaestro.checked);
     });
 
-    recorridosListados.forEach(({ recorrido: recorridoActual, indice: indiceGlobal }, indiceVisible) => {
-        const numero = indiceVisible + 1;
+    recorridosListados.forEach(({ recorrido: recorridoActual, indice: indiceGlobal }) => {
+        // Mismo número que usan los pines del mapa y el reproductor
+        const numero = indiceGlobal + 1;
         const inicio = recorridoActual[0];
         const fin = recorridoActual[recorridoActual.length - 1];
         const distancia = calcularDistanciaRecorrido(recorridoActual);
