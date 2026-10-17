@@ -158,19 +158,20 @@ def obtener_ultimo_registro() -> dict | None:
         return dict(fila) if fila else None
     finally:
         conexion.close()
-def obtener_registros_en_rango(desde, hasta) -> list[dict]:
-    """Devuelve los registros entre dos timestamps según la fecha y hora de la
-    telemetría (enviada por la app en hora colombiana), ordenados cronológicamente."""
+def obtener_registros_en_rango(desde, hasta, limite: int = 200_000) -> list[dict]:
+    """Devuelve los registros cuya fecha+hora de telemetría (hora Colombia, columna ts)
+    está entre `desde` y `hasta`, ordenados cronológicamente. Las filas con ts NULL
+    (fecha/hora corruptas) se ignoran. `limite` protege contra consultas gigantes."""
     conexion = _conectar()
     try:
         with conexion.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
                 sql.SQL(
-                    "SELECT lat, lng, fecha, hora, recibido_en FROM {tabla} "
-                    "WHERE (fecha || ' ' || hora)::timestamp BETWEEN %s AND %s "
-                    "ORDER BY (fecha || ' ' || hora)::timestamp ASC, id ASC"
+                    "SELECT id, lat, lng, fecha, hora, ts, acc FROM {tabla} "
+                    "WHERE ts BETWEEN %s AND %s "
+                    "ORDER BY ts ASC, id ASC LIMIT %s"
                 ).format(tabla=sql.Identifier(DB_TABLE)),
-                (desde, hasta),
+                (desde, hasta, limite),
             )
             filas = cur.fetchall()
         return [dict(f) for f in filas]

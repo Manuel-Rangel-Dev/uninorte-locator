@@ -5,10 +5,18 @@ NGINX es el único que le hace reverse proxy desde afuera.
 """
 
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, jsonify, request
 from db import obtener_ultimo_registro, obtener_registros_en_rango
+from filtros import filtrar_ruido
+from tiempo import ahora_colombia
+
 app = Flask(__name__)
+
+# Sin parámetros, /api/historico devuelve solo las últimas 24 h (antes devolvía toda la tabla).
+VENTANA_POR_DEFECTO = timedelta(hours=24)
+# Tope de filas por consulta (a 1 fix cada 5 s, un día son ~17.000).
+MAX_REGISTROS_HISTORICO = 200_000
 
 
 def registro_o_vacio() -> dict:
@@ -53,6 +61,7 @@ def solo_hora():
 @app.get("/api/integrante")
 def nombre_integrante():
     return jsonify({"nombre": os.environ.get("NOMBRE_INTEGRANTE", "Desconocido")})
+
 
 def _parsear_param_fecha_hora(fecha_val: str | None, hora_val: str | None, combinado_val: str | None) -> tuple[datetime | None, bool]:
     """Parsea una fecha y hora a datetime soportando parámetros combinados o separados. Retorna (dt, tiene_segundos)."""
@@ -109,8 +118,9 @@ def historico():
 
     if not dt_desde or not dt_hasta:
         if not fecha_desde and not fecha_hasta and not desde_param and not hasta_param and not fecha_global:
-            dt_desde = datetime(2020, 1, 1, 0, 0, 0)
-            dt_hasta = datetime.now().replace(year=datetime.now().year + 5)
+            # Sin parámetros: últimas 24 h en hora de Colombia (los datos están en esa hora).
+            dt_hasta = ahora_colombia()
+            dt_desde = dt_hasta - VENTANA_POR_DEFECTO
             hasta_tiene_segundos = True
         else:
             return jsonify({
@@ -129,7 +139,17 @@ def historico():
     if dt_hasta < dt_desde:
         return jsonify({"error": "'hasta' no puede ser anterior a 'desde'"}), 400
 
-    registros = obtener_registros_en_rango(dt_desde, dt_hasta)
+    try:
+        registros = obtener_registros_en_rango(dt_desde, dt_hasta, MAX_REGISTROS_HISTORICO)
+    except Exception:
+        app.logger.exception("Error consultando el histórico")
+        return jsonify({"error": "Error interno consultando la base de datos"}), 500
+
+    # Filtro de ruido GPS (duplicados, mala precisión, saltos imposibles).
+    # Para depurar con los datos crudos: /api/historico?...&filtrar=0
+    if request.args.get("filtrar", "1") != "0":
+        registros = filtrar_ruido(registros)
+
     return jsonify([
         {
             "lat": r["lat"],
@@ -139,7 +159,8 @@ def historico():
         }
         for r in registros
     ])
-    
+
+
 if __name__ == "__main__":
     # host="127.0.0.1": solo accesible localmente, jamás directo desde la web.
     # El puerto viene del .env (API_PORT); si no está definido, usa 8000 (main).
