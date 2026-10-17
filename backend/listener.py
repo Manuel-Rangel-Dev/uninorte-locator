@@ -1,50 +1,70 @@
 """
-Listener UDP ("sniffer"): escucha en el puerto configurado, parsea el JSON
+Listener UDP ("sniffer"): escucha en el puerto configurado, valida el JSON
 enviado por la app Android y lo persiste en la base de datos (tabla
 configurable vía DB_TABLE, ver db.py).
+
+El puerto está abierto a todo internet, por eso TODO paquete pasa primero por
+validacion.parsear_paquete(); lo que no cumple el formato se descarta.
 """
 
-import json
 import os
 import socket
+import traceback
+from collections import deque
 from datetime import datetime
 
 from db import init_db, insertar_registro
+from validacion import PaqueteInvalido, parsear_paquete
 
 # Configurable para poder correr un listener de dev en la misma EC2 que el
 # de main sin pisarse el puerto UDP.
 PUERTO_UDP = int(os.environ.get("LISTENER_UDP_PORT", "5000"))
-CAMPOS_REQUERIDOS = {"lat", "lng", "date", "hour"}
 
-
-def procesar_paquete(datos: bytes, origen: tuple) -> None:
-    """Decodifica, valida e inserta un datagrama recibido."""
-    try:
-        texto = datos.decode("utf-8")
-        payload = json.loads(texto)
-    except (UnicodeDecodeError, json.JSONDecodeError):
-        print(f"[{timestamp()}] Paquete descartado (no es JSON válido) desde {origen}")
-        return
-
-    if not CAMPOS_REQUERIDOS.issubset(payload.keys()):
-        print(f"[{timestamp()}] Paquete descartado (faltan campos) desde {origen}: {payload}")
-        return
-
-    try:
-        lat = float(payload["lat"])
-        lng = float(payload["lng"])
-        fecha = str(payload["date"])
-        hora = str(payload["hour"])
-    except (ValueError, TypeError):
-        print(f"[{timestamp()}] Paquete descartado (tipos inválidos) desde {origen}: {payload}")
-        return
-
-    insertar_registro(lat, lng, fecha, hora)
-    print(f"[{timestamp()}] Registrado desde {origen}: lat={lat}, lng={lng}, fecha={fecha}, hora={hora}")
+# Claves (lat, lng, fecha, hora) de los últimos paquetes guardados. La app puede
+# reenviar el mismo fix; así no se insertan duplicados. Se usa una ventana en
+# vez de solo "el último" por si dos celulares envían al mismo listener.
+_recientes = deque(maxlen=50)
 
 
 def timestamp() -> str:
     return datetime.now().strftime("%H:%M:%S")
+
+
+def procesar_paquete(datos: bytes, origen: tuple) -> None:
+    """Valida, deduplica e inserta un datagrama recibido. Nunca lanza excepciones
+    hacia el bucle principal."""
+    try:
+        paquete = parsear_paquete(datos)
+    except PaqueteInvalido as motivo:
+        print(f"[{timestamp()}] Paquete descartado ({motivo}) desde {origen}")
+        return
+
+    clave = (paquete["lat"], paquete["lng"], paquete["fecha"], paquete["hora"])
+    if clave in _recientes:
+        return  # fix repetido: no se guarda dos veces
+
+    try:
+        insertar_registro(
+            paquete["lat"],
+            paquete["lng"],
+            paquete["fecha"],
+            paquete["hora"],
+            acc=paquete["acc"],
+            spd=paquete["spd"],
+            seq=paquete["seq"],
+            ts=paquete["ts"],
+        )
+    except Exception as error:
+        # Corte de RDS, credenciales, etc.: se registra y el listener sigue vivo.
+        print(f"[{timestamp()}] ERROR al insertar en la base de datos: {error}")
+        return
+
+    _recientes.append(clave)
+    print(
+        f"[{timestamp()}] Registrado desde {origen}: lat={paquete['lat']}, lng={paquete['lng']}, "
+        f"fecha={paquete['fecha']}, hora={paquete['hora']}, acc={paquete['acc']}, "
+        f"spd={paquete['spd']}, seq={paquete['seq']}"
+    )
 
 
 def iniciar_listener() -> None:
@@ -57,7 +77,11 @@ def iniciar_listener() -> None:
     try:
         while True:
             datos, origen = sock.recvfrom(1024)
-            procesar_paquete(datos, origen)
+            try:
+                procesar_paquete(datos, origen)
+            except Exception:
+                # Última red de seguridad: ningún paquete debe tumbar el proceso.
+                traceback.print_exc()
     except KeyboardInterrupt:
         print("\nDetenido por el usuario.")
     finally:
