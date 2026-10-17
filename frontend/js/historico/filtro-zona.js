@@ -2,7 +2,7 @@
 // HISTÓRICOS: FILTRO POR ZONA GEOGRÁFICA
 // =============================================================================
 import { estado } from '../estado.js';
-import { RADIO_DEFAULT_METROS, NOMINATIM_URL } from '../constantes.js';
+import { RADIO_DEFAULT_METROS, NOMINATIM_URL, INTERVALO_MIN_BUSQUEDA_MS } from '../constantes.js';
 import {
     formatearRadio,
     distanciaSegmentoAPunto,
@@ -13,7 +13,7 @@ import {
     mostrarListaRecorridos
 } from './lista-slidebar.js';
 
-let debounceTimer = null;
+let ultimaBusquedaMs = 0;
 let indiceSugerenciaSeleccionada = -1;
 let sugerenciasActuales = [];
 let temporizadorArrastreZona = null;
@@ -420,6 +420,11 @@ async function buscarLugares(query) {
         return;
     }
 
+    // Política de Nominatim: máximo 1 petición por segundo
+    const ahora = Date.now();
+    if (ahora - ultimaBusquedaMs < INTERVALO_MIN_BUSQUEDA_MS) return;
+    ultimaBusquedaMs = ahora;
+
     if (spinner) spinner.style.display = 'block';
 
     try {
@@ -501,7 +506,7 @@ function actualizarSeleccionVisualSugerencias(items) {
     });
 }
 
-// Configura la búsqueda por lugar en el input
+// Configura la búsqueda por lugar: se busca SOLO al presionar Enter (Nominatim no permite autocompletar).
 export function initBusquedaLugar() {
     const input = document.getElementById('inputBusquedaLugar');
     const btnLimpiar = document.getElementById('btnLimpiarBusquedaLugar');
@@ -511,13 +516,9 @@ export function initBusquedaLugar() {
     if (!input) return;
 
     input.addEventListener('input', () => {
-        const val = input.value;
-        if (btnLimpiar) btnLimpiar.style.display = val ? 'block' : 'none';
-
-        if (debounceTimer) clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            buscarLugares(val);
-        }, 350);
+        if (btnLimpiar) btnLimpiar.style.display = input.value ? 'block' : 'none';
+        // El texto cambió: las sugerencias anteriores ya no le corresponden.
+        cerrarSugerencias();
     });
 
     if (btnLimpiar) {
@@ -531,20 +532,13 @@ export function initBusquedaLugar() {
 
     input.addEventListener('keydown', (e) => {
         const items = sugerenciasEl ? sugerenciasEl.querySelectorAll('.itemSugerencia') : [];
-        if (!items || items.length === 0) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                if (debounceTimer) clearTimeout(debounceTimer);
-                buscarLugares(input.value);
-            }
-            return;
-        }
-
-        if (e.key === 'ArrowDown') {
+        if (e.key === 'Escape') {
+            cerrarSugerencias();
+        } else if (e.key === 'ArrowDown' && items.length > 0) {
             e.preventDefault();
             indiceSugerenciaSeleccionada = (indiceSugerenciaSeleccionada + 1) % items.length;
             actualizarSeleccionVisualSugerencias(items);
-        } else if (e.key === 'ArrowUp') {
+        } else if (e.key === 'ArrowUp' && items.length > 0) {
             e.preventDefault();
             indiceSugerenciaSeleccionada = (indiceSugerenciaSeleccionada - 1 + items.length) % items.length;
             actualizarSeleccionVisualSugerencias(items);
@@ -554,9 +548,9 @@ export function initBusquedaLugar() {
                 seleccionarSugerencia(sugerenciasActuales[indiceSugerenciaSeleccionada]);
             } else if (sugerenciasActuales.length > 0) {
                 seleccionarSugerencia(sugerenciasActuales[0]);
+            } else {
+                buscarLugares(input.value);
             }
-        } else if (e.key === 'Escape') {
-            cerrarSugerencias();
         }
     });
 

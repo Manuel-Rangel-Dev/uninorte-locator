@@ -14,3 +14,4 @@ export const RADIO_DEFAULT_METROS = 300; //Radio default del area de busqueda po
 export const RADIO_MIN_METROS = 50; //Radio minimo del area de busqueda por lugar
 export const RADIO_MAX_METROS = 3000; //Radio maximo del area de busqueda por lugar
 export const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search'; //Url del provedor de la info de busqueda escrita
+export const INTERVALO_MIN_BUSQUEDA_MS = 1100; // Nominatim: máximo 1 petición por segundo
