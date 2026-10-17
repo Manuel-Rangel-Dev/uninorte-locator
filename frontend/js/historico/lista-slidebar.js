@@ -18,6 +18,13 @@ function buscarEntradaVisible(indice) {
     return estado.lineasHistoricas.find(entrada => entrada.indice === indice);
 }
 
+// Número estable de un recorrido: se calcula contra la lista completa (sin filtro por zona).
+function numeroDeRecorrido(recorrido) {
+    let posicion = estado.recorridosBase.indexOf(recorrido);
+    if (posicion < 0) posicion = estado.recorridosHistoricos.indexOf(recorrido);
+    return posicion + 1;
+}
+
 function prepararReproductorParaRender() {
     const reproductor = document.getElementById('reproductorHistorico');
     const panel = document.getElementById('panelHistoricos');
@@ -185,8 +192,8 @@ export function mostrarListaRecorridos(recorridos) {
     });
 
     recorridosListados.forEach(({ recorrido: recorridoActual, indice: indiceGlobal }) => {
-        // Mismo número que usan los pines del mapa y el reproductor
-        const numero = indiceGlobal + 1;
+        // El número visible permanece estable aunque se aplique el filtro por zona.
+        const numero = numeroDeRecorrido(recorridoActual);
         const inicio = recorridoActual[0];
         const fin = recorridoActual[recorridoActual.length - 1];
         const distancia = calcularDistanciaRecorrido(recorridoActual);
@@ -376,7 +383,7 @@ function dibujarRecorridoEnMapa(indice, mostrarTooltipsPermanentes = true) {
         opacity: 0.9
     }).addTo(estado.mapa).on('click', () => seleccionarRecorrido(indice));
 
-    const numero = indice + 1;
+    const numero = numeroDeRecorrido(recorrido);
     const puntoInicio = recorrido[0];
     const puntoFin = recorrido[recorrido.length - 1];
 
@@ -526,7 +533,7 @@ export function actualizarPuntoReproduccion(indice) {
 
     const infoRecorrido = document.getElementById('infoRecorridoSeleccionado');
     if (infoRecorrido) {
-        const indiceRecorrido = estado.recorridosHistoricos.indexOf(estado.recorridoSeleccionado) + 1;
+        const indiceRecorrido = numeroDeRecorrido(estado.recorridoSeleccionado);
         infoRecorrido.textContent = `Recorrido ${indiceRecorrido}`;
     }
 
