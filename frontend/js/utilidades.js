@@ -93,3 +93,13 @@ export function distanciaSegmentoAPunto(p1, p2, centro) {
 
     return Math.hypot(projX, projY);
 }
+
+// Escapa texto para insertarlo de forma segura dentro de HTML (innerHTML, popups de Leaflet).
+export function escaparHtml(texto) {
+    return String(texto ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}

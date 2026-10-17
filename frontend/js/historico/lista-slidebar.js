@@ -3,7 +3,7 @@
 // =============================================================================
 import { estado } from '../estado.js';
 import { calcularDistanciaRecorrido } from './segmentacion.js';
-import { formatearDistancia, obtenerTimestampPunto } from '../utilidades.js';
+import { formatearDistancia, obtenerTimestampPunto, escaparHtml } from '../utilidades.js';
 
 // Colores usados para distinguir cada recorrido en el mapa
 const PALETA_RECORRIDOS = ['#4A90D9', '#2ecc71', '#e67e22', '#9b59b6', '#e74c3c', '#1abc9c', '#f1c40f', '#e84393'];
@@ -206,15 +206,15 @@ export function mostrarListaRecorridos(recorridos) {
                 </div>
                 <div class="datosRecorrido">
                     <div>
-                        ${inicio.fecha || '--'}
+                        ${escaparHtml(inicio.fecha || '--')}
                         ·
-                        ${inicio.hora || '--'}
+                        ${escaparHtml(inicio.hora || '--')}
                     </div>
                     <div>
                         →
-                        ${fin.fecha || '--'}
+                        ${escaparHtml(fin.fecha || '--')}
                         ·
-                        ${fin.hora || '--'}
+                        ${escaparHtml(fin.hora || '--')}
                     </div>
                     <div>
                         ${recorridoActual.length} puntos
@@ -397,7 +397,7 @@ function dibujarRecorridoEnMapa(indice, mostrarTooltipsPermanentes = true) {
             offset: [0, -14],
             className: 'tooltipRecorrido tooltipInicio'
         })
-        .bindPopup(`Inicio recorrido ${numero}${puntoInicio.fecha ? ' — ' + puntoInicio.fecha + ' ' + (puntoInicio.hora || '') : ''}`)
+        .bindPopup(escaparHtml(`Inicio recorrido ${numero}${puntoInicio.fecha ? ' — ' + puntoInicio.fecha + ' ' + (puntoInicio.hora || '') : ''}`))
         .on('click', () => seleccionarRecorrido(indice));
 
     // Marcador de fin
@@ -412,7 +412,7 @@ function dibujarRecorridoEnMapa(indice, mostrarTooltipsPermanentes = true) {
             offset: offsetFin,
             className: 'tooltipRecorrido tooltipFin'
         })
-        .bindPopup(`Fin recorrido ${numero}${puntoFin.fecha ? ' — ' + puntoFin.fecha + ' ' + (puntoFin.hora || '') : ''}`)
+        .bindPopup(escaparHtml(`Fin recorrido ${numero}${puntoFin.fecha ? ' — ' + puntoFin.fecha + ' ' + (puntoFin.hora || '') : ''}`))
         .on('click', () => seleccionarRecorrido(indice));
 
     // Guarda la referencia del recorrido visible para poder manipularlo después

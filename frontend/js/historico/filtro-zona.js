@@ -5,7 +5,8 @@ import { estado } from '../estado.js';
 import { RADIO_DEFAULT_METROS, NOMINATIM_URL } from '../constantes.js';
 import {
     formatearRadio,
-    distanciaSegmentoAPunto
+    distanciaSegmentoAPunto,
+    escaparHtml
 } from '../utilidades.js';
 import {
     removerCapasHistoricas,
@@ -452,8 +453,8 @@ async function buscarLugares(query) {
             btn.className = 'itemSugerencia';
             btn.dataset.index = idx;
             btn.innerHTML = `
-                <span class="tituloSugerencia">${titulo}</span>
-                ${subtitulo ? `<span class="subtituloSugerencia">${subtitulo}</span>` : ''}
+                <span class="tituloSugerencia">${escaparHtml(titulo)}</span>
+                ${subtitulo ? `<span class="subtituloSugerencia">${escaparHtml(subtitulo)}</span>` : ''}
             `;
 
             btn.addEventListener('click', () => {
