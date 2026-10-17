@@ -2,8 +2,16 @@
 // MAPA EN VIVO: INICIALIZACIÓN Y TELEMETRÍA EN TIEMPO REAL
 // =============================================================================
 
-import { API_BASE, INTERVALO_MS, CENTRO_DEFAULT, ZOOM_CENTRADO } from './constantes.js';
-import { redondearCoord } from './utilidades.js';
+import {
+    API_BASE,
+    INTERVALO_MS,
+    CENTRO_DEFAULT,
+    ZOOM_CENTRADO,
+    VEL_MAX_VIVO_MS,
+    DIST_MIN_SALTO_VIVO_M,
+    MINUTOS_PRECARGA_RECORRIDO
+} from './constantes.js';
+import { redondearCoord, formatearFechaISO, formatearHoraISO } from './utilidades.js';
 import { estado } from './estado.js';
 
 // =============================================================================
@@ -55,6 +63,35 @@ export async function refrescarCampo(nombreCampo, idElemento) {
 // FUNCIÓN: actualizarMarcador
 // =============================================================================
 
+// Decide si una posición en vivo debe mostrarse. Un salto imposible solo se acepta si la
+// siguiente lectura lo confirma; un pico aislado (el siguiente punto vuelve) se descarta.
+function esPosicionVivaValida(posicion) {
+    const ahora = Date.now();
+    const aceptar = () => {
+        estado.ultimaPosicionValida = posicion;
+        estado.instanteUltimaPosicionValida = ahora;
+        estado.candidatoSalto = null;
+        return true;
+    };
+
+    const previa = estado.ultimaPosicionValida;
+    if (!previa) return aceptar();
+
+    const distancia = L.latLng(previa).distanceTo(L.latLng(posicion));
+    const segundos = Math.max(1, (ahora - estado.instanteUltimaPosicionValida) / 1000);
+    const esSaltoImposible = distancia > DIST_MIN_SALTO_VIVO_M
+        && distancia / segundos > VEL_MAX_VIVO_MS;
+    if (!esSaltoImposible) return aceptar();
+
+    // Salto imposible: solo se acepta si el candidato anterior estaba aquí mismo (confirmado).
+    const candidato = estado.candidatoSalto;
+    if (candidato && L.latLng(candidato).distanceTo(L.latLng(posicion)) <= DIST_MIN_SALTO_VIVO_M) {
+        return aceptar();
+    }
+    estado.candidatoSalto = posicion;
+    return false;
+}
+
 export async function actualizarMarcador() {
     // ─────────────────────────────────────────────────────────────────────
     // PASO 1: Obtener datos del backend
@@ -96,6 +133,9 @@ export async function actualizarMarcador() {
     // Ejemplo: 11.01901234 → 11.0190
     // Con esto evitamos que la línea parpadee cuando el vehículo está quieto
     const posicion = [redondearCoord(lat), redondearCoord(lng)];
+
+    // Descarta saltos falsos antes de mover el marcador o dibujar la ruta
+    if (!esPosicionVivaValida(posicion)) return;
     
     // ─────────────────────────────────────────────────────────────────────
     // PASO 4: Mover el marcador (punto rojo del vehículo)
@@ -168,6 +208,54 @@ export async function actualizarMarcador() {
             // Esto evita confusión: el usuario ve solo el histórico, no ambas rutas
             estado.recorrido.setStyle({ opacity: 0 });
         }
+    }
+}
+
+// Ejecuta actualizarMarcador y programa la siguiente ejecución SOLO cuando la actual termina
+// (evita peticiones solapadas con red lenta).
+async function cicloActualizacion() {
+    try {
+        await actualizarMarcador();
+    } catch (error) {
+        console.error('[Locator] Error en el ciclo de actualización:', error);
+    }
+    setTimeout(cicloActualizacion, INTERVALO_MS);
+}
+
+// Dibuja en la traza en vivo los minutos previos al último registro,
+// para que al recargar la página la línea roja no empiece vacía.
+async function precargarRecorridoReciente(ultimo) {
+    try {
+        const fin = new Date(`${ultimo.fecha}T${ultimo.hora}`);
+        if (isNaN(fin.getTime())) return;
+
+        const inicio = new Date(fin.getTime() - MINUTOS_PRECARGA_RECORRIDO * 60 * 1000);
+        const desde = `${formatearFechaISO(inicio)} ${formatearHoraISO(inicio)}`;
+        const hasta = `${formatearFechaISO(fin)} ${formatearHoraISO(fin)}`;
+        const url = `${API_BASE}/api/historico?desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`;
+        const respuesta = await fetch(url);
+        if (!respuesta.ok) return;
+
+        const puntos = await respuesta.json();
+        const coordenadas = [];
+        for (const punto of puntos) {
+            if (punto.lat === null || punto.lng === null
+                || isNaN(Number(punto.lat)) || isNaN(Number(punto.lng))) {
+                continue;
+            }
+
+            const posicion = [redondearCoord(punto.lat), redondearCoord(punto.lng)];
+            const previa = coordenadas[coordenadas.length - 1];
+            if (!previa || previa[0] !== posicion[0] || previa[1] !== posicion[1]) {
+                coordenadas.push(posicion);
+            }
+        }
+
+        if (coordenadas.length === 0) return;
+        estado.recorrido.setLatLngs(coordenadas);
+        estado.ultimaPosicionRecorrido = coordenadas[coordenadas.length - 1];
+    } catch (error) {
+        console.warn('No se pudo precargar la traza reciente:', error);
     }
 }
 
@@ -283,6 +371,9 @@ export async function initMap() {
                 
                 // Marca que el mapa ya está centrado
                 estado.mapaCentradoInicial = true;
+
+                // Precarga los últimos minutos de traza para no empezar con la línea vacía
+                await precargarRecorridoReciente(datos);
             }
         }
     } catch (e) {
@@ -292,16 +383,6 @@ export async function initMap() {
         console.warn('No se pudo obtener la posición inicial desde /api/ultimo, usando centro por defecto:', e);
     }
     
-    // ─────────────────────────────────────────────────────────────────────
-    // PARTE 6: Iniciar el ciclo de actualizaciones
-    // ─────────────────────────────────────────────────────────────────────
-    
-    // Ejecuta la actualización una vez inmediatamente
-    // Esto asegura que el mapa muestre datos lo más pronto posible
-    actualizarMarcador();
-    
-    // Luego ejecuta actualizarMarcador cada INTERVALO_MS milisegundos (5000 = 5 segundos)
-    // setInterval = repetir indefinidamente hasta que se llame clearInterval
-    // Esto crea el efecto de "tiempo real" donde el marcador se actualiza constantemente
-    setInterval(actualizarMarcador, INTERVALO_MS);
+    // PARTE 6: iniciar el ciclo de actualizaciones (la siguiente corre cuando termina la anterior)
+    cicloActualizacion();
 }

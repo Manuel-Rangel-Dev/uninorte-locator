@@ -11,6 +11,9 @@ export const estado = {
     ultimaPosicionRecorrido: null,
     mapaCentradoInicial: false,
     modoTracking: false,
+    ultimaPosicionValida: null,
+    instanteUltimaPosicionValida: 0,
+    candidatoSalto: null,
 
     // Históricos: recorridos y reproductor
     modoHistoricoActivo: false,
