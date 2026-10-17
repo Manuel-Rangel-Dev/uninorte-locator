@@ -2,7 +2,14 @@
 // MAPA EN VIVO: INICIALIZACIÓN Y TELEMETRÍA EN TIEMPO REAL
 // =============================================================================
 
-import { API_BASE, INTERVALO_MS, CENTRO_DEFAULT, ZOOM_CENTRADO } from './constantes.js';
+import {
+    API_BASE,
+    INTERVALO_MS,
+    CENTRO_DEFAULT,
+    ZOOM_CENTRADO,
+    VEL_MAX_VIVO_MS,
+    DIST_MIN_SALTO_VIVO_M
+} from './constantes.js';
 import { redondearCoord } from './utilidades.js';
 import { estado } from './estado.js';
 
@@ -55,6 +62,35 @@ export async function refrescarCampo(nombreCampo, idElemento) {
 // FUNCIÓN: actualizarMarcador
 // =============================================================================
 
+// Decide si una posición en vivo debe mostrarse. Un salto imposible solo se acepta si la
+// siguiente lectura lo confirma; un pico aislado (el siguiente punto vuelve) se descarta.
+function esPosicionVivaValida(posicion) {
+    const ahora = Date.now();
+    const aceptar = () => {
+        estado.ultimaPosicionValida = posicion;
+        estado.instanteUltimaPosicionValida = ahora;
+        estado.candidatoSalto = null;
+        return true;
+    };
+
+    const previa = estado.ultimaPosicionValida;
+    if (!previa) return aceptar();
+
+    const distancia = L.latLng(previa).distanceTo(L.latLng(posicion));
+    const segundos = Math.max(1, (ahora - estado.instanteUltimaPosicionValida) / 1000);
+    const esSaltoImposible = distancia > DIST_MIN_SALTO_VIVO_M
+        && distancia / segundos > VEL_MAX_VIVO_MS;
+    if (!esSaltoImposible) return aceptar();
+
+    // Salto imposible: solo se acepta si el candidato anterior estaba aquí mismo (confirmado).
+    const candidato = estado.candidatoSalto;
+    if (candidato && L.latLng(candidato).distanceTo(L.latLng(posicion)) <= DIST_MIN_SALTO_VIVO_M) {
+        return aceptar();
+    }
+    estado.candidatoSalto = posicion;
+    return false;
+}
+
 export async function actualizarMarcador() {
     // ─────────────────────────────────────────────────────────────────────
     // PASO 1: Obtener datos del backend
@@ -96,6 +132,9 @@ export async function actualizarMarcador() {
     // Ejemplo: 11.01901234 → 11.0190
     // Con esto evitamos que la línea parpadee cuando el vehículo está quieto
     const posicion = [redondearCoord(lat), redondearCoord(lng)];
+
+    // Descarta saltos falsos antes de mover el marcador o dibujar la ruta
+    if (!esPosicionVivaValida(posicion)) return;
     
     // ─────────────────────────────────────────────────────────────────────
     // PASO 4: Mover el marcador (punto rojo del vehículo)
