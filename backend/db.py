@@ -5,6 +5,7 @@ systemd EnvironmentFile), nunca quemadas en el código.
 """
 
 import os
+from datetime import datetime
 
 import psycopg2
 import psycopg2.extras
@@ -30,6 +31,16 @@ if os.environ.get("DB_SSLMODE"):
 # misma RDS sin pisarse los datos (cada uno con su propia tabla).
 DB_TABLE = os.environ.get("DB_TABLE", "telemetria")
 
+# Columnas añadidas después de la primera versión de la tabla. init_db() las
+# agrega con ALTER TABLE ... IF NOT EXISTS, así que las tablas antiguas se migran
+# solas al reiniciar el listener (las filas viejas quedan con NULL en acc/spd/seq).
+COLUMNAS_NUEVAS = (
+    ("acc", "DOUBLE PRECISION"),  # precisión horizontal en metros (location.accuracy)
+    ("spd", "DOUBLE PRECISION"),  # velocidad en m/s (location.speed)
+    ("seq", "BIGINT"),            # contador incremental de la app (mide pérdida de UDP)
+    ("ts", "TIMESTAMP"),          # fecha+hora de la telemetría (hora Colombia), indexada
+)
+
 
 def _conectar():
     """Abre una conexión nueva a RDS. Falla rápido y explícito si faltan
@@ -37,8 +48,40 @@ def _conectar():
     return psycopg2.connect(**DB_CONFIG)
 
 
+def _rellenar_ts(conexion) -> None:
+    """Calcula ts para las filas que aún no lo tienen, parseando fecha y hora en
+    Python. Las filas con fecha/hora inválidas se omiten (quedan con ts NULL y
+    el histórico las ignora) en vez de hacer fallar todo el UPDATE."""
+    tabla = sql.Identifier(DB_TABLE)
+    with conexion.cursor() as cur:
+        cur.execute(sql.SQL("SELECT id, fecha, hora FROM {tabla} WHERE ts IS NULL").format(tabla=tabla))
+        pendientes = cur.fetchall()
+    if not pendientes:
+        return
+
+    validas = []
+    invalidas = 0
+    for id_fila, fecha, hora in pendientes:
+        try:
+            ts = datetime.strptime(f"{fecha} {hora}", "%Y-%m-%d %H:%M:%S")
+        except (ValueError, TypeError):
+            invalidas += 1
+            continue
+        validas.append((ts, id_fila))
+
+    if validas:
+        consulta = sql.SQL("UPDATE {tabla} SET ts = %s WHERE id = %s").format(tabla=tabla).as_string(conexion)
+        with conexion.cursor() as cur:
+            psycopg2.extras.execute_batch(cur, consulta, validas, page_size=500)
+        conexion.commit()
+    print(f"[db] ts rellenado en {len(validas)} fila(s); {invalidas} con fecha/hora inválida (omitidas)")
+
+
 def init_db() -> None:
-    """Crea la tabla (DB_TABLE) si no existe."""
+    """Crea la tabla (DB_TABLE) si no existe, agrega las columnas nuevas si
+    faltan, crea el índice sobre ts y rellena ts en las filas antiguas.
+    Es idempotente: se puede ejecutar cuantas veces haga falta."""
+    tabla = sql.Identifier(DB_TABLE)
     conexion = _conectar()
     try:
         with conexion.cursor() as cur:
@@ -54,16 +97,35 @@ def init_db() -> None:
                         hora TEXT NOT NULL
                     )
                     """
-                ).format(tabla=sql.Identifier(DB_TABLE))
+                ).format(tabla=tabla)
+            )
+            for columna, tipo in COLUMNAS_NUEVAS:
+                cur.execute(
+                    sql.SQL("ALTER TABLE {tabla} ADD COLUMN IF NOT EXISTS {columna} {tipo}").format(
+                        tabla=tabla,
+                        columna=sql.Identifier(columna),
+                        tipo=sql.SQL(tipo),
+                    )
+                )
+            cur.execute(
+                sql.SQL("CREATE INDEX IF NOT EXISTS {indice} ON {tabla} (ts)").format(
+                    indice=sql.Identifier(f"idx_{DB_TABLE}_ts"),
+                    tabla=tabla,
+                )
             )
         conexion.commit()
+        _rellenar_ts(conexion)
     finally:
         conexion.close()
 
 
-def insertar_registro(lat: float, lng: float, fecha: str, hora: str) -> None:
-    """Inserta un nuevo registro de telemetría."""
-    from datetime import datetime
+def insertar_registro(lat: float, lng: float, fecha: str, hora: str,
+                      acc: float | None = None, spd: float | None = None,
+                      seq: int | None = None, ts: datetime | None = None) -> None:
+    """Inserta un nuevo registro de telemetría.
+    ts (hora Colombia) se calcula a partir de fecha y hora si no se entrega."""
+    if ts is None:
+        ts = datetime.strptime(f"{fecha} {hora}", "%Y-%m-%d %H:%M:%S")
 
     conexion = _conectar()
     try:
@@ -71,11 +133,11 @@ def insertar_registro(lat: float, lng: float, fecha: str, hora: str) -> None:
             cur.execute(
                 sql.SQL(
                     """
-                    INSERT INTO {tabla} (recibido_en, lat, lng, fecha, hora)
-                    VALUES (%s, %s, %s, %s, %s)
+                    INSERT INTO {tabla} (recibido_en, lat, lng, fecha, hora, acc, spd, seq, ts)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
                 ).format(tabla=sql.Identifier(DB_TABLE)),
-                (datetime.now(), lat, lng, fecha, hora),
+                (datetime.now(), lat, lng, fecha, hora, acc, spd, seq, ts),
             )
         conexion.commit()
     finally:
