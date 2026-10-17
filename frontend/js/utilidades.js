@@ -36,6 +36,14 @@ export function formatearFechaISO(d) {
     return `${anio}-${mes}-${dia}`;
 }
 
+// Convierte Date a HH:MM:SS (hora local del Date recibido).
+export function formatearHoraISO(d) {
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+    return `${hh}:${mm}:${ss}`;
+}
+
 // Formatea metros como "250 m" o "1.50 km".
 export function formatearDistancia(metros) {
     if (metros < 1000) {

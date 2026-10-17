@@ -8,9 +8,10 @@ import {
     CENTRO_DEFAULT,
     ZOOM_CENTRADO,
     VEL_MAX_VIVO_MS,
-    DIST_MIN_SALTO_VIVO_M
+    DIST_MIN_SALTO_VIVO_M,
+    MINUTOS_PRECARGA_RECORRIDO
 } from './constantes.js';
-import { redondearCoord } from './utilidades.js';
+import { redondearCoord, formatearFechaISO, formatearHoraISO } from './utilidades.js';
 import { estado } from './estado.js';
 
 // =============================================================================
@@ -221,6 +222,43 @@ async function cicloActualizacion() {
     setTimeout(cicloActualizacion, INTERVALO_MS);
 }
 
+// Dibuja en la traza en vivo los minutos previos al último registro,
+// para que al recargar la página la línea roja no empiece vacía.
+async function precargarRecorridoReciente(ultimo) {
+    try {
+        const fin = new Date(`${ultimo.fecha}T${ultimo.hora}`);
+        if (isNaN(fin.getTime())) return;
+
+        const inicio = new Date(fin.getTime() - MINUTOS_PRECARGA_RECORRIDO * 60 * 1000);
+        const desde = `${formatearFechaISO(inicio)} ${formatearHoraISO(inicio)}`;
+        const hasta = `${formatearFechaISO(fin)} ${formatearHoraISO(fin)}`;
+        const url = `${API_BASE}/api/historico?desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`;
+        const respuesta = await fetch(url);
+        if (!respuesta.ok) return;
+
+        const puntos = await respuesta.json();
+        const coordenadas = [];
+        for (const punto of puntos) {
+            if (punto.lat === null || punto.lng === null
+                || isNaN(Number(punto.lat)) || isNaN(Number(punto.lng))) {
+                continue;
+            }
+
+            const posicion = [redondearCoord(punto.lat), redondearCoord(punto.lng)];
+            const previa = coordenadas[coordenadas.length - 1];
+            if (!previa || previa[0] !== posicion[0] || previa[1] !== posicion[1]) {
+                coordenadas.push(posicion);
+            }
+        }
+
+        if (coordenadas.length === 0) return;
+        estado.recorrido.setLatLngs(coordenadas);
+        estado.ultimaPosicionRecorrido = coordenadas[coordenadas.length - 1];
+    } catch (error) {
+        console.warn('No se pudo precargar la traza reciente:', error);
+    }
+}
+
 // =============================================================================
 // FUNCIÓN: initMap
 // =============================================================================
@@ -333,6 +371,9 @@ export async function initMap() {
                 
                 // Marca que el mapa ya está centrado
                 estado.mapaCentradoInicial = true;
+
+                // Precarga los últimos minutos de traza para no empezar con la línea vacía
+                await precargarRecorridoReciente(datos);
             }
         }
     } catch (e) {
