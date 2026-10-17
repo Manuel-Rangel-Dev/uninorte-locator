@@ -115,6 +115,14 @@ def historico():
 
     dt_desde, _ = _parsear_param_fecha_hora(fecha_desde, hora_desde, desde_param)
     dt_hasta, hasta_tiene_segundos = _parsear_param_fecha_hora(fecha_hasta, hora_hasta, hasta_param)
+    hasta_es_solo_fecha = (
+        (bool(fecha_hasta) and not hora_hasta and not hasta_param)
+        or (
+            bool(hasta_param)
+            and len(hasta_param.strip()) == 10
+            and hasta_param.strip().count("-") == 2
+        )
+    )
 
     if not dt_desde or not dt_hasta:
         if not fecha_desde and not fecha_hasta and not desde_param and not hasta_param and not fecha_global:
@@ -131,7 +139,9 @@ def historico():
 
     # Si no se especificaron segundos en hasta, incluir el minuto completo (:59.999999).
     # Si se especificaron segundos, cubrir hasta el final de ese segundo (.999999) para abarcar registros intermedios.
-    if not hasta_tiene_segundos:
+    if hasta_es_solo_fecha:
+        dt_hasta = dt_hasta.replace(hour=23, minute=59, second=59, microsecond=999999)
+    elif not hasta_tiene_segundos:
         dt_hasta = dt_hasta.replace(second=59, microsecond=999999)
     elif dt_hasta.microsecond == 0:
         dt_hasta = dt_hasta.replace(microsecond=999999)

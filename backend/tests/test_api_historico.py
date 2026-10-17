@@ -44,6 +44,13 @@ def test_filtrar_cero_devuelve_crudo(monkeypatch):
     assert len(r.get_json()) == 3
 
 
+def test_fecha_sola_cubre_todo_el_dia(monkeypatch):
+    capturas = {}
+    cliente(monkeypatch, [], capturas).get("/api/historico?fecha=2026-10-15")
+    assert capturas["desde"] == datetime(2026, 10, 15, 0, 0, 0)
+    assert capturas["hasta"] == datetime(2026, 10, 15, 23, 59, 59, 999999)
+
+
 def test_sin_parametros_usa_ultimas_24h(monkeypatch):
     cap = {}
     r = cliente(monkeypatch, [], cap).get("/api/historico")
