@@ -171,6 +171,17 @@ export async function actualizarMarcador() {
     }
 }
 
+// Ejecuta actualizarMarcador y programa la siguiente ejecución SOLO cuando la actual termina
+// (evita peticiones solapadas con red lenta).
+async function cicloActualizacion() {
+    try {
+        await actualizarMarcador();
+    } catch (error) {
+        console.error('[Locator] Error en el ciclo de actualización:', error);
+    }
+    setTimeout(cicloActualizacion, INTERVALO_MS);
+}
+
 // =============================================================================
 // FUNCIÓN: initMap
 // =============================================================================
@@ -292,16 +303,6 @@ export async function initMap() {
         console.warn('No se pudo obtener la posición inicial desde /api/ultimo, usando centro por defecto:', e);
     }
     
-    // ─────────────────────────────────────────────────────────────────────
-    // PARTE 6: Iniciar el ciclo de actualizaciones
-    // ─────────────────────────────────────────────────────────────────────
-    
-    // Ejecuta la actualización una vez inmediatamente
-    // Esto asegura que el mapa muestre datos lo más pronto posible
-    actualizarMarcador();
-    
-    // Luego ejecuta actualizarMarcador cada INTERVALO_MS milisegundos (5000 = 5 segundos)
-    // setInterval = repetir indefinidamente hasta que se llame clearInterval
-    // Esto crea el efecto de "tiempo real" donde el marcador se actualiza constantemente
-    setInterval(actualizarMarcador, INTERVALO_MS);
+    // PARTE 6: iniciar el ciclo de actualizaciones (la siguiente corre cuando termina la anterior)
+    cicloActualizacion();
 }
