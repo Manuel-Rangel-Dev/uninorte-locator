@@ -8,6 +8,7 @@ export const DECIMALES_COORDENADAS = 4; // ~11m de resolución: filtra el ruido 
 export const VEL_MAX_VIVO_MS = 25; // Velocidad máxima creíble en vivo (90 km/h)
 export const DIST_MIN_SALTO_VIVO_M = 60; // Saltos menores a esto nunca se consideran ruido
 export const MINUTOS_PRECARGA_RECORRIDO = 15; // Minutos de traza que se precargan al abrir la página
+export const UMBRAL_HUECO_SEGUNDOS = 60; // Más de este tiempo sin datos se dibuja punteado
 export const ZOOM_CENTRADO = 17; // Nivel de zoom específico al centrar en el vehículo
 export const UMBRAL_SEGMENTACION_MINUTOS = 30; // Diferencia mínima para considerar un nuevo recorrido (30 min)
 export const UMBRAL_SEGMENTACION_METROS = 2000; // Salto de distancia para considerar un nuevo recorrido (2 km)

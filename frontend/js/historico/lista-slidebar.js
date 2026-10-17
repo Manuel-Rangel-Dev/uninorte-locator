@@ -4,6 +4,7 @@
 import { estado } from '../estado.js';
 import { calcularDistanciaRecorrido } from './segmentacion.js';
 import { formatearDistancia, obtenerTimestampPunto, escaparHtml } from '../utilidades.js';
+import { UMBRAL_HUECO_SEGUNDOS } from '../constantes.js';
 
 // Colores usados para distinguir cada recorrido en el mapa
 const PALETA_RECORRIDOS = ['#4A90D9', '#2ecc71', '#e67e22', '#9b59b6', '#e74c3c', '#1abc9c', '#f1c40f', '#e84393'];
@@ -362,6 +363,39 @@ export function alternarVisibilidadRecorrido(indice, debeMostrar = null) {
     actualizarCheckboxMaestro();
 }
 
+// Construye la línea del recorrido; los tramos con hueco de datos se dibujan punteados.
+// Cada punto trae `timestamp` (ms) calculado en segmentarRecorridos.
+function construirLineaRecorrido(recorrido, color) {
+    const estiloNormal = { color, weight: 5, opacity: 0.9 };
+    const estiloHueco = { color, weight: 3, opacity: 0.5, dashArray: '6,10' };
+    const capas = [];
+    let tramo = [[recorrido[0].lat, recorrido[0].lng]];
+
+    for (let i = 1; i < recorrido.length; i++) {
+        const previo = recorrido[i - 1];
+        const actual = recorrido[i];
+        const segundos = (Number.isFinite(previo.timestamp) && Number.isFinite(actual.timestamp))
+            ? (actual.timestamp - previo.timestamp) / 1000
+            : 0;
+
+        if (segundos > UMBRAL_HUECO_SEGUNDOS) {
+            if (tramo.length > 1) capas.push(L.polyline(tramo, estiloNormal));
+            capas.push(L.polyline([
+                [previo.lat, previo.lng],
+                [actual.lat, actual.lng]
+            ], estiloHueco));
+            tramo = [[actual.lat, actual.lng]];
+        } else {
+            tramo.push([actual.lat, actual.lng]);
+        }
+    }
+
+    if (tramo.length > 1 || capas.length === 0) {
+        capas.push(L.polyline(tramo, estiloNormal));
+    }
+    return L.featureGroup(capas);
+}
+
 // Actualiza el estado del checkbox de un recorrido
 function marcarCheckbox(indice, valor) {
     const checkbox = document.querySelector(`.checkRecorrido[data-indice="${indice}"]`);
@@ -373,15 +407,12 @@ function dibujarRecorridoEnMapa(indice, mostrarTooltipsPermanentes = true) {
     const recorrido = estado.recorridosHistoricos[indice];
     if (!recorrido) return;
 
-    const coordenadas = recorrido.map(punto => [punto.lat, punto.lng]);
     const color = obtenerColorRecorrido(indice);
 
-    // Línea principal del recorrido
-    const linea = L.polyline(coordenadas, {
-        color,
-        weight: 5,
-        opacity: 0.9
-    }).addTo(estado.mapa).on('click', () => seleccionarRecorrido(indice));
+    // Línea principal del recorrido (grupo de líneas; los huecos de datos van punteados)
+    const linea = construirLineaRecorrido(recorrido, color)
+        .addTo(estado.mapa)
+        .on('click', () => seleccionarRecorrido(indice));
 
     const numero = numeroDeRecorrido(recorrido);
     const puntoInicio = recorrido[0];
