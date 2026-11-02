@@ -339,7 +339,9 @@ def rutas():
 
 # Mismo encabezado que log_csv.py (así route_model.py y predict_route.py leen el
 # archivo sin cambios), más las columnas del GNSS al final.
-ENCABEZADO_CSV_OBD = ["recorrido_id", "hora_pc", "t_ms", *NOMBRES_OBD, "lat", "lng", "alt", "gnss_kmh", "sats"]
+# seq va al final: un salto en seq es un paquete UDP perdido; un salto en t_ms sin
+# salto en seq es una pausa en la lectura OBD.
+ENCABEZADO_CSV_OBD = ["recorrido_id", "hora_pc", "t_ms", *NOMBRES_OBD, "lat", "lng", "alt", "gnss_kmh", "sats", "seq"]
 
 
 @app.get("/api/obd/recorridos")
@@ -367,7 +369,7 @@ def recorridos_obd():
 def recorrido_obd_csv(recorrido_id: str):
     """Descarga un recorrido como CSV con el formato de log_csv.py.
     hora_pc = hora del GNSS (Colombia). Sin fix, se estima con t_ms desde la primera
-    fila con hora GNSS, o, si ninguna tiene, se usa la hora de llegada al servidor."""
+    fila con hora GNSS o, si ninguna tiene, desde la llegada más rápida al servidor."""
     if not RID_VALIDO.fullmatch(recorrido_id):
         return jsonify({"error": "recorrido_id inválido"}), 400
     try:
@@ -378,16 +380,21 @@ def recorrido_obd_csv(recorrido_id: str):
     if not filas:
         return jsonify({"error": "recorrido no encontrado"}), 404
 
-    # Filas sin fix GNSS (p. ej. antes de que el módulo ubique satélites): su hora se
-    # estima con t_ms a partir de la primera fila que sí tiene hora del GNSS.
+    # Filas sin fix GNSS: su hora se estima con t_ms (reloj del ESP32).
+    # 1. Si alguna fila tiene hora del GNSS, se usa como referencia.
+    # 2. Si ninguna tiene, se usa la llegada al servidor, pero no fila por fila: las
+    #    filas que esperaron en la cola del ESP32 (sin señal LTE) llegan juntas y
+    #    con retraso. La fila que llegó más rápido fija el desfase mínimo
+    #    (recibido_en - t_ms), y ese desfase se aplica a todas.
     referencia = next((f for f in filas if f["ts"] is not None), None)
+    desfase_min = min(f["recibido_en"] - timedelta(milliseconds=f["t_ms"]) for f in filas)
 
     def hora_fila(f):
         if f["ts"] is not None:
             return f["ts"]
         if referencia is not None:
             return referencia["ts"] + timedelta(milliseconds=f["t_ms"] - referencia["t_ms"])
-        return f["recibido_en"]
+        return desfase_min + timedelta(milliseconds=f["t_ms"])
 
     salida = io.StringIO()
     escritor = csv.writer(salida, lineterminator="\n")
