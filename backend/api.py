@@ -4,6 +4,8 @@ Escucha SOLO en localhost — nunca expuesto directamente a la red,
 NGINX es el único que le hace reverse proxy desde afuera.
 """
 
+import csv
+import io
 import os
 
 import json
@@ -12,10 +14,12 @@ import urllib.parse
 import urllib.request
 
 from datetime import datetime, timedelta
-from flask import Flask, jsonify, request
-from db import obtener_ultimo_registro, obtener_registros_en_rango
+from flask import Flask, Response, jsonify, request
+from db import (listar_recorridos_obd, obtener_recorrido_obd, obtener_registros_en_rango,
+                obtener_ultimo_registro)
 from filtros import filtrar_ruido
 from tiempo import ahora_colombia
+from validacion import NOMBRES_OBD, RID_VALIDO
 
 app = Flask(__name__)
 
@@ -327,6 +331,81 @@ def rutas():
             "puntos": _puntos_ruta(ruta),
         })
     return jsonify(salida)
+
+
+# ---------------------------------------------------------------------------
+# Nodo OBD del Kia
+# ---------------------------------------------------------------------------
+
+# Mismo encabezado que log_csv.py (así route_model.py y predict_route.py leen el
+# archivo sin cambios), más las columnas del GNSS al final.
+ENCABEZADO_CSV_OBD = ["recorrido_id", "hora_pc", "t_ms", *NOMBRES_OBD, "lat", "lng", "alt", "gnss_kmh", "sats"]
+
+
+@app.get("/api/obd/recorridos")
+def recorridos_obd():
+    """Lista los recorridos del nodo OBD: id, filas, filas con GPS, inicio y fin."""
+    try:
+        recorridos = listar_recorridos_obd()
+    except Exception:
+        app.logger.exception("Error listando los recorridos OBD")
+        return jsonify({"error": "Error interno consultando la base de datos"}), 500
+    return jsonify([
+        {
+            "recorrido_id": r["recorrido_id"],
+            "filas": r["filas"],
+            "filas_con_gps": r["filas_con_gps"],
+            "inicio": r["inicio"].strftime("%Y-%m-%d %H:%M:%S"),
+            "fin": r["fin"].strftime("%Y-%m-%d %H:%M:%S"),
+            "csv": f"/api/obd/recorridos/{r['recorrido_id']}.csv",
+        }
+        for r in recorridos
+    ])
+
+
+@app.get("/api/obd/recorridos/<recorrido_id>.csv")
+def recorrido_obd_csv(recorrido_id: str):
+    """Descarga un recorrido como CSV con el formato de log_csv.py.
+    hora_pc = hora del GNSS (Colombia). Sin fix, se estima con t_ms desde la primera
+    fila con hora GNSS, o, si ninguna tiene, se usa la hora de llegada al servidor."""
+    if not RID_VALIDO.fullmatch(recorrido_id):
+        return jsonify({"error": "recorrido_id inválido"}), 400
+    try:
+        filas = obtener_recorrido_obd(recorrido_id)
+    except Exception:
+        app.logger.exception("Error consultando el recorrido OBD")
+        return jsonify({"error": "Error interno consultando la base de datos"}), 500
+    if not filas:
+        return jsonify({"error": "recorrido no encontrado"}), 404
+
+    # Filas sin fix GNSS (p. ej. antes de que el módulo ubique satélites): su hora se
+    # estima con t_ms a partir de la primera fila que sí tiene hora del GNSS.
+    referencia = next((f for f in filas if f["ts"] is not None), None)
+
+    def hora_fila(f):
+        if f["ts"] is not None:
+            return f["ts"]
+        if referencia is not None:
+            return referencia["ts"] + timedelta(milliseconds=f["t_ms"] - referencia["t_ms"])
+        return f["recibido_en"]
+
+    salida = io.StringIO()
+    escritor = csv.writer(salida, lineterminator="\n")
+    escritor.writerow(ENCABEZADO_CSV_OBD)
+    for f in filas:
+        escritor.writerow(
+            [f["recorrido_id"], hora_fila(f).strftime("%Y-%m-%d %H:%M:%S.%f"), f["t_ms"]]
+            + ["" if f[c] is None else f[c] for c in ENCABEZADO_CSV_OBD[3:]]
+        )
+
+    inicio = hora_fila(filas[0])
+    nombre = f"{recorrido_id}_{inicio:%Y%m%d_%H%M%S}.csv"
+    return Response(
+        salida.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{nombre}"'},
+    )
+
 
 if __name__ == "__main__":
     # host="127.0.0.1": solo accesible localmente, jamás directo desde la web.

@@ -12,6 +12,9 @@ import psycopg2.extras
 from psycopg2 import sql
 from dotenv import load_dotenv
 
+from tiempo import ahora_colombia
+from validacion import NOMBRES_OBD
+
 load_dotenv()  # busca un archivo .env en el directorio actual, si existe
 
 DB_CONFIG = {
@@ -30,6 +33,10 @@ if os.environ.get("DB_SSLMODE"):
 # Nombre de la tabla: permite que main y los entornos dev convivan en la
 # misma RDS sin pisarse los datos (cada uno con su propia tabla).
 DB_TABLE = os.environ.get("DB_TABLE", "telemetria")
+
+# Tabla del nodo OBD del Kia (ESP32-S3 + A7608SA). Por defecto se deriva de
+# DB_TABLE ("telemetria" -> "telemetria_obd") para que main y dev tampoco se pisen.
+DB_TABLE_OBD = os.environ.get("DB_TABLE_OBD", f"{DB_TABLE}_obd")
 
 # Columnas añadidas después de la primera versión de la tabla. init_db() las
 # agrega con ALTER TABLE ... IF NOT EXISTS, así que las tablas antiguas se migran
@@ -182,5 +189,122 @@ def obtener_registros_en_rango(desde, hasta, limite: int = 200_000,
             )
             filas = cur.fetchall()
         return [dict(f) for f in filas]
+    finally:
+        conexion.close()
+
+
+# ---------------------------------------------------------------------------
+# Nodo OBD del Kia
+# ---------------------------------------------------------------------------
+
+# Columnas de la tabla OBD en el orden de log_csv.py, más los datos del GNSS.
+# Las claves del dict validado se mapean a las columnas donde el nombre cambia.
+_COLUMNAS_GNSS = (("lat", "lat"), ("lng", "lng"), ("alt", "alt"), ("gnss_kmh", "gkmh"), ("sats", "sat"))
+
+
+def init_db_obd() -> None:
+    """Crea la tabla DB_TABLE_OBD si no existe. Idempotente.
+    UNIQUE (recorrido_id, seq) evita filas repetidas si el ESP32 reenvía un paquete."""
+    tabla = sql.Identifier(DB_TABLE_OBD)
+    columnas_pid = sql.SQL(",\n").join(
+        sql.SQL("{} DOUBLE PRECISION").format(sql.Identifier(nombre)) for nombre in NOMBRES_OBD
+    )
+    conexion = _conectar()
+    try:
+        with conexion.cursor() as cur:
+            cur.execute(
+                sql.SQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS {tabla} (
+                        id BIGSERIAL PRIMARY KEY,
+                        recibido_en TIMESTAMP NOT NULL,
+                        recorrido_id TEXT NOT NULL,
+                        seq BIGINT NOT NULL,
+                        t_ms BIGINT NOT NULL,
+                        ts TIMESTAMP,
+                        {columnas_pid},
+                        lat DOUBLE PRECISION,
+                        lng DOUBLE PRECISION,
+                        alt DOUBLE PRECISION,
+                        gnss_kmh DOUBLE PRECISION,
+                        sats INTEGER,
+                        CONSTRAINT {unico} UNIQUE (recorrido_id, seq)
+                    )
+                    """
+                ).format(
+                    tabla=tabla,
+                    columnas_pid=columnas_pid,
+                    unico=sql.Identifier(f"uq_{DB_TABLE_OBD}_rid_seq"),
+                )
+            )
+            cur.execute(
+                sql.SQL("CREATE INDEX IF NOT EXISTS {indice} ON {tabla} (recorrido_id, t_ms)").format(
+                    indice=sql.Identifier(f"idx_{DB_TABLE_OBD}_rid_tms"),
+                    tabla=tabla,
+                )
+            )
+        conexion.commit()
+    finally:
+        conexion.close()
+
+
+def insertar_registro_obd(paquete: dict) -> bool:
+    """Inserta una fila del nodo OBD (dict de validacion.clasificar_paquete).
+    Devuelve False si la fila ya existía (mismo recorrido_id y seq)."""
+    columnas = ["recibido_en", "recorrido_id", "seq", "t_ms", "ts", *NOMBRES_OBD,
+                *(columna for columna, _ in _COLUMNAS_GNSS)]
+    valores = [ahora_colombia(), paquete["rid"], paquete["seq"], paquete["t_ms"], paquete["ts"],
+               *(paquete[nombre] for nombre in NOMBRES_OBD),
+               *(paquete[clave] for _, clave in _COLUMNAS_GNSS)]
+    consulta = sql.SQL(
+        "INSERT INTO {tabla} ({columnas}) VALUES ({marcadores}) "
+        "ON CONFLICT (recorrido_id, seq) DO NOTHING"
+    ).format(
+        tabla=sql.Identifier(DB_TABLE_OBD),
+        columnas=sql.SQL(", ").join(map(sql.Identifier, columnas)),
+        marcadores=sql.SQL(", ").join(sql.Placeholder() * len(columnas)),
+    )
+    conexion = _conectar()
+    try:
+        with conexion.cursor() as cur:
+            cur.execute(consulta, valores)
+            insertada = cur.rowcount == 1
+        conexion.commit()
+        return insertada
+    finally:
+        conexion.close()
+
+
+def listar_recorridos_obd(limite: int = 500) -> list[dict]:
+    """Un resumen por recorrido: filas, filas con GPS, inicio y fin (hora Colombia;
+    hora del GNSS si la hay, si no la de llegada al servidor). Más recientes primero."""
+    conexion = _conectar()
+    try:
+        with conexion.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                sql.SQL(
+                    "SELECT recorrido_id, COUNT(*) AS filas, COUNT(lat) AS filas_con_gps, "
+                    "MIN(COALESCE(ts, recibido_en)) AS inicio, MAX(COALESCE(ts, recibido_en)) AS fin "
+                    "FROM {tabla} GROUP BY recorrido_id ORDER BY inicio DESC LIMIT %s"
+                ).format(tabla=sql.Identifier(DB_TABLE_OBD)),
+                (limite,),
+            )
+            return [dict(f) for f in cur.fetchall()]
+    finally:
+        conexion.close()
+
+
+def obtener_recorrido_obd(recorrido_id: str) -> list[dict]:
+    """Todas las filas de un recorrido, en el orden en que se midieron (t_ms)."""
+    conexion = _conectar()
+    try:
+        with conexion.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                sql.SQL("SELECT * FROM {tabla} WHERE recorrido_id = %s ORDER BY t_ms ASC, seq ASC").format(
+                    tabla=sql.Identifier(DB_TABLE_OBD)
+                ),
+                (recorrido_id,),
+            )
+            return [dict(f) for f in cur.fetchall()]
     finally:
         conexion.close()

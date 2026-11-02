@@ -1,10 +1,11 @@
 """
 Listener UDP ("sniffer"): escucha en el puerto configurado, valida el JSON
 enviado por la app Android y lo persiste en la base de datos (tabla
-configurable vía DB_TABLE, ver db.py).
+configurable vía DB_TABLE, ver db.py). Los paquetes del nodo OBD del Kia
+("tipo": "obd") van a su propia tabla (DB_TABLE_OBD).
 
 El puerto está abierto a todo internet, por eso TODO paquete pasa primero por
-validacion.parsear_paquete(); lo que no cumple el formato se descarta.
+validacion.clasificar_paquete(); lo que no cumple el formato se descarta.
 """
 
 import os
@@ -13,14 +14,21 @@ import traceback
 from collections import deque
 from datetime import datetime
 
-from db import init_db, insertar_registro
-from validacion import PaqueteInvalido, parsear_paquete
+from db import init_db, init_db_obd, insertar_registro, insertar_registro_obd
+from validacion import PaqueteInvalido, clasificar_paquete
 
 # Configurable para poder correr un listener de dev en la misma EC2 que el
 # de main sin pisarse el puerto UDP.
 PUERTO_UDP = int(os.environ.get("LISTENER_UDP_PORT", "5000"))
 # Vehículo que se asume cuando el paquete no trae vid (versiones viejas de la app).
 VID_POR_DEFECTO = os.environ.get("VID_POR_DEFECTO", "celular")
+
+# Token compartido con el firmware del nodo OBD. Si está definido, los paquetes
+# OBD sin ese token se descartan (el puerto está abierto a todo internet).
+TOKEN_OBD = os.environ.get("OBD_TOKEN") or None
+
+# El paquete OBD (15 PIDs + GNSS) pesa hasta unos 470 bytes; 2048 deja margen.
+TAMANO_MAX_DATAGRAMA = 2048
 
 # Claves (lat, lng, fecha, hora) de los últimos paquetes guardados. La app puede
 # reenviar el mismo fix; así no se insertan duplicados. Se usa una ventana en
@@ -36,11 +44,15 @@ def procesar_paquete(datos: bytes, origen: tuple) -> None:
     """Valida, deduplica e inserta un datagrama recibido. Nunca lanza excepciones
     hacia el bucle principal."""
     try:
-        paquete = parsear_paquete(datos)
+        tipo, paquete = clasificar_paquete(datos, TOKEN_OBD)
     except PaqueteInvalido as motivo:
         print(f"[{timestamp()}] Paquete descartado ({motivo}) desde {origen}")
         return
-    
+
+    if tipo == "obd":
+        procesar_obd(paquete, origen)
+        return
+
     vid = paquete["vid"] or VID_POR_DEFECTO
     clave = (paquete["lat"], paquete["lng"], paquete["fecha"], paquete["hora"], vid)
     if clave in _recientes:
@@ -72,8 +84,25 @@ def procesar_paquete(datos: bytes, origen: tuple) -> None:
     )
 
 
+def procesar_obd(paquete: dict, origen: tuple) -> None:
+    """Inserta una fila del nodo OBD. Los duplicados (mismo recorrido y seq) los
+    descarta la base de datos con ON CONFLICT DO NOTHING."""
+    try:
+        insertada = insertar_registro_obd(paquete)
+    except Exception as error:
+        print(f"[{timestamp()}] ERROR al insertar OBD en la base de datos: {error}")
+        return
+    if insertada:
+        gps = f"lat={paquete['lat']}, lng={paquete['lng']}" if paquete["lat"] is not None else "sin GPS"
+        print(
+            f"[{timestamp()}] OBD desde {origen}: rid={paquete['rid']}, seq={paquete['seq']}, "
+            f"rpm={paquete['rpm']}, vel={paquete['vel']}, fuel_lph={paquete['fuel_lph']}, {gps}"
+        )
+
+
 def iniciar_listener() -> None:
     init_db()
+    init_db_obd()
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("0.0.0.0", PUERTO_UDP))
@@ -81,7 +110,7 @@ def iniciar_listener() -> None:
 
     try:
         while True:
-            datos, origen = sock.recvfrom(1024)
+            datos, origen = sock.recvfrom(TAMANO_MAX_DATAGRAMA)
             try:
                 procesar_paquete(datos, origen)
             except Exception:
