@@ -34,9 +34,9 @@ if os.environ.get("DB_SSLMODE"):
 # misma RDS sin pisarse los datos (cada uno con su propia tabla).
 DB_TABLE = os.environ.get("DB_TABLE", "telemetria")
 
-# Tabla del nodo OBD del Kia (ESP32-S3 + A7608SA). Por defecto se deriva de
-# DB_TABLE ("telemetria" -> "telemetria_obd") para que main y dev tampoco se pisen.
-DB_TABLE_OBD = os.environ.get("DB_TABLE_OBD", f"{DB_TABLE}_obd")
+# Tabla del nodo OBD del Kia (ESP32-S3 + A7608SA). A diferencia de DB_TABLE, es una
+# sola tabla compartida por main y dev; no se deriva de DB_TABLE a propósito.
+DB_TABLE_OBD = os.environ.get("DB_TABLE_OBD", "telemetria_obd")
 
 # Columnas añadidas después de la primera versión de la tabla. init_db() las
 # agrega con ALTER TABLE ... IF NOT EXISTS, así que las tablas antiguas se migran
