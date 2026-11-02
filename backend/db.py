@@ -38,7 +38,8 @@ COLUMNAS_NUEVAS = (
     ("acc", "DOUBLE PRECISION"),  # precisión horizontal en metros (location.accuracy)
     ("spd", "DOUBLE PRECISION"),  # velocidad en m/s (location.speed)
     ("seq", "BIGINT"),            # contador incremental de la app (mide pérdida de UDP)
-    ("ts", "TIMESTAMP"),          # fecha+hora de la telemetría (hora Colombia), indexada
+    ("ts", "TIMESTAMP"),
+    ("vid", "TEXT"),          # fecha+hora de la telemetría (hora Colombia), indexada
 )
 
 
@@ -121,7 +122,8 @@ def init_db() -> None:
 
 def insertar_registro(lat: float, lng: float, fecha: str, hora: str,
                       acc: float | None = None, spd: float | None = None,
-                      seq: int | None = None, ts: datetime | None = None) -> None:
+                      seq: int | None = None, ts: datetime | None = None,
+                      vid: str | None = None) -> None:
     """Inserta un nuevo registro de telemetría.
     ts (hora Colombia) se calcula a partir de fecha y hora si no se entrega."""
     if ts is None:
@@ -133,45 +135,50 @@ def insertar_registro(lat: float, lng: float, fecha: str, hora: str,
             cur.execute(
                 sql.SQL(
                     """
-                    INSERT INTO {tabla} (recibido_en, lat, lng, fecha, hora, acc, spd, seq, ts)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO {tabla} (recibido_en, lat, lng, fecha, hora, acc, spd, seq, ts, vid)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
                 ).format(tabla=sql.Identifier(DB_TABLE)),
-                (datetime.now(), lat, lng, fecha, hora, acc, spd, seq, ts),
+                (datetime.now(), lat, lng, fecha, hora, acc, spd, seq, ts, vid),
             )
         conexion.commit()
     finally:
         conexion.close()
 
 
-def obtener_ultimo_registro() -> dict | None:
-    """Devuelve el registro más reciente como diccionario, o None si la tabla está vacía."""
+def obtener_ultimo_registro(vid: str | None = None) -> dict | None:
+    """Último registro (de un vehículo si se indica vid), o None si no hay datos."""
+    filtro = sql.SQL("WHERE vid = %s ") if vid else sql.SQL("")
+    params = (vid,) if vid else ()
     conexion = _conectar()
     try:
         with conexion.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
-                sql.SQL("SELECT * FROM {tabla} ORDER BY id DESC LIMIT 1").format(
-                    tabla=sql.Identifier(DB_TABLE)
-                )
+                sql.SQL("SELECT * FROM {tabla} {filtro}ORDER BY id DESC LIMIT 1").format(
+                    tabla=sql.Identifier(DB_TABLE), filtro=filtro
+                ),
+                params,
             )
             fila = cur.fetchone()
         return dict(fila) if fila else None
     finally:
         conexion.close()
-def obtener_registros_en_rango(desde, hasta, limite: int = 200_000) -> list[dict]:
-    """Devuelve los registros cuya fecha+hora de telemetría (hora Colombia, columna ts)
-    está entre `desde` y `hasta`, ordenados cronológicamente. Las filas con ts NULL
-    (fecha/hora corruptas) se ignoran. `limite` protege contra consultas gigantes."""
+def obtener_registros_en_rango(desde, hasta, limite: int = 200_000,
+                               vid: str | None = None) -> list[dict]:
+    """Registros entre `desde` y `hasta` (columna ts), en orden cronológico.
+    Si se indica vid, solo los de ese vehículo."""
+    filtro = sql.SQL(" AND vid = %s") if vid else sql.SQL("")
+    params = (desde, hasta) + ((vid,) if vid else ()) + (limite,)
     conexion = _conectar()
     try:
         with conexion.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
                 sql.SQL(
-                    "SELECT id, lat, lng, fecha, hora, ts, acc FROM {tabla} "
-                    "WHERE ts BETWEEN %s AND %s "
+                    "SELECT id, lat, lng, fecha, hora, ts, acc, vid FROM {tabla} "
+                    "WHERE ts BETWEEN %s AND %s{filtro} "
                     "ORDER BY ts ASC, id ASC LIMIT %s"
-                ).format(tabla=sql.Identifier(DB_TABLE)),
-                (desde, hasta, limite),
+                ).format(tabla=sql.Identifier(DB_TABLE), filtro=filtro),
+                params,
             )
             filas = cur.fetchall()
         return [dict(f) for f in filas]

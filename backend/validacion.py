@@ -16,6 +16,10 @@ from datetime import datetime, timedelta
 
 from tiempo import ahora_colombia
 
+import re
+
+VID_VALIDO = re.compile(r"[A-Za-z0-9_-]{1,32}")  # letras, números, _ y -
+
 CAMPOS_REQUERIDOS = {"lat", "lng", "date", "hour"}
 FECHA_MINIMA = datetime(2020, 1, 1)
 MARGEN_FUTURO = timedelta(days=1)  # tolera relojes de celular algo adelantados
@@ -102,6 +106,13 @@ def parsear_paquete(datos: bytes) -> dict:
     if ts < FECHA_MINIMA or ts > ahora_colombia() + MARGEN_FUTURO:
         raise PaqueteInvalido("fecha fuera de rango")
 
+    vid = payload.get("vid")
+    if vid is not None:
+        # Este puerto está abierto a internet: el vid solo se acepta con formato estricto.
+        if not isinstance(vid, str) or not VID_VALIDO.fullmatch(vid.strip()):
+            raise PaqueteInvalido("vid con formato inválido")
+        vid = vid.strip().lower()
+
     return {
         "lat": lat,
         "lng": lng,
@@ -112,4 +123,5 @@ def parsear_paquete(datos: bytes) -> dict:
         "acc": _opcional_float(payload.get("acc"), 0.0, ACC_MAX_VALIDA),
         "spd": _opcional_float(payload.get("spd"), 0.0, SPD_MAX_VALIDA),
         "seq": _opcional_int(payload.get("seq"), 0, SEQ_MAX_VALIDO),
+        "vid": vid,
     }
