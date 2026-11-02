@@ -19,6 +19,8 @@ from validacion import PaqueteInvalido, parsear_paquete
 # Configurable para poder correr un listener de dev en la misma EC2 que el
 # de main sin pisarse el puerto UDP.
 PUERTO_UDP = int(os.environ.get("LISTENER_UDP_PORT", "5000"))
+# Vehículo que se asume cuando el paquete no trae vid (versiones viejas de la app).
+VID_POR_DEFECTO = os.environ.get("VID_POR_DEFECTO", "celular")
 
 # Claves (lat, lng, fecha, hora) de los últimos paquetes guardados. La app puede
 # reenviar el mismo fix; así no se insertan duplicados. Se usa una ventana en
@@ -38,8 +40,9 @@ def procesar_paquete(datos: bytes, origen: tuple) -> None:
     except PaqueteInvalido as motivo:
         print(f"[{timestamp()}] Paquete descartado ({motivo}) desde {origen}")
         return
-
-    clave = (paquete["lat"], paquete["lng"], paquete["fecha"], paquete["hora"])
+    
+    vid = paquete["vid"] or VID_POR_DEFECTO
+    clave = (paquete["lat"], paquete["lng"], paquete["fecha"], paquete["hora"], vid)
     if clave in _recientes:
         return  # fix repetido: no se guarda dos veces
 
@@ -53,6 +56,7 @@ def procesar_paquete(datos: bytes, origen: tuple) -> None:
             spd=paquete["spd"],
             seq=paquete["seq"],
             ts=paquete["ts"],
+            vid=vid,
         )
     except Exception as error:
         # Corte de RDS, credenciales, etc.: se registra y el listener sigue vivo.
@@ -64,6 +68,7 @@ def procesar_paquete(datos: bytes, origen: tuple) -> None:
         f"[{timestamp()}] Registrado desde {origen}: lat={paquete['lat']}, lng={paquete['lng']}, "
         f"fecha={paquete['fecha']}, hora={paquete['hora']}, acc={paquete['acc']}, "
         f"spd={paquete['spd']}, seq={paquete['seq']}"
+        f"vid={vid}"
     )
 
 
