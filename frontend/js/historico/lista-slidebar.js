@@ -266,10 +266,10 @@ export function mostrarListaRecorridos(recorridos) {
             alternarVisibilidadRecorrido(indiceGlobal, checkbox.checked);
         });
 
-        // Cualquier otra parte de la tarjeta selecciona el recorrido
+        // Cualquier otra parte de la tarjeta alterna la selección del recorrido
         elemento.addEventListener('click', (evento) => {
             if (evento.target.closest('.checkRecorridoWrapper')) return;
-            seleccionarRecorrido(indiceGlobal);
+            alternarVisibilidadRecorrido(indiceGlobal);
         });
 
         if (estado.recorridoSeleccionado === recorridoActual) {
@@ -341,7 +341,11 @@ export function alternarVisibilidadRecorrido(indice, debeMostrar = null) {
     const entradaExistente = buscarEntradaVisible(indice);
 
     const quitarRecorrido = debeMostrar === false
-        || (debeMostrar === null && Boolean(entradaExistente));
+        || (
+            debeMostrar === null
+            && Boolean(entradaExistente)
+            && estado.recorridoSeleccionado === estado.recorridosHistoricos[indice]
+        );
 
     // Si debe ocultarse y está visible, se elimina del mapa
     if (entradaExistente && quitarRecorrido) {
@@ -435,7 +439,7 @@ function dibujarRecorridoEnMapa(indice, mostrarTooltipsPermanentes = true) {
     // Línea principal del recorrido (grupo de líneas; los huecos de datos van punteados)
     const linea = construirLineaRecorrido(recorrido, color)
         .addTo(estado.mapa)
-        .on('click', () => seleccionarRecorrido(indice));
+        .on('click', () => alternarVisibilidadRecorrido(indice));
 
     const numero = numeroDeRecorrido(recorrido);
     const puntoInicio = recorrido[0];
@@ -459,7 +463,7 @@ function dibujarRecorridoEnMapa(indice, mostrarTooltipsPermanentes = true) {
             className: 'tooltipRecorrido tooltipInicio'
         })
         .bindPopup(escaparHtml(`Inicio recorrido ${numero}${puntoInicio.fecha ? ' — ' + puntoInicio.fecha + ' ' + (puntoInicio.hora || '') : ''}`))
-        .on('click', () => seleccionarRecorrido(indice));
+        .on('click', () => alternarVisibilidadRecorrido(indice));
 
     // Marcador de fin
     const marcadorFin = L.marker([puntoFin.lat, puntoFin.lng], {
@@ -474,7 +478,7 @@ function dibujarRecorridoEnMapa(indice, mostrarTooltipsPermanentes = true) {
             className: 'tooltipRecorrido tooltipFin'
         })
         .bindPopup(escaparHtml(`Fin recorrido ${numero}${puntoFin.fecha ? ' — ' + puntoFin.fecha + ' ' + (puntoFin.hora || '') : ''}`))
-        .on('click', () => seleccionarRecorrido(indice));
+        .on('click', () => alternarVisibilidadRecorrido(indice));
 
     // Guarda la referencia del recorrido visible para poder manipularlo después
     estado.lineasHistoricas.push({ indice, linea, marcadorInicio, marcadorFin });
