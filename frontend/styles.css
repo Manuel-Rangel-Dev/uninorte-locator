@@ -197,11 +197,16 @@ html, body {
 }
 
 .cabeceraPanelHistoricos {
+    position: sticky;
+    top: -12px;
+    z-index: 2;
     display: flex;
     align-items: center;
     justify-content: space-between;
     min-height: 20px;
-    margin: -2px 0 0;
+    margin: -12px -12px 0;
+    padding: 10px 12px 8px;
+    background-color: rgba(18, 18, 18, 0.98);
 }
 
 .tituloPanelHistoricos {
