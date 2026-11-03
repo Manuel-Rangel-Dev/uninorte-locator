@@ -32,6 +32,7 @@ function prepararReproductorParaRender() {
     if (!reproductor || !panel) return;
 
     panel.appendChild(reproductor);
+    reproductor.classList.remove('flotante');
     reproductor.style.display = 'none';
     reproductor.classList.remove('visible');
 }
@@ -42,8 +43,30 @@ function ocultarReproductor() {
     if (!reproductor || !panel) return;
 
     panel.appendChild(reproductor);
+    reproductor.classList.remove('flotante');
     reproductor.style.display = 'none';
     reproductor.classList.remove('visible');
+}
+
+// Mantiene el reproductor visible fuera del panel cuando este está minimizado.
+export function actualizarUbicacionReproductor() {
+    const reproductor = document.getElementById('reproductorHistorico');
+    const panel = document.getElementById('panelHistoricos');
+    if (!reproductor || !panel || !estado.recorridoSeleccionado) return;
+
+    if (estado.panelMinimizado) {
+        document.body.appendChild(reproductor);
+        reproductor.classList.add('flotante');
+        return;
+    }
+
+    const itemActual = document.querySelector('.itemRecorrido.enReproduccion');
+    reproductor.classList.remove('flotante');
+    if (itemActual) {
+        itemActual.after(reproductor);
+    } else {
+        panel.appendChild(reproductor);
+    }
 }
 
 function obtenerRecorridosListados(recorridos) {
@@ -510,13 +533,7 @@ export function seleccionarRecorrido(indice) {
 
     const reproductor = document.getElementById('reproductorHistorico');
     if (reproductor) {
-        const panel = document.getElementById('panelHistoricos');
-        if (panel && reproductor.parentElement !== panel) {
-            panel.appendChild(reproductor);
-        }
-        if (itemActual) {
-            itemActual.after(reproductor);
-        }
+        actualizarUbicacionReproductor();
         reproductor.style.display = 'block';
         reproductor.classList.remove('visible');
         void reproductor.offsetWidth;

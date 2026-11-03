@@ -654,6 +654,20 @@ html, body {
     transform: translateY(0);
 }
 
+#reproductorHistorico.flotante {
+    position: fixed;
+    left: 50%;
+    bottom: 70px;
+    z-index: 1100;
+    width: min(390px, calc(100vw - 24px));
+    margin: 0;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.65);
+}
+
+#reproductorHistorico.flotante.visible {
+    transform: translateX(-50%);
+}
+
 .infoReproduccion {
     text-align: center;
     margin-bottom: 10px;
