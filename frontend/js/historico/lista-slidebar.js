@@ -353,6 +353,7 @@ export function alternarVisibilidadRecorrido(indice, debeMostrar = null) {
         estado.mapa.removeLayer(entradaExistente.marcadorInicio);
         estado.mapa.removeLayer(entradaExistente.marcadorFin);
         estado.lineasHistoricas = estado.lineasHistoricas.filter(entrada => entrada.indice !== indice);
+        marcarCheckbox(indice, false);
 
         // Si era el recorrido seleccionado, se cierra el reproductor
         if (estado.recorridoSeleccionado === estado.recorridosHistoricos[indice]) {
