@@ -18,6 +18,7 @@ from flask import Flask, Response, jsonify, request
 from db import (listar_recorridos_obd, obtener_recorrido_obd, obtener_registros_en_rango,
                 obtener_ultimo_registro)
 from filtros import filtrar_ruido
+from recorridos import horas_pc
 from tiempo import ahora_colombia
 from validacion import NOMBRES_OBD, RID_VALIDO
 
@@ -380,32 +381,18 @@ def recorrido_obd_csv(recorrido_id: str):
     if not filas:
         return jsonify({"error": "recorrido no encontrado"}), 404
 
-    # Filas sin fix GNSS: su hora se estima con t_ms (reloj del ESP32).
-    # 1. Si alguna fila tiene hora del GNSS, se usa como referencia.
-    # 2. Si ninguna tiene, se usa la llegada al servidor, pero no fila por fila: las
-    #    filas que esperaron en la cola del ESP32 (sin señal LTE) llegan juntas y
-    #    con retraso. La fila que llegó más rápido fija el desfase mínimo
-    #    (recibido_en - t_ms), y ese desfase se aplica a todas.
-    referencia = next((f for f in filas if f["ts"] is not None), None)
-    desfase_min = min(f["recibido_en"] - timedelta(milliseconds=f["t_ms"]) for f in filas)
-
-    def hora_fila(f):
-        if f["ts"] is not None:
-            return f["ts"]
-        if referencia is not None:
-            return referencia["ts"] + timedelta(milliseconds=f["t_ms"] - referencia["t_ms"])
-        return desfase_min + timedelta(milliseconds=f["t_ms"])
+    horas = horas_pc(filas)
 
     salida = io.StringIO()
     escritor = csv.writer(salida, lineterminator="\n")
     escritor.writerow(ENCABEZADO_CSV_OBD)
-    for f in filas:
+    for f, hora in zip(filas, horas):
         escritor.writerow(
-            [f["recorrido_id"], hora_fila(f).strftime("%Y-%m-%d %H:%M:%S.%f"), f["t_ms"]]
+            [f["recorrido_id"], hora.strftime("%Y-%m-%d %H:%M:%S.%f"), f["t_ms"]]
             + ["" if f[c] is None else f[c] for c in ENCABEZADO_CSV_OBD[3:]]
         )
 
-    inicio = hora_fila(filas[0])
+    inicio = horas[0]
     nombre = f"{recorrido_id}_{inicio:%Y%m%d_%H%M%S}.csv"
     return Response(
         salida.getvalue(),
