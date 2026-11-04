@@ -4,12 +4,23 @@ Escucha SOLO en localhost — nunca expuesto directamente a la red,
 NGINX es el único que le hace reverse proxy desde afuera.
 """
 
+import csv
+import io
 import os
+
+import json
+import urllib.error
+import urllib.parse
+import urllib.request
+
 from datetime import datetime, timedelta
-from flask import Flask, jsonify, request
-from db import obtener_ultimo_registro, obtener_registros_en_rango
+from flask import Flask, Response, jsonify, request
+from db import (listar_recorridos_obd, obtener_recorrido_obd, obtener_registros_en_rango,
+                obtener_ultimo_registro)
 from filtros import filtrar_ruido
+from recorridos import horas_pc
 from tiempo import ahora_colombia
+from validacion import NOMBRES_OBD, RID_VALIDO
 
 app = Flask(__name__)
 
@@ -20,15 +31,16 @@ MAX_REGISTROS_HISTORICO = 200_000
 
 
 def registro_o_vacio() -> dict:
-    """Devuelve el último registro, o valores vacíos si aún no hay datos."""
-    registro = obtener_ultimo_registro()
+    """Devuelve el último registro (del vehículo ?vid= si se indica), o vacíos."""
+    registro = obtener_ultimo_registro(request.args.get("vid"))
     if registro is None:
-        return {"lat": None, "lng": None, "fecha": None, "hora": None}
+        return {"lat": None, "lng": None, "fecha": None, "hora": None, "vid": None}
     return {
         "lat": registro["lat"],
         "lng": registro["lng"],
         "fecha": registro["fecha"],
         "hora": registro["hora"],
+        "vid": registro.get("vid"),
     }
 
 
@@ -148,9 +160,11 @@ def historico():
 
     if dt_hasta < dt_desde:
         return jsonify({"error": "'hasta' no puede ser anterior a 'desde'"}), 400
-
+    
+    vid = request.args.get("vid")
     try:
-        registros = obtener_registros_en_rango(dt_desde, dt_hasta, MAX_REGISTROS_HISTORICO)
+        registros = obtener_registros_en_rango(dt_desde, dt_hasta, MAX_REGISTROS_HISTORICO, vid)
+
     except Exception:
         app.logger.exception("Error consultando el histórico")
         return jsonify({"error": "Error interno consultando la base de datos"}), 500
@@ -166,9 +180,225 @@ def historico():
             "lng": r["lng"],
             "fecha": r.get("fecha"),
             "hora": r.get("hora"),
+            "vid": r.get("vid"),
         }
         for r in registros
     ])
+
+
+# ----------------------------------------------------------------------------
+# Planificación de rutas (TomTom). La clave vive solo en el servidor.
+# ----------------------------------------------------------------------------
+TOMTOM_KEY = os.environ.get("TOMTOM_KEY")
+CENTRO_DEFECTO = (10.9685, -74.7813)   # Barranquilla: sesgo de búsqueda si no llega ubicación
+MAX_PUNTOS_RUTA = 400                  # tope de puntos por ruta, para que la respuesta no pese
+# Desplazamientos (grados, ~30 m cada paso) para cuando TomTom no ubica un punto en la vía
+OFFSETS_GRADOS = [(0, 0), (0.0003, 0), (-0.0003, 0), (0, 0.0003), (0, -0.0003),
+                  (0.0006, 0), (-0.0006, 0), (0, 0.0006), (0, -0.0006)]
+
+
+def _float_param(nombre: str, minimo: float, maximo: float):
+    """Lee un parámetro numérico de la URL; None si falta, no es número o está fuera de rango."""
+    try:
+        valor = float(request.args.get(nombre, ""))
+    except ValueError:
+        return None
+    return valor if minimo <= valor <= maximo else None
+
+
+def _tomtom_get(url: str):
+    """GET a TomTom. Devuelve (estado, dict). No imprime la clave en los logs."""
+    try:
+        with urllib.request.urlopen(url, timeout=10) as r:
+            return r.status, json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        try:
+            cuerpo = json.loads(e.read().decode("utf-8"))
+        except Exception:
+            cuerpo = {}
+        return e.code, cuerpo
+    except Exception:
+        app.logger.exception("Error consultando TomTom")
+        return 502, {}
+
+
+@app.get("/api/buscar")
+def buscar_lugar():
+    """Busca direcciones o lugares. Ej.: /api/buscar?q=Universidad del Norte&lat=10.99&lon=-74.80"""
+    if not TOMTOM_KEY:
+        return jsonify({"error": "TOMTOM_KEY no está configurada en el servidor"}), 500
+    texto = (request.args.get("q") or "").strip()
+    if not 3 <= len(texto) <= 100:
+        return jsonify({"error": "q debe tener entre 3 y 100 caracteres"}), 400
+
+    lat = _float_param("lat", -90, 90)
+    lon = _float_param("lon", -180, 180)
+    if lat is None or lon is None:
+        lat, lon = CENTRO_DEFECTO
+
+    params = {"key": TOMTOM_KEY, "countrySet": "CO", "limit": 5, "lat": lat, "lon": lon}
+    url = ("https://api.tomtom.com/search/2/search/"
+           f"{urllib.parse.quote(texto, safe='')}.json?{urllib.parse.urlencode(params)}")
+    estado, datos = _tomtom_get(url)
+    if estado != 200:
+        return jsonify({"error": "Falló la búsqueda en TomTom"}), 502
+
+    resultados = []
+    for r in datos.get("results", []):
+        pos = r.get("position") or {}
+        if "lat" not in pos or "lon" not in pos:
+            continue
+        direccion = (r.get("address") or {}).get("freeformAddress", "")
+        nombre = (r.get("poi") or {}).get("name") or direccion
+        resultados.append({"nombre": nombre, "direccion": direccion,
+                           "lat": pos["lat"], "lon": pos["lon"]})
+    return jsonify(resultados)
+
+
+def _calcular_rutas(origen, destino):
+    locs = f"{origen[0]},{origen[1]}:{destino[0]},{destino[1]}"
+    params = {"key": TOMTOM_KEY, "traffic": "true", "travelMode": "car",
+              "routeType": "fastest", "maxAlternatives": 2}
+    url = (f"https://api.tomtom.com/routing/1/calculateRoute/{locs}/json?"
+           f"{urllib.parse.urlencode(params)}")
+    return _tomtom_get(url)
+
+
+def _rutas_con_ajuste(origen, destino):
+    """Pide las rutas; si TomTom no ubica un punto en una vía, lo mueve unos metros y reintenta."""
+    o_aj, d_aj = origen, destino
+    i_o = i_d = 0
+    estado, datos = _calcular_rutas(o_aj, d_aj)
+    while estado == 400 and "MAP_MATCHING_FAILURE" in json.dumps(datos):
+        error = json.dumps(datos)
+        if "Origin" in error and i_o < len(OFFSETS_GRADOS) - 1:
+            i_o += 1
+            o_aj = (origen[0] + OFFSETS_GRADOS[i_o][0], origen[1] + OFFSETS_GRADOS[i_o][1])
+        elif "Destination" in error and i_d < len(OFFSETS_GRADOS) - 1:
+            i_d += 1
+            d_aj = (destino[0] + OFFSETS_GRADOS[i_d][0], destino[1] + OFFSETS_GRADOS[i_d][1])
+        else:
+            break
+        estado, datos = _calcular_rutas(o_aj, d_aj)
+    return estado, datos
+
+
+def _resumen_ruta(ruta: dict) -> dict:
+    resumen = ruta.get("summary")
+    if resumen:
+        return resumen
+    tramos = [t.get("summary", {}) for t in ruta.get("legs", [])]
+    return {k: sum(t.get(k, 0) for t in tramos)
+            for k in ("lengthInMeters", "travelTimeInSeconds", "trafficDelayInSeconds")}
+
+
+def _puntos_ruta(ruta: dict) -> list:
+    """Lista [[lat, lon], ...] de la ruta, reducida a MAX_PUNTOS_RUTA como máximo."""
+    puntos = [[p["latitude"], p["longitude"]]
+              for tramo in ruta.get("legs", []) for p in tramo.get("points", [])]
+    if not puntos:
+        return []
+    paso = max(1, -(-len(puntos) // MAX_PUNTOS_RUTA))
+    reducidos = puntos[::paso]
+    if reducidos[-1] != puntos[-1]:
+        reducidos.append(puntos[-1])
+    return reducidos
+
+
+@app.get("/api/rutas")
+def rutas():
+    """Rutas alternativas con tráfico. Ej.:
+    /api/rutas?origen_lat=..&origen_lon=..&destino_lat=..&destino_lon=.."""
+    if not TOMTOM_KEY:
+        return jsonify({"error": "TOMTOM_KEY no está configurada en el servidor"}), 500
+    o_lat, o_lon = _float_param("origen_lat", -90, 90), _float_param("origen_lon", -180, 180)
+    d_lat, d_lon = _float_param("destino_lat", -90, 90), _float_param("destino_lon", -180, 180)
+    if None in (o_lat, o_lon, d_lat, d_lon):
+        return jsonify({"error": "Faltan origen_lat, origen_lon, destino_lat o destino_lon (o son inválidos)"}), 400
+
+    estado, datos = _rutas_con_ajuste((o_lat, o_lon), (d_lat, d_lon))
+    if estado != 200 or not datos.get("routes"):
+        codigo = (datos.get("detailedError") or {}).get("code")
+        return jsonify({"error": "No se pudo calcular la ruta", "codigo": codigo}), 502
+
+    salida = []
+    for i, ruta in enumerate(datos["routes"]):
+        resumen = _resumen_ruta(ruta)
+        salida.append({
+            "id": i,
+            "distancia_m": resumen.get("lengthInMeters"),
+            "tiempo_s": resumen.get("travelTimeInSeconds"),
+            "retraso_trafico_s": resumen.get("trafficDelayInSeconds"),
+            "puntos": _puntos_ruta(ruta),
+        })
+    return jsonify(salida)
+
+
+# ---------------------------------------------------------------------------
+# Nodo OBD del Kia
+# ---------------------------------------------------------------------------
+
+# Mismo encabezado que log_csv.py (así route_model.py y predict_route.py leen el
+# archivo sin cambios), más las columnas del GNSS al final.
+# seq va al final: un salto en seq es un paquete UDP perdido; un salto en t_ms sin
+# salto en seq es una pausa en la lectura OBD.
+ENCABEZADO_CSV_OBD = ["recorrido_id", "hora_pc", "t_ms", *NOMBRES_OBD, "lat", "lng", "alt", "gnss_kmh", "sats", "seq"]
+
+
+@app.get("/api/obd/recorridos")
+def recorridos_obd():
+    """Lista los recorridos del nodo OBD: id, filas, filas con GPS, inicio y fin."""
+    try:
+        recorridos = listar_recorridos_obd()
+    except Exception:
+        app.logger.exception("Error listando los recorridos OBD")
+        return jsonify({"error": "Error interno consultando la base de datos"}), 500
+    return jsonify([
+        {
+            "recorrido_id": r["recorrido_id"],
+            "filas": r["filas"],
+            "filas_con_gps": r["filas_con_gps"],
+            "inicio": r["inicio"].strftime("%Y-%m-%d %H:%M:%S"),
+            "fin": r["fin"].strftime("%Y-%m-%d %H:%M:%S"),
+            "csv": f"/api/obd/recorridos/{r['recorrido_id']}.csv",
+        }
+        for r in recorridos
+    ])
+
+
+@app.get("/api/obd/recorridos/<recorrido_id>.csv")
+def recorrido_obd_csv(recorrido_id: str):
+    """Descarga un recorrido como CSV con el formato de log_csv.py.
+    hora_pc = hora del GNSS (Colombia). Sin fix, se estima con t_ms desde la primera
+    fila con hora GNSS o, si ninguna tiene, desde la llegada más rápida al servidor."""
+    if not RID_VALIDO.fullmatch(recorrido_id):
+        return jsonify({"error": "recorrido_id inválido"}), 400
+    try:
+        filas = obtener_recorrido_obd(recorrido_id)
+    except Exception:
+        app.logger.exception("Error consultando el recorrido OBD")
+        return jsonify({"error": "Error interno consultando la base de datos"}), 500
+    if not filas:
+        return jsonify({"error": "recorrido no encontrado"}), 404
+
+    horas = horas_pc(filas)
+
+    salida = io.StringIO()
+    escritor = csv.writer(salida, lineterminator="\n")
+    escritor.writerow(ENCABEZADO_CSV_OBD)
+    for f, hora in zip(filas, horas):
+        escritor.writerow(
+            [f["recorrido_id"], hora.strftime("%Y-%m-%d %H:%M:%S.%f"), f["t_ms"]]
+            + ["" if f[c] is None else f[c] for c in ENCABEZADO_CSV_OBD[3:]]
+        )
+
+    inicio = horas[0]
+    nombre = f"{recorrido_id}_{inicio:%Y%m%d_%H%M%S}.csv"
+    return Response(
+        salida.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{nombre}"'},
+    )
 
 
 if __name__ == "__main__":

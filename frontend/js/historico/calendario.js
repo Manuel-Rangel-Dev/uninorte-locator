@@ -4,7 +4,10 @@
 import { HISTORICO_MIN_ANIO, ZOOM_CENTRADO } from '../constantes.js';
 import { normalizarFecha, formatearFechaCorta } from '../utilidades.js';
 import { estado } from '../estado.js';
-import { removerCapasHistoricas } from './lista-slidebar.js';
+import {
+    removerCapasHistoricas,
+    actualizarUbicacionReproductor
+} from './lista-slidebar.js';
 
 // Muestra el mensaje de estado del histórico en la interfaz
 export function mostrarEstadoHistorico(mensaje, color = '#B3B3B3') {
@@ -205,6 +208,7 @@ export function minimizarPanelHistoricos() {
     estado.panelMinimizado = true;
     const panel = document.getElementById('panelHistoricos');
     if (panel) panel.classList.add('minimizado');
+    actualizarUbicacionReproductor();
     actualizarBotonRestaurarPanel();
 }
 
@@ -215,6 +219,7 @@ export function restaurarPanelHistoricos() {
     estado.panelMinimizado = false;
     const panel = document.getElementById('panelHistoricos');
     if (panel) panel.classList.remove('minimizado');
+    actualizarUbicacionReproductor();
     actualizarBotonRestaurarPanel();
 }
 

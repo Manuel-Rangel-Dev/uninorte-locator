@@ -197,11 +197,16 @@ html, body {
 }
 
 .cabeceraPanelHistoricos {
+    position: sticky;
+    top: -12px;
+    z-index: 2;
     display: flex;
     align-items: center;
     justify-content: space-between;
     min-height: 20px;
-    margin: -2px 0 0;
+    margin: -12px -12px 0;
+    padding: 10px 12px 8px;
+    background-color: rgba(18, 18, 18, 0.98);
 }
 
 .tituloPanelHistoricos {
@@ -652,6 +657,20 @@ html, body {
     opacity: 1;
     max-height: 220px;
     transform: translateY(0);
+}
+
+#reproductorHistorico.flotante {
+    position: fixed;
+    left: 50%;
+    bottom: 70px;
+    z-index: 1100;
+    width: min(390px, calc(100vw - 24px));
+    margin: 0;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.65);
+}
+
+#reproductorHistorico.flotante.visible {
+    transform: translateX(-50%);
 }
 
 .infoReproduccion {
