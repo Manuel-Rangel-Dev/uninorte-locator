@@ -46,7 +46,9 @@ function textoPopupKia(datos) {
         ${escaparHtml(formatearNumero(datos.vel_kmh, 0, ' km/h'))}
         · ${escaparHtml(formatearNumero(datos.lph_ecuacion, 2, ' L/h'))} (ecuación)<br>
         PID: ${escaparHtml(formatearNumero(datos.lph_pid, 2, ' L/h'))}<br>
-        ${escaparHtml(datos.hora_posicion || datos.hora || '--')}
+        Última posición: ${escaparHtml(datos.hora_posicion || '--')}
+        ${datos.recorrido_posicion && datos.recorrido_posicion !== datos.recorrido_id
+            ? '<br><em>(de un recorrido anterior: el actual no tiene GNSS)</em>' : ''}
     `;
 }
 
@@ -120,6 +122,7 @@ async function cargarTraza(recorridoId) {
 // Agrega la última lectura a la traza si es una posición nueva (más reciente que la última).
 function extenderTraza(datos) {
     if (datos.lat === null || datos.lng === null || !estado.kiaTraza) return;
+    if (datos.recorrido_posicion !== datos.recorrido_id) return;  // posición de otro recorrido
     const punto = {
         lat: datos.lat, lng: datos.lng, hora: datos.hora_posicion,
         lph_pid: datos.lph_pid, lph_ecuacion: datos.lph_ecuacion
@@ -198,11 +201,15 @@ export function initKiaVivo() {
 
     const botonCentrar = document.getElementById('btnCentrarKia');
     if (botonCentrar) {
+        // Centra en la última posición conocida del Kia (aunque sea de un recorrido anterior).
         botonCentrar.addEventListener('click', () => {
             if (estado.kiaMarcador) {
                 estado.mapa.setView(estado.kiaMarcador.getLatLng(), ZOOM_CENTRADO);
                 estado.kiaMarcador.openPopup();
+                return;
             }
+            botonCentrar.textContent = 'Sin posición GNSS del Kia';
+            setTimeout(() => { botonCentrar.textContent = 'Centrar Kia'; }, 2500);
         });
     }
 

@@ -613,7 +613,9 @@ def _acumulado_en_curso(recorrido_id: str) -> dict:
 @app.get("/api/kia/vivo")
 def kia_vivo():
     """Última lectura del Kia y lo acumulado en su recorrido. en_vivo es False si la
-    última fila tiene más de EDAD_EN_VIVO_S segundos. null si no hay ninguna fila."""
+    última fila tiene más de EDAD_EN_VIVO_S segundos. lat/lng son la última posición
+    conocida: si el recorrido actual no tiene GNSS, la de un recorrido anterior
+    (recorrido_posicion dice de cuál). null si no hay ninguna fila."""
     try:
         fila = obtener_ultima_fila_kia()
         if fila is None:
@@ -631,6 +633,7 @@ def kia_vivo():
         "lat": fila["lat"],
         "lng": fila["lng"],
         "hora_posicion": _texto_fecha(fila["hora_posicion"]),
+        "recorrido_posicion": fila["recorrido_posicion"],
         "vel_kmh": fila["vel"],
         "lph_ecuacion": fila["fuel_lph_ecuacion"],
         "lph_pid": fila["fuel_lph"],

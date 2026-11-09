@@ -880,9 +880,10 @@ def precio_vigente_actual(instante: datetime | None = None) -> tuple | None:
 
 def obtener_ultima_fila_kia() -> dict | None:
     """Última fila OBD del Kia, sin límite de edad: recorrido_id, fuel_lph,
-    fuel_lph_ecuacion, vel, hora (GNSS o llegada al servidor) y la última posición con
-    fix de ese recorrido (lat, lng, hora_posicion), que puede ser de una fila anterior
-    si la última llegó sin GNSS. None si la tabla está vacía."""
+    fuel_lph_ecuacion, vel, hora (GNSS o llegada al servidor) y la última posición
+    conocida (lat, lng, hora_posicion, recorrido_posicion): la última fila con fix de ese
+    recorrido o, si el recorrido no tiene ninguna (el módulo GNSS no envió), la última con
+    fix de cualquier recorrido anterior. None si la tabla está vacía."""
     conexion = _conectar()
     try:
         with conexion.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
@@ -896,14 +897,18 @@ def obtener_ultima_fila_kia() -> dict | None:
             fila = cur.fetchone()
             if fila is None:
                 return None
+            columnas = sql.SQL("SELECT lat, lng, COALESCE(ts, recibido_en) AS hora_posicion, "
+                               "recorrido_id AS recorrido_posicion FROM {tabla} ").format(tabla=tabla)
             cur.execute(
-                sql.SQL(
-                    "SELECT lat, lng, COALESCE(ts, recibido_en) AS hora_posicion FROM {tabla} "
-                    "WHERE recorrido_id = %s AND lat IS NOT NULL ORDER BY t_ms DESC, seq DESC LIMIT 1"
-                ).format(tabla=tabla),
+                columnas + sql.SQL("WHERE recorrido_id = %s AND lat IS NOT NULL "
+                                   "ORDER BY t_ms DESC, seq DESC LIMIT 1"),
                 (fila["recorrido_id"],),
             )
-            posicion = cur.fetchone() or {"lat": None, "lng": None, "hora_posicion": None}
+            posicion = cur.fetchone()
+            if posicion is None:
+                cur.execute(columnas + sql.SQL("WHERE lat IS NOT NULL ORDER BY recibido_en DESC, id DESC LIMIT 1"))
+                posicion = cur.fetchone()
+            posicion = posicion or {"lat": None, "lng": None, "hora_posicion": None, "recorrido_posicion": None}
             return {**dict(fila), **dict(posicion)}
     finally:
         conexion.close()
