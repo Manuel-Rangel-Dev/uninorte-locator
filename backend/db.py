@@ -65,6 +65,14 @@ COLUMNAS_MODELO_RECORRIDOS = (
     ("bajada_m_km", "DOUBLE PRECISION"),
     ("modelo_calculado_en", "TIMESTAMP"),
 )
+# Las mismas del modelo en predicciones_rutas (rutas planificadas con TomTom), para
+# poder comparar después la ruta planificada con el recorrido medido.
+COLUMNAS_MODELO_RUTAS = (
+    ("litros_modelo_sin_factor", "DOUBLE PRECISION"),
+    ("factor_modelo", "DOUBLE PRECISION"),
+    ("subida_m_km", "DOUBLE PRECISION"),
+    ("bajada_m_km", "DOUBLE PRECISION"),
+)
 
 # Serializa init_db_p3 entre listeners: con varias EC2 reiniciando a la vez sobre la
 # misma RDS, CREATE OR REPLACE VIEW puede fallar con "tuple concurrently updated".
@@ -528,12 +536,13 @@ def _crear_vista_factor(cur) -> None:
 
 
 def _ampliar_tabla_recorridos(cur) -> None:
-    """Columnas del modelo de ruta en recorridos (P3-S3)."""
-    for columna, tipo in COLUMNAS_MODELO_RECORRIDOS:
-        cur.execute(sql.SQL("ALTER TABLE {tabla} ADD COLUMN IF NOT EXISTS {columna} {tipo}").format(
-            tabla=sql.Identifier(DB_TABLE_RECORRIDOS), columna=sql.Identifier(columna),
-            tipo=sql.SQL(tipo),
-        ))
+    """Columnas del modelo de ruta en recorridos y en predicciones_rutas (P3-S3)."""
+    for tabla, columnas in ((DB_TABLE_RECORRIDOS, COLUMNAS_MODELO_RECORRIDOS),
+                            (DB_TABLE_PREDICCIONES_RUTAS, COLUMNAS_MODELO_RUTAS)):
+        for columna, tipo in columnas:
+            cur.execute(sql.SQL("ALTER TABLE {tabla} ADD COLUMN IF NOT EXISTS {columna} {tipo}").format(
+                tabla=sql.Identifier(tabla), columna=sql.Identifier(columna), tipo=sql.SQL(tipo),
+            ))
 
 
 def _crear_vista_factor_modelo(cur) -> None:
@@ -840,6 +849,27 @@ def obtener_consumo_vivo(vid: str = VID_KIA, max_edad_s: float = 30) -> dict | N
     return dict(fila)
 
 
+def factor_modelo_actual(modelo: str) -> float | None:
+    """Factor del Kia para una ruta planificada ahora: el de todos los recorridos
+    cerrados de ese modelo. None con menos de min_recorridos_factor (se usa el del PC)."""
+    conexion = _conectar()
+    try:
+        with conexion.cursor() as cur:
+            return _factor_previo(cur, modelo, ahora_colombia())
+    finally:
+        conexion.close()
+
+
+def precio_vigente_actual() -> tuple | None:
+    """(id, cop_por_galon) del precio vigente ahora, o None si no hay."""
+    conexion = _conectar()
+    try:
+        with conexion.cursor() as cur:
+            return _precio_vigente(cur, ahora_colombia())
+    finally:
+        conexion.close()
+
+
 def guardar_prediccion(origen_lat: float, origen_lng: float, destino_lat: float, destino_lng: float,
                        rutas: list[dict], vid: str = VID_KIA, destino_texto: str | None = None,
                        precio_id: int | None = None) -> dict:
@@ -850,7 +880,8 @@ def guardar_prediccion(origen_lat: float, origen_lng: float, destino_lat: float,
     Lanza ValueError si el vehículo no tiene OBD o no se conoce su cilindrada."""
     columnas_ruta = ("opcion", "tipo_ruta", "distancia_km", "tiempo_s", "tiempo_sin_trafico_s",
                      "tiempo_historico_s", "retraso_trafico_s", "vel_media_kmh", "litros_modelo",
-                     "costo_cop", "modelo", "geometria")
+                     "costo_cop", "modelo", "geometria",
+                     *(columna for columna, _ in COLUMNAS_MODELO_RUTAS))
     insertar_ruta = sql.SQL(
         "INSERT INTO {tabla} (prediccion_id, {columnas}) VALUES (%s, {marcadores}) RETURNING id"
     ).format(
