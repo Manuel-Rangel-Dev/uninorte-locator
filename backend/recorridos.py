@@ -4,7 +4,8 @@ Resumen de los recorridos del Kia: consumo, distancia, velocidad media y costo.
 Este módulo no importa db.py al cargarse a propósito: así se puede probar sin base
 de datos ni variables de entorno, igual que validacion.py. Solo --rellenar lo usa.
 
-Relleno de los datos que ya están en la base (se puede correr varias veces):
+Relleno de los datos que ya están en la base, incluido el modelo de ruta (se puede
+correr varias veces):
     python backend/recorridos.py --rellenar
 """
 
@@ -178,6 +179,43 @@ def resumir(filas: list[dict]) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Métricas de validación (modelo y ecuación frente al PID 0x5E)
+# ---------------------------------------------------------------------------
+
+def error_pct(estimado, real) -> float | None:
+    """Error con signo en %: positivo si el estimado sobreestima el real."""
+    if estimado is None or not real:
+        return None
+    return (estimado / real - 1) * 100
+
+
+def metricas_litros(pares: list[tuple]) -> dict:
+    """Métricas de una lista de (litros_real, litros_estimado, distancia_km):
+    n, mape_pct, error_total_pct (Σ estimado / Σ real − 1), mae_litros y r2_l100km
+    (R² de los L/100 km ponderado por la distancia). None en lo que no se puede
+    calcular (sin pares, o R² con menos de 2 recorridos o sin varianza)."""
+    pares = [(r, e, d) for r, e, d in pares if r and e is not None and d]
+    n = len(pares)
+    if n == 0:
+        return {"n": 0, "mape_pct": None, "error_total_pct": None, "mae_litros": None, "r2_l100km": None}
+    mape = sum(abs(e - r) / r for r, e, _ in pares) / n * 100
+    total = (sum(e for _, e, _ in pares) / sum(r for r, _, _ in pares) - 1) * 100
+    mae = sum(abs(e - r) for r, e, _ in pares) / n
+
+    r2 = None
+    if n >= 2:
+        pesos = [d for _, _, d in pares]
+        y = [r / d * 100 for r, _, d in pares]
+        y_est = [e / d * 100 for _, e, d in pares]
+        media = sum(w * v for w, v in zip(pesos, y)) / sum(pesos)
+        total_cuadrados = sum(w * (v - media) ** 2 for w, v in zip(pesos, y))
+        residuo = sum(w * (v - ve) ** 2 for w, v, ve in zip(pesos, y, y_est))
+        if total_cuadrados > 0:
+            r2 = 1 - residuo / total_cuadrados
+    return {"n": n, "mape_pct": mape, "error_total_pct": total, "mae_litros": mae, "r2_l100km": r2}
+
+
+# ---------------------------------------------------------------------------
 # Relleno de lo que ya hay en la base
 # ---------------------------------------------------------------------------
 
@@ -189,17 +227,26 @@ def rellenar() -> None:
 
     # Todos y no solo los pendientes: si el hilo del listener ya resumió un recorrido
     # antes de este relleno, su litros_ecuacion debe recalcularse con las filas nuevas.
+    # En orden de llegada (recorridos_pendientes ordena por la última fila): el factor del
+    # modelo de cada recorrido sale de los recorridos anteriores ya cerrados.
     pendientes = db.recorridos_pendientes(todos=True)
+    con_modelo = 0
     for pendiente in pendientes:
-        db.actualizar_recorrido(pendiente["recorrido_id"], cerrar=pendiente["cerrar"])
+        resumen = db.actualizar_recorrido(pendiente["recorrido_id"], cerrar=pendiente["cerrar"])
+        if resumen and resumen.get("modelo"):
+            con_modelo += 1
+            print(f"[relleno] {pendiente['recorrido_id']}: {resumen['modelo']}, "
+                  f"{resumen['litros_modelo']:.3f} L (factor {resumen['factor_modelo']:.3f}), "
+                  f"PID {resumen['litros_pid'] or 0:.3f} L")
     cerrados = sum(1 for p in pendientes if p["cerrar"])
-    print(f"[relleno] {len(pendientes)} recorrido(s) actualizados, {cerrados} cerrados")
+    print(f"[relleno] {len(pendientes)} recorrido(s) actualizados, {cerrados} cerrados, "
+          f"{con_modelo} con modelo de ruta")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Herramientas de la tabla recorridos")
     parser.add_argument("--rellenar", action="store_true",
-                        help="calcula fuel_lph_ecuacion y crea o actualiza todos los recorridos")
+                        help="calcula fuel_lph_ecuacion y crea o actualiza todos los recorridos (con el modelo)")
     argumentos = parser.parse_args()
     if argumentos.rellenar:
         rellenar()

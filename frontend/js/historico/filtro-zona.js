@@ -234,7 +234,17 @@ export function actualizarRadioZona(nuevoRadio) {
 }
 
 // Filtra localmente las rutas base según el centro y radio actuales
+// Avisa la zona actual (o null si se limpió) a la pestaña Kia K3 (kia-historico.js), que
+// filtra sus propios recorridos con el mismo círculo.
+function avisarZona() {
+    const zona = estado.centroZona
+        ? { lat: estado.centroZona.lat, lng: estado.centroZona.lng, radio: estado.radioZona }
+        : null;
+    document.dispatchEvent(new CustomEvent('historico:zona', { detail: zona }));
+}
+
 export function aplicarFiltroZonaAutomatico() {
+    if (estado.centroZona) avisarZona();
     if (!estado.centroZona || estado.recorridosBase.length === 0) return;
 
     const estadoEl = document.getElementById('estadoZona');
@@ -286,6 +296,7 @@ export function limpiarZona() {
         estado.marcadorCentroZona = null;
     }
     estado.centroZona = null;
+    avisarZona();
 
     removerCapasHistoricas();
     estado.recorridosHistoricos = estado.recorridosBase;

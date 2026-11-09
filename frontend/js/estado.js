@@ -45,5 +45,20 @@ export const estado = {
     circuloZona: null,
     marcadorCentroZona: null,
     modoSeleccionCentro: false,
-    arrastrandoZona: false
+    arrastrandoZona: false,
+
+    // Kia en vivo (P3-S3)
+    kiaMarcador: null,
+    kiaTraza: null,              // L.featureGroup con la traza del recorrido en curso
+    kiaRecorridoTraza: null,     // recorrido_id de la traza dibujada
+    kiaUltimoPuntoTraza: null,   // último punto agregado a la traza ({lat, lng, hora, lph})
+    kiaPanelMinimizado: false,
+    kiaTracking: false,          // modo seguimiento del Kia (#btnSeguirKia)
+
+    // Kia en el histórico (P3-S3)
+    pestanaHistoricos: 'app',    // 'app' o 'kia'
+    kiaMostrarTodos: false,      // false: solo los recorridos con estimado del modelo
+    kiaRecorridos: [],
+    kiaSeleccionado: null,       // recorrido_id dibujado en el mapa
+    kiaCapasHistorico: null      // L.featureGroup con traza, puntos e inicio/fin
 };

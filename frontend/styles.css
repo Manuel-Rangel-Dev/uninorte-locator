@@ -58,9 +58,8 @@ html, body {
 
 #btnCentrar {
     position: absolute;
-    top: 50%;
-    right: 12px;
-    transform: translateY(-50%);
+    bottom: 156px;       /* encima de #panelInfo (bottom 12 px, unos 136 px de alto) */
+    left: 12px;
     z-index: 1000;
     background-color: rgba(18, 18, 18, 0.9);
     border: 1px solid #2A2A2A;
@@ -641,7 +640,8 @@ html, body {
    REPRODUCTOR
    ============================================================ */
 
-#reproductorHistorico {
+#reproductorHistorico,
+#reproductorKia {
     margin-top: 12px;
     padding: 10px;
     border-radius: 8px;
@@ -653,13 +653,15 @@ html, body {
     transition: opacity 0.25s ease, max-height 0.25s ease, transform 0.25s ease;
 }
 
-#reproductorHistorico.visible {
+#reproductorHistorico.visible,
+#reproductorKia.visible {
     opacity: 1;
     max-height: 220px;
     transform: translateY(0);
 }
 
-#reproductorHistorico.flotante {
+#reproductorHistorico.flotante,
+#reproductorKia.flotante {
     position: fixed;
     left: 50%;
     bottom: 70px;
@@ -669,7 +671,8 @@ html, body {
     box-shadow: 0 4px 18px rgba(0, 0, 0, 0.65);
 }
 
-#reproductorHistorico.flotante.visible {
+#reproductorHistorico.flotante.visible,
+#reproductorKia.flotante.visible {
     transform: translateX(-50%);
 }
 
@@ -678,12 +681,14 @@ html, body {
     margin-bottom: 10px;
 }
 
-#infoRecorridoSeleccionado {
+#infoRecorridoSeleccionado,
+#infoKiaReproduccion {
     font-weight: bold;
     margin-bottom: 4px;
 }
 
-#fechaHoraReproduccion {
+#fechaHoraReproduccion,
+#fechaHoraKiaReproduccion {
     font-size: 14px;
     font-weight: bold;
 }
@@ -694,12 +699,15 @@ html, body {
     gap: 8px;
 }
 
-#sliderRecorrido {
+#sliderRecorrido,
+#sliderKia {
     flex: 1;
 }
 
 #tiempoInicioRecorrido,
-#tiempoFinRecorrido {
+#tiempoFinRecorrido,
+#tiempoInicioKia,
+#tiempoFinKia {
     font-size: 10px;
     opacity: 0.7;
 }
@@ -1038,4 +1046,333 @@ html, body {
 .itemRecorrido.enReproduccion {
     background-color: rgba(74, 144, 217, 0.15);
     border: 1px solid #4A90D9;
+}
+/* ============================================================
+   KIA EN VIVO (P3-S3)
+   ============================================================ */
+
+#panelKia {
+    position: absolute;
+    bottom: 26px;          /* encima de los créditos de OpenStreetMap */
+    right: 12px;
+    z-index: 1000;
+    background-color: rgba(18, 18, 18, 0.9);
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 12px;
+    width: 250px;
+    max-width: calc(100vw - 24px);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(8px);
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
+}
+
+#panelKia.conDatos {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.modoHistorico #panelKia {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(8px);
+    pointer-events: none;
+}
+
+.cabeceraKia {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.tituloKia {
+    color: #dc0303;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+#kiaEstado {
+    color: #B3B3B3;
+    font-size: 11px;
+    font-weight: normal;
+}
+
+.puntoVivo {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #6b6b6b;
+    margin: 0 2px;
+}
+
+#panelKia.enVivo .puntoVivo {
+    background-color: #2ecc71;
+    box-shadow: 0 0 6px #2ecc71;
+}
+
+#btnMinimizarKia {
+    background: none;
+    border: 1px solid #2A2A2A;
+    border-radius: 4px;
+    color: #ffffff;
+    width: 24px;
+    height: 22px;
+    cursor: pointer;
+    font-family: monospace;
+}
+
+#btnMinimizarKia:hover {
+    border-color: #dc0303;
+}
+
+.cuerpoKia {
+    margin-top: 8px;
+}
+
+#panelKia.minimizado .cuerpoKia {
+    display: none;
+}
+
+.subtituloKia {
+    margin: 8px 0 4px;
+    font-size: 11px;
+    font-weight: bold;
+    color: #B3B3B3;
+    border-top: 1px solid #2A2A2A;
+    padding-top: 6px;
+}
+
+
+.iconoKia {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ============================================================
+   HISTÓRICOS: PESTAÑAS APP / KIA K3 (P3-S3)
+   ============================================================ */
+
+.pestanasHistoricos {
+    display: flex;
+    gap: 6px;
+}
+
+.tabHistoricos {
+    flex: 1;
+    background-color: #1a1a1a;
+    border: 1px solid #2A2A2A;
+    border-radius: 4px;
+    padding: 6px 3px;
+    color: #B3B3B3;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.tabHistoricos.activo {
+    border-color: #dc0303;
+    background-color: rgba(220, 3, 3, 0.15);
+    color: #ffffff;
+}
+
+#vistaKia {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#panelHistoricos.pestanaKia #vistaKia {
+    display: flex;
+}
+
+/* Las pestañas aparecen después de buscar un rango (clase conBusqueda en el panel) */
+#panelHistoricos:not(.conBusqueda) .pestanasHistoricos {
+    display: none;
+}
+
+/* En la pestaña Kia se ocultan las secciones de la app sin tocar su estado. El calendario
+   sigue visible porque el rango es el mismo para las dos pestañas. */
+#panelHistoricos.pestanaKia > :not(.cabeceraPanelHistoricos):not(#vistaFiltroFecha):not(.pestanasHistoricos):not(#btnFiltrarPorZona):not(#vistaFiltroZona):not(#vistaKia),
+#panelHistoricos.pestanaKia #estadoHistorico,
+#panelHistoricos.pestanaKia #estadoZona {
+    display: none !important;
+}
+
+/* El filtro por zona es uno solo para las dos pestañas. En la pestaña Kia, su botón se muestra
+   si el Kia tiene recorridos en el rango (aunque la app no tenga) y se oculta si no tiene. */
+#panelHistoricos.pestanaKia.kiaConResultados #btnFiltrarPorZona {
+    display: block !important;
+}
+
+#panelHistoricos.pestanaKia:not(.kiaConResultados) #btnFiltrarPorZona,
+#panelHistoricos.pestanaKia:not(.kiaConResultados) #vistaFiltroZona {
+    display: none !important;
+}
+
+.metricasKia {
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 11px;
+    line-height: 1.6;
+    background: #1a1a1a;
+}
+
+.tituloMetricas {
+    font-weight: bold;
+    margin-bottom: 4px;
+    color: #ffffff;
+}
+
+.filaMetrica {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    color: #d0d0d0;
+}
+
+.filaMetrica.secundaria {
+    color: #9a9a9a;
+}
+
+.estadoKia {
+    font-size: 11px;
+    min-height: 0;
+}
+
+.estadoKia:empty {
+    display: none;
+}
+
+#listaKia {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.itemKia {
+    display: block;
+}
+
+.filaConsumoKia {
+    display: grid;
+    grid-template-columns: 58px 1fr 52px;
+    gap: 4px;
+}
+
+.errorConsumo {
+    text-align: right;
+}
+
+.etiquetaSinGnss {
+    font-size: 10px;
+    font-weight: normal;
+    color: #e5a50a;
+    border: 1px solid #e5a50a;
+    border-radius: 3px;
+    padding: 0 4px;
+    margin-left: 4px;
+}
+
+/* Consumo estimado en las tarjetas de la app */
+.consumoRecorrido {
+    color: #f1c40f;
+}
+
+.consumoRecorrido:empty {
+    display: none;
+}
+
+.consumoRecorrido.sinEstimado {
+    color: #9a9a9a;
+}
+
+/* Pantallas angostas (celular): el panel del Kia sube a la derecha, debajo de "Históricos",
+   para no tapar #panelInfo. En modo histórico está oculto, así que no choca con ese panel. */
+@media (max-width: 600px) {
+    #panelKia {
+        bottom: auto;
+        top: 58px;
+        width: 220px;
+        font-size: 11px;
+        padding: 8px 10px;
+    }
+}
+
+/* Reproductor del Kia (P3-S3): el mismo aspecto que el de la app. Si el panel se minimiza,
+   solo flota el reproductor de la pestaña que está abierta. */
+.datosKiaReproduccion {
+    font-size: 11px;
+    margin-top: 4px;
+    color: #f1c40f;
+}
+
+body.pestanaKiaActiva #reproductorHistorico.flotante,
+body:not(.pestanaKiaActiva) #reproductorKia.flotante {
+    display: none !important;
+}
+
+/* El slider del Kia puede encogerse para que la hora final (HH:MM:SS) no se corte en el panel */
+#sliderKia {
+    min-width: 0;
+}
+
+/* Seguimiento del Kia: mismo aspecto que #btnCentrar, encima de la tarjeta del Kia */
+#btnSeguirKia {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: 0;
+    background-color: rgba(18, 18, 18, 0.9);
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    color: #ffffff;
+    width: 42px;
+    height: 42px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#btnSeguirKia:hover {
+    border-color: #dc0303;
+}
+
+#btnSeguirKia.activo {
+    border-color: #dc0303;
+    background-color: rgba(220, 3, 3, 0.2);
+    color: #dc0303;
+    box-shadow: 0 0 10px rgba(220, 3, 3, 0.35);
+}
+
+/* Sin posición GNSS del Kia: aviso breve en el botón */
+#btnSeguirKia.sinPosicion {
+    border-color: #e5a50a;
+    color: #e5a50a;
+}
+
+@media (max-width: 600px) {
+    /* La tarjeta del Kia está arriba: el botón va a su izquierda para no tapar "Históricos" */
+    #btnSeguirKia {
+        bottom: auto;
+        top: 0;
+        right: calc(100% + 8px);
+    }
 }

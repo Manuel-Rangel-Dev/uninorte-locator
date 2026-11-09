@@ -1,0 +1,86 @@
+{
+  "generado": "2026-11-08",
+  "origen": "2_modelo_ruta/route_model.py (entrenado en eVED), exportado con export_ec2_model.py",
+  "principal": "slope/linear_physics",
+  "respaldo": "base/linear_physics",
+  "min_distancia_km": 1.0,
+  "min_duracion_s": 180,
+  "vel_media_kmh_rango": [
+    5.0,
+    130.0
+  ],
+  "min_recorridos_factor": 3,
+  "min_cobertura_traza": 0.5,
+  "min_fraccion_gnss": 0.5,
+  "min_satelites": 6,
+  "modelos": {
+    "slope/linear_physics": {
+      "nombre": "slope/linear_physics",
+      "entradas": [
+        "mean_speed_kmh",
+        "distance_km",
+        "displacement_l",
+        "srtm_climb_m_per_km",
+        "srtm_descent_m_per_km"
+      ],
+      "terminos": [
+        "1/mean_speed_kmh",
+        "mean_speed_kmh",
+        "mean_speed_kmh^2",
+        "1/distance_km",
+        "displacement_l",
+        "srtm_climb_m_per_km",
+        "srtm_descent_m_per_km"
+      ],
+      "intercepto": 1.1512007044297814,
+      "coeficientes": [
+        104.71773940216747,
+        -0.04831488942451133,
+        0.0004567335474444309,
+        1.157847503878068,
+        2.4246320508066574,
+        0.11735918272802562,
+        -0.08068966975358431
+      ],
+      "factor_inicial": 1.0501747608822585,
+      "usa_factor": true,
+      "kia_pc": {
+        "n": 7,
+        "mape_pct": 7.2840295558815304,
+        "mape_factor_pct": 6.841368557953801,
+        "factor": 1.0501747608822585
+      }
+    },
+    "base/linear_physics": {
+      "nombre": "base/linear_physics",
+      "entradas": [
+        "mean_speed_kmh",
+        "distance_km",
+        "displacement_l"
+      ],
+      "terminos": [
+        "1/mean_speed_kmh",
+        "mean_speed_kmh",
+        "mean_speed_kmh^2",
+        "1/distance_km",
+        "displacement_l"
+      ],
+      "intercepto": 1.1671994594132231,
+      "coeficientes": [
+        106.60319371136855,
+        -0.04196536996580425,
+        0.00039624290002996526,
+        1.3944404895479927,
+        2.453503601373467
+      ],
+      "factor_inicial": 1.0,
+      "usa_factor": false,
+      "kia_pc": {
+        "n": 12,
+        "mape_pct": 10.838304320541633,
+        "mape_factor_pct": 12.079031628465835,
+        "factor": 1.0411609029187558
+      }
+    }
+  }
+}
