@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="" />
-    <link rel="stylesheet" href="styles.css?v=30">
+    <link rel="stylesheet" href="styles.css?v=31">
     <script src="config.js"></script>
     <script>
         if (typeof APP_CONFIG === 'undefined') {
@@ -106,12 +106,6 @@
             </button>
         </div>
 
-        <!-- PESTAÑAS (P3-S3): App = históricos de siempre; Kia K3 = consumo medido frente a estimado -->
-        <div class="pestanasHistoricos">
-            <button type="button" id="tabHistApp" class="tabHistoricos activo">App</button>
-            <button type="button" id="tabHistKia" class="tabHistoricos">Kia K3</button>
-        </div>
-
         <!-- SECCIÓN 1: FILTRAR POR FECHA (Mantiene exactamente lo existente) -->
         <div id="vistaFiltroFecha">
             <div class="selectorRangoFecha">
@@ -171,6 +165,13 @@
             </div>
 
             <div id="estadoHistorico"></div>
+        </div>
+
+        <!-- PESTAÑAS (P3-S3): aparecen después de buscar un rango en el calendario.
+             App = históricos de siempre; Kia K3 = consumo medido frente a estimado en ese rango -->
+        <div class="pestanasHistoricos">
+            <button type="button" id="tabHistApp" class="tabHistoricos activo">App</button>
+            <button type="button" id="tabHistKia" class="tabHistoricos">Kia K3</button>
         </div>
 
         <button id="btnFiltrarPorZona" class="btnFiltrarPorZona" type="button" style="display: none;">
@@ -288,6 +289,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
-    <script type="module" src="js/main.js?v=33"></script>
+    <script type="module" src="js/main.js?v=34"></script>
 </body>
 </html>

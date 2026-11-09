@@ -288,20 +288,30 @@ function renderMetricas(m) {
     const contenedor = document.getElementById('metricasKia');
     if (!contenedor) return;
     if (!m || !m.modelo || m.modelo.n === 0) {
-        contenedor.innerHTML = '<div class="tituloMetricas">MODELO</div><div>Sin recorridos cerrados para medir.</div>';
+        contenedor.innerHTML = '<div class="tituloMetricas">MODELO FRENTE AL PID</div>'
+            + '<div>Sin recorridos cerrados con PID en este rango.</div>';
         return;
     }
-    const fila = (nombre, x) => `
-        <div class="filaMetrica"><span>${escaparHtml(nombre)}</span>
+    const fila = (nombre, x, clase = '') => `
+        <div class="filaMetrica ${clase}"><span>${escaparHtml(nombre)} (${escaparHtml(x.n)})</span>
         <span>MAPE ${escaparHtml(formatearNumero(x.mape_pct, 1, ' %'))} · R² ${escaparHtml(formatearNumero(x.r2_l100km, 2))}</span></div>`;
+    const porModelo = m.por_modelo || {};
+    const nombreSlope = Object.keys(porModelo).find(n => n.startsWith('slope/'));
+    const nombreBase = Object.keys(porModelo).find(n => n.startsWith('base/'));
+    // Primero el modelo elegido (con pendiente); el respaldo sin GNSS y el total van aparte
     contenedor.innerHTML = `
-        <div class="tituloMetricas">MODELO FRENTE AL PID (${escaparHtml(m.modelo.n)} recorridos)</div>
-        ${fila('Modelo', m.modelo)}
-        <div class="filaMetrica secundaria"><span></span>
-        <span>total ${escaparHtml(formatearError(m.modelo.error_total_pct))} · MAE ${escaparHtml(formatearLitros(m.modelo.mae_litros))}</span></div>
-        ${Object.entries(m.por_modelo || {}).map(([nombre, x]) => fila(`  ${nombre.split('/')[0]}`, x)).join('')}
+        <div class="tituloMetricas">MODELO FRENTE AL PID</div>
+        ${nombreSlope ? fila('Pendiente', porModelo[nombreSlope]) : ''}
+        ${nombreSlope ? `<div class="filaMetrica secundaria"><span></span>
+            <span>total ${escaparHtml(formatearError(porModelo[nombreSlope].error_total_pct))}
+            · MAE ${escaparHtml(formatearLitros(porModelo[nombreSlope].mae_litros))}</span></div>` : ''}
+        ${nombreBase ? fila('Sin GNSS', porModelo[nombreBase], 'secundaria') : ''}
+        ${fila('Todos', m.modelo, 'secundaria')}
         ${fila('Ecuación', m.ecuacion)}
     `;
+    contenedor.title = 'Con pendiente: slope/linear_physics (recorridos con GNSS). '
+        + 'Sin GNSS: respaldo base/linear_physics. Todos: lo que muestra la página. '
+        + 'R² de L/100 km ponderado por distancia.';
 }
 
 function filaConsumo(nombre, litros, pesos, error) {
@@ -313,18 +323,42 @@ function filaConsumo(nombre, litros, pesos, error) {
         </div>`;
 }
 
+// Por defecto, como en la app: solo los recorridos de la última semana (7 días antes del fin
+// del más reciente) y, de esos, solo los que tienen estimado del modelo. "Ver todos" quita ambos filtros.
+const SEMANA_MS = 7 * 24 * 60 * 60 * 1000;
+function recorridosListadosKia(todos) {
+    if (estado.kiaMostrarTodos) return todos;
+    const instante = r => new Date(String(r.fin || r.inicio).replace(' ', 'T')).getTime();
+    const conModelo = todos.filter(r => r.litros_modelo !== null);
+    if (conModelo.length === 0) return [];
+    const corte = Math.max(...conModelo.map(instante)) - SEMANA_MS;
+    return conModelo.filter(r => instante(r) >= corte);
+}
+
 function renderLista(todos) {
     const lista = document.getElementById('listaKia');
     if (!lista) return;
     guardarReproductorKia();
     lista.innerHTML = '';
-    const recorridos = estado.kiaMostrarTodos ? todos : todos.filter(r => r.litros_modelo !== null);
-    if (recorridos.length === 0) {
-        lista.textContent = 'No hay recorridos del Kia.';
+    const recorridos = recorridosListadosKia(todos);
+
+    if (todos.length === 0) {
+        lista.textContent = 'No hay recorridos del Kia en este rango.';
+    } else if (recorridos.length < todos.length) {
+        const encabezado = document.createElement('div');
+        encabezado.className = 'encabezadoSemana';
+        encabezado.textContent = `Mostrando la última semana, con estimado del modelo (${recorridos.length} de ${todos.length})`;
+        lista.appendChild(encabezado);
+    } else if (estado.kiaMostrarTodos) {
+        const encabezado = document.createElement('div');
+        encabezado.className = 'encabezadoSemana';
+        encabezado.textContent = `Mostrando todos los recorridos (${todos.length})`;
+        lista.appendChild(encabezado);
     }
 
-    recorridos.forEach((r, i) => {
-        const numero = recorridos.length - i;  // la lista va del más reciente al más antiguo
+    recorridos.forEach(r => {
+        // Número estable: posición en todo el rango, del más antiguo (1) al más reciente
+        const numero = todos.length - todos.indexOf(r);
         const elemento = document.createElement('div');
         elemento.className = 'itemRecorrido itemKia';
         elemento.dataset.recorrido = r.recorrido_id;
@@ -346,33 +380,66 @@ function renderLista(todos) {
         lista.appendChild(elemento);
     });
 
+    // Si el recorrido elegido quedó fuera de la lista, se borra del mapa
+    if (estado.kiaSeleccionado && !recorridos.some(r => r.recorrido_id === estado.kiaSeleccionado)) {
+        limpiarCapasKia();
+    }
     ubicarReproductorKia();
 
     const boton = document.getElementById('btnTodosKia');
     if (boton) {
-        const conModelo = todos.filter(r => r.litros_modelo !== null).length;
-        boton.style.display = todos.length > conModelo ? '' : 'none';
+        const ocultos = todos.length > recorridos.length;
+        boton.style.display = (ocultos || estado.kiaMostrarTodos) && todos.length > 0 ? '' : 'none';
         boton.textContent = estado.kiaMostrarTodos
-            ? `Ver solo los que tienen estimado (${conModelo})`
+            ? 'Ver solo la última semana con estimado'
             : `Ver todos (${todos.length})`;
     }
 }
 
+// -----------------------------------------------------------------------------
+// Búsqueda por rango: la misma del calendario ("Ver recorrido") para las dos pestañas
+// -----------------------------------------------------------------------------
+let rangoKia = null;      // { desde, hasta } de la última búsqueda
+let consultaKia = 0;      // para descartar respuestas de búsquedas anteriores
+
+function actualizarTitulosPestanas() {
+    const app = document.getElementById('tabHistApp');
+    const kia = document.getElementById('tabHistKia');
+    if (app) app.textContent = `App (${estado.recorridosBase.length})`;
+    if (kia) kia.textContent = rangoKia ? `Kia K3 (${estado.kiaRecorridos.length})` : 'Kia K3';
+}
+
 async function cargarVistaKia() {
+    if (!rangoKia) return;
+    const numero = ++consultaKia;
+    const parametros = `desde=${encodeURIComponent(rangoKia.desde)}&hasta=${encodeURIComponent(rangoKia.hasta)}`;
     mostrarEstadoKia('Cargando recorridos del Kia…');
     try {
         const [metricas, recorridos] = await Promise.all([
-            pedirJson('/api/kia/metricas'),
-            pedirJson('/api/kia/recorridos?todos=1')
+            pedirJson(`/api/kia/metricas?${parametros}`),
+            pedirJson(`/api/kia/recorridos?todos=1&${parametros}`)
         ]);
+        if (numero !== consultaKia) return;  // llegó otra búsqueda mientras tanto
         estado.kiaRecorridos = recorridos;
         renderMetricas(metricas);
         renderLista(recorridos);
+        actualizarTitulosPestanas();
         mostrarEstadoKia('');
     } catch (error) {
+        if (numero !== consultaKia) return;
         console.error('[Kia] Error cargando el histórico del Kia:', error);
         mostrarEstadoKia('No se pudieron cargar los recorridos del Kia.', '#e74c3c');
     }
+}
+
+function alBuscarRango(evento) {
+    rangoKia = evento.detail;
+    estado.kiaMostrarTodos = false;
+    estado.kiaRecorridos = [];
+    limpiarCapasKia();
+    document.getElementById('panelHistoricos')?.classList.add('conBusqueda');
+    actualizarTitulosPestanas();
+    cargarVistaKia();  // también si la pestaña abierta es App: así su título muestra cuántos hay
 }
 
 // -----------------------------------------------------------------------------
@@ -387,12 +454,26 @@ function cambiarPestana(pestana) {
     document.getElementById('tabHistKia')?.classList.toggle('activo', pestana === 'kia');
     if (pestana === 'kia') {
         mostrarCapasApp(false);
-        cargarVistaKia();
     } else {
         limpiarCapasKia();
         mostrarCapasApp(true);
         mostrarEstadoKia('');
     }
+}
+
+// Al volver al modo en vivo, el panel queda como al principio: sin búsqueda y en la pestaña App.
+function reiniciarHistoricoKia() {
+    limpiarCapasKia();
+    rangoKia = null;
+    consultaKia++;
+    estado.kiaRecorridos = [];
+    estado.kiaMostrarTodos = false;
+    document.getElementById('panelHistoricos')?.classList.remove('conBusqueda');
+    if (estado.pestanaHistoricos !== 'app') cambiarPestana('app');
+    const lista = document.getElementById('listaKia');
+    if (lista) lista.innerHTML = '';
+    const metricas = document.getElementById('metricasKia');
+    if (metricas) metricas.innerHTML = '';
 }
 
 export function initKiaHistorico() {
@@ -403,8 +484,18 @@ export function initKiaHistorico() {
         estado.kiaMostrarTodos = !estado.kiaMostrarTodos;
         renderLista(estado.kiaRecorridos);
     });
-    // Al volver al modo en vivo se quitan las capas del Kia, como las de la app.
+    document.addEventListener('historico:busqueda', alBuscarRango);
+
+    // El título de la pestaña App muestra cuántos recorridos encontró su búsqueda (que corre
+    // en main.js): se actualiza cuando cambia su lista o su mensaje de estado.
+    const observarApp = new MutationObserver(actualizarTitulosPestanas);
+    ['listaRecorridos', 'estadoHistorico'].forEach(id => {
+        const elemento = document.getElementById(id);
+        if (elemento) observarApp.observe(elemento, { childList: true, characterData: true, subtree: true });
+    });
+
+    // Al volver al modo en vivo se quitan las capas del Kia y se reinicia el panel.
     new MutationObserver(() => {
-        if (!document.body.classList.contains('modoHistorico')) limpiarCapasKia();
+        if (!document.body.classList.contains('modoHistorico')) reiniciarHistoricoKia();
     }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
 }

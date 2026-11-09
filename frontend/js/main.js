@@ -174,6 +174,11 @@ function initHistoricos() {
             return;
         }
 
+        // Avisa el rango a la pestaña Kia K3 (kia-historico.js), que busca sus recorridos aparte
+        document.dispatchEvent(new CustomEvent('historico:busqueda', {
+            detail: { desde: `${fechaDesdeISO} ${horaDesde}`, hasta: `${fechaHastaISO} ${horaHasta}` }
+        }));
+
         // Muestra mensaje de carga y desactiva el botón
         mostrarEstadoHistorico('Cargando recorrido...', '#B3B3B3');
         document.getElementById('btnVerRecorrido').disabled = true;
@@ -261,7 +266,7 @@ function initHistoricos() {
 
 // Función principal de inicialización de la aplicación
 async function bootstrap() {
-    console.log('[Locator] Inicializando aplicación (v33)...');
+    console.log('[Locator] Inicializando aplicación (v34)...');
     // Intenta inicializar el mapa
     try {
         await initMap();

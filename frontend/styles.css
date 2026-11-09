@@ -1215,8 +1215,15 @@ html, body {
     display: flex;
 }
 
-/* En la pestaña Kia se ocultan las secciones de la app sin tocar su estado */
-#panelHistoricos.pestanaKia > :not(.cabeceraPanelHistoricos):not(.pestanasHistoricos):not(#vistaKia) {
+/* Las pestañas aparecen después de buscar un rango (clase conBusqueda en el panel) */
+#panelHistoricos:not(.conBusqueda) .pestanasHistoricos {
+    display: none;
+}
+
+/* En la pestaña Kia se ocultan las secciones de la app sin tocar su estado. El calendario
+   sigue visible porque el rango es el mismo para las dos pestañas. */
+#panelHistoricos.pestanaKia > :not(.cabeceraPanelHistoricos):not(#vistaFiltroFecha):not(.pestanasHistoricos):not(#vistaKia),
+#panelHistoricos.pestanaKia #estadoHistorico {
     display: none !important;
 }
 
