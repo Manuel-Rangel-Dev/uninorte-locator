@@ -5,6 +5,7 @@ import { estado } from '../estado.js';
 import { calcularDistanciaRecorrido } from './segmentacion.js';
 import { formatearDistancia, obtenerTimestampPunto, escaparHtml } from '../utilidades.js';
 import { UMBRAL_HUECO_SEGUNDOS } from '../constantes.js';
+import { pintarConsumoEnTarjeta, agregarConsumoAPopup } from './consumo-app.js';
 
 // Colores usados para distinguir cada recorrido en el mapa
 const PALETA_RECORRIDOS = ['#4A90D9', '#2ecc71', '#e67e22', '#9b59b6', '#e74c3c', '#1abc9c', '#f1c40f', '#e84393'];
@@ -252,6 +253,7 @@ export function mostrarListaRecorridos(recorridos) {
                         ·
                         ${formatearDistancia(distancia)}
                     </div>
+                    <div class="consumoRecorrido"></div>
                 </div>
             </button>
         `;
@@ -276,6 +278,8 @@ export function mostrarListaRecorridos(recorridos) {
             elemento.classList.add('enReproduccion');
         }
         lista.appendChild(elemento);
+        // Litros y costo estimados por el modelo (P3-S3); se llena cuando responde el backend
+        pintarConsumoEnTarjeta(elemento, recorridoActual);
     });
 
     if (botonAlternar) {
@@ -467,6 +471,7 @@ function dibujarRecorridoEnMapa(indice, mostrarTooltipsPermanentes = true) {
         .on('click', () => alternarVisibilidadRecorrido(indice));
 
     // Marcador de fin
+    const textoFin = `Fin recorrido ${numero}${puntoFin.fecha ? ' — ' + puntoFin.fecha + ' ' + (puntoFin.hora || '') : ''}`;
     const marcadorFin = L.marker([puntoFin.lat, puntoFin.lng], {
         icon: crearIconoFin(numero),
         zIndexOffset: 500
@@ -478,8 +483,9 @@ function dibujarRecorridoEnMapa(indice, mostrarTooltipsPermanentes = true) {
             offset: offsetFin,
             className: 'tooltipRecorrido tooltipFin'
         })
-        .bindPopup(escaparHtml(`Fin recorrido ${numero}${puntoFin.fecha ? ' — ' + puntoFin.fecha + ' ' + (puntoFin.hora || '') : ''}`))
+        .bindPopup(escaparHtml(textoFin))
         .on('click', () => alternarVisibilidadRecorrido(indice));
+    agregarConsumoAPopup(marcadorFin, recorrido, textoFin);
 
     // Guarda la referencia del recorrido visible para poder manipularlo después
     estado.lineasHistoricas.push({ indice, linea, marcadorInicio, marcadorFin });

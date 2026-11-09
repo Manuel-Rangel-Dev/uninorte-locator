@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="" />
-    <link rel="stylesheet" href="styles.css?v=28">
+    <link rel="stylesheet" href="styles.css?v=30">
     <script src="config.js"></script>
     <script>
         if (typeof APP_CONFIG === 'undefined') {
@@ -31,6 +31,24 @@
         <div class="filaInfo"><span class="etiquetaInfo">LONG:</span><span id="valorLng">--</span></div>
         <div class="filaInfo"><span class="etiquetaInfo">DATE:</span><span id="valorFecha">--</span></div>
         <div class="filaInfo"><span class="etiquetaInfo">HOUR:</span><span id="valorHora">--</span></div>
+    </div>
+
+    <!-- KIA EN VIVO (P3-S3): consumo por ecuación y PID del recorrido en curso -->
+    <div id="panelKia">
+        <div class="cabeceraKia">
+            <span class="tituloKia">KIA K3 <span class="puntoVivo"></span> <span id="kiaEstado">--</span></span>
+            <button id="btnMinimizarKia" type="button" title="Minimizar panel del Kia">–</button>
+        </div>
+        <div class="cuerpoKia">
+            <div class="filaInfo"><span class="etiquetaInfo">VEL:</span><span id="kiaVelocidad">--</span></div>
+            <div class="filaInfo"><span class="etiquetaInfo">L/h ECUACIÓN:</span><span id="kiaLphEcuacion">--</span></div>
+            <div class="filaInfo"><span class="etiquetaInfo">L/h PID:</span><span id="kiaLphPid">--</span></div>
+            <div class="subtituloKia" id="kiaTituloRecorrido">RECORRIDO EN CURSO</div>
+            <div class="filaInfo"><span class="etiquetaInfo">RECORRIDO:</span><span id="kiaRecorrido">--</span></div>
+            <div class="filaInfo"><span class="etiquetaInfo">PID:</span><span id="kiaLitrosPid">--</span></div>
+            <div class="filaInfo"><span class="etiquetaInfo">ECUACIÓN:</span><span id="kiaLitrosEcuacion">--</span></div>
+            <button id="btnCentrarKia" type="button">Centrar Kia</button>
+        </div>
     </div>
 
     <button id="btnCentrar" title="Activar modo seguimiento">
@@ -86,6 +104,12 @@
                     <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                 </svg>
             </button>
+        </div>
+
+        <!-- PESTAÑAS (P3-S3): App = históricos de siempre; Kia K3 = consumo medido frente a estimado -->
+        <div class="pestanasHistoricos">
+            <button type="button" id="tabHistApp" class="tabHistoricos activo">App</button>
+            <button type="button" id="tabHistKia" class="tabHistoricos">Kia K3</button>
         </div>
 
         <!-- SECCIÓN 1: FILTRAR POR FECHA (Mantiene exactamente lo existente) -->
@@ -225,12 +249,45 @@
                 </select>
             </div>
         </div>
+
+        <!-- SECCIÓN KIA (P3-S3): métricas del modelo y recorridos del Kia -->
+        <div id="vistaKia">
+            <div id="metricasKia" class="metricasKia"></div>
+            <div class="tituloRecorridos">RECORRIDOS DEL KIA</div>
+            <div id="estadoKia" class="estadoKia"></div>
+            <div id="listaKia"></div>
+            <button id="btnTodosKia" class="btnAlternarListaRutas" type="button" style="display: none;">Ver todos</button>
+
+            <!-- REPRODUCTOR DEL KIA: se mueve debajo de la tarjeta elegida, como el de la app -->
+            <div id="reproductorKia" style="display: none;">
+                <div class="infoReproduccion">
+                    <div id="infoKiaReproduccion">Kia --</div>
+                    <div id="fechaHoraKiaReproduccion">--/--/---- --:--:--</div>
+                    <div id="datosKiaReproduccion" class="datosKiaReproduccion">--</div>
+                </div>
+                <div class="contenedorSlider">
+                    <span id="tiempoInicioKia">--:--</span>
+                    <input type="range" id="sliderKia" min="0" max="0" value="0" step="1">
+                    <span id="tiempoFinKia">--:--</span>
+                </div>
+                <div class="controlesReproduccion">
+                    <button id="btnPlayKia" type="button">▶</button>
+                    <button id="btnReiniciarKia" type="button">↺</button>
+                    <select id="velocidadKia">
+                        <option value="1000">1x</option>
+                        <option value="500">2x</option>
+                        <option value="250">4x</option>
+                        <option value="100">10x</option>
+                    </select>
+                </div>
+            </div>
+        </div>
     </div>
     <div id="mapa"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
-    <script type="module" src="js/main.js?v=31"></script>
+    <script type="module" src="js/main.js?v=33"></script>
 </body>
 </html>

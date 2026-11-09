@@ -25,6 +25,8 @@ import {
     limpiarRecorridoHistorico
 } from './historico/calendario.js';
 import { initMap } from './mapa-vivo.js';
+import { initKiaVivo } from './kia/kia-vivo.js';
+import { initKiaHistorico } from './kia/kia-historico.js';
 import {
     initFiltroZona,
     activarModoFiltroZonaUI,
@@ -259,7 +261,7 @@ function initHistoricos() {
 
 // Función principal de inicialización de la aplicación
 async function bootstrap() {
-    console.log('[Locator] Inicializando aplicación (v21)...');
+    console.log('[Locator] Inicializando aplicación (v33)...');
     // Intenta inicializar el mapa
     try {
         await initMap();
@@ -271,6 +273,13 @@ async function bootstrap() {
         initHistoricos();
     } catch (err) {
         console.error('[Locator] Error al inicializar históricos:', err);
+    }
+    // Consumo del Kia (P3-S3): en vivo y pestaña del histórico. Si falla, la app sigue igual.
+    try {
+        initKiaVivo();
+        initKiaHistorico();
+    } catch (err) {
+        console.error('[Locator] Error al inicializar el Kia:', err);
     }
 }
 
