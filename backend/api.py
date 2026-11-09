@@ -21,7 +21,7 @@ from db import (factor_modelo_actual, guardar_prediccion, listar_recorridos, lis
                 obtener_resumen_recorrido, obtener_ultima_fila_kia, obtener_ultimo_registro,
                 precio_vigente_actual)
 from filtros import distancia_m, filtrar_ruido
-from recorridos import VID_KIA, costo_en_pesos, error_pct, horas_pc, metricas_litros, resumir
+from recorridos import VID_KIA, costo_en_pesos, error_pct, es_emulado, horas_pc, metricas_litros, resumir
 from tiempo import ahora_colombia
 from validacion import NOMBRES_OBD, RID_VALIDO
 
@@ -456,7 +456,7 @@ def ruta_elegida():
 # archivo sin cambios), más las columnas del GNSS al final.
 # seq va al final: un salto en seq es un paquete UDP perdido; un salto en t_ms sin
 # salto en seq es una pausa en la lectura OBD.
-ENCABEZADO_CSV_OBD = ["recorrido_id", "hora_pc", "t_ms", *NOMBRES_OBD, "lat", "lng", "alt", "gnss_kmh", "sats", "seq"]
+ENCABEZADO_CSV_OBD = ["recorrido_id", "hora_pc", "t_ms", *NOMBRES_OBD, "lat", "lng", "alt", "gnss_kmh", "sats", "acc", "seq"]
 
 
 @app.get("/api/obd/recorridos")
@@ -470,6 +470,7 @@ def recorridos_obd():
     return jsonify([
         {
             "recorrido_id": r["recorrido_id"],
+            "emulado": es_emulado(r["recorrido_id"]),
             "filas": r["filas"],
             "filas_con_gps": r["filas_con_gps"],
             "inicio": r["inicio"].strftime("%Y-%m-%d %H:%M:%S"),
@@ -566,6 +567,7 @@ def _recorrido_kia_json(r: dict) -> dict:
     """Campos de un recorrido del Kia para la lista y el detalle."""
     return {
         "recorrido_id": r["recorrido_id"],
+        "emulado": es_emulado(r["recorrido_id"]),
         "inicio": _texto_fecha(r.get("inicio")),
         "fin": _texto_fecha(r.get("fin")),
         "duracion_s": r.get("duracion_s"),
@@ -629,6 +631,7 @@ def kia_vivo():
         "en_vivo": edad_s <= EDAD_EN_VIVO_S,
         "edad_s": round(edad_s, 1),
         "recorrido_id": fila["recorrido_id"],
+        "emulado": es_emulado(fila["recorrido_id"]),
         "hora": _texto_fecha(fila["hora"]),
         "lat": fila["lat"],
         "lng": fila["lng"],
@@ -719,8 +722,13 @@ def kia_metricas():
     def pares(columna, sub):
         return [(f["litros_pid"], f[columna], f["distancia_km"]) for f in sub]
 
+    emulados = [f for f in utiles if es_emulado(f["recorrido_id"])]
+    utiles = [f for f in utiles if not es_emulado(f["recorrido_id"])]
     nombres = sorted({f["modelo"] for f in utiles if f["modelo"]})
     return jsonify({
+        "emulados": {"recorridos": len(emulados),
+                     "modelo": metricas_litros(pares("litros_modelo", emulados)),
+                     "ecuacion": metricas_litros(pares("litros_ecuacion", emulados))},
         "recorridos": len(utiles),
         "desde": _texto_fecha(rango[0]),
         "hasta": _texto_fecha(rango[1]),

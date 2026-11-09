@@ -71,6 +71,8 @@ function actualizarPanel(datos) {
     const panel = document.getElementById('panelKia');
     if (!panel) return;
     panel.classList.add('conDatos');
+    const etiqueta = document.getElementById('kiaEmulado');
+    if (etiqueta) etiqueta.hidden = !datos?.emulado;
 
     if (!datos) {
         panel.classList.remove('enVivo');

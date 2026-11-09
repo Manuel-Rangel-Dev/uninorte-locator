@@ -17,7 +17,7 @@ from datetime import timedelta
 # Constantes
 # ---------------------------------------------------------------------------
 
-# El nodo OBD solo está en el Kia: todo lo de consumo y recorridos es de este vehículo.
+# Los recorridos OBD se muestran bajo el Kia, incluidos los emulados identificados por rid.
 VID_KIA = "kia_k3"
 NOMBRE_KIA = "Kia K3 GT Line 2025"
 CILINDRADA_KIA_L = 1.6
@@ -45,6 +45,11 @@ RADIO_TIERRA_KM = 6371.0088
 # ---------------------------------------------------------------------------
 # Consumo
 # ---------------------------------------------------------------------------
+
+def es_emulado(recorrido_id: str) -> bool:
+    """Única regla de identificación: los emulados llevan el prefijo emu_."""
+    return recorrido_id.startswith("emu_")
+
 
 def constante_k(cilindrada_l, afr, densidad_comb_g_l, densidad_aire_g_l) -> float | None:
     """K de la ecuación de consumo. None si falta algún dato del vehículo."""
@@ -165,6 +170,7 @@ def resumir(filas: list[dict]) -> dict:
     return {
         "vid": VID_KIA,
         "recorrido_id": filas[0]["recorrido_id"],
+        "emulado": es_emulado(filas[0]["recorrido_id"]),
         "inicio": inicio,
         "fin": fin,
         "filas": len(filas),

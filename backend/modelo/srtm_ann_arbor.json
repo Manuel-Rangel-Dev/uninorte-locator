@@ -1,0 +1,9 @@
+{
+  "lat_norte": 42.36,
+  "lon_oeste": -83.86,
+  "muestras_por_grado": 3600,
+  "filas": 577,
+  "columnas": 1009,
+  "formato": "int16 big-endian, fila 0 = borde norte",
+  "fuente": "SRTM 1\" N42W084.hgt (elevation-tiles-prod/skadi)"
+}

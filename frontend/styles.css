@@ -1376,3 +1376,14 @@ body:not(.pestanaKiaActiva) #reproductorKia.flotante {
         right: calc(100% + 8px);
     }
 }
+
+/* Identifica las pruebas emuladas sin competir con el estado en vivo. */
+.etiquetaEmulado {
+    font-size: 10px;
+    font-weight: normal;
+    color: #b3b3b3;
+    border: 1px solid #777;
+    border-radius: 3px;
+    padding: 0 4px;
+    margin-left: 4px;
+}
