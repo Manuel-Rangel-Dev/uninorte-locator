@@ -266,7 +266,7 @@ function initHistoricos() {
 
 // Función principal de inicialización de la aplicación
 async function bootstrap() {
-    console.log('[Locator] Inicializando aplicación (v34)...');
+    console.log('[Locator] Inicializando aplicación (v35)...');
     // Intenta inicializar el mapa
     try {
         await initMap();

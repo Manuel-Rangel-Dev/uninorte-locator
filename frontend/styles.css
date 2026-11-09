@@ -1222,8 +1222,20 @@ html, body {
 
 /* En la pestaña Kia se ocultan las secciones de la app sin tocar su estado. El calendario
    sigue visible porque el rango es el mismo para las dos pestañas. */
-#panelHistoricos.pestanaKia > :not(.cabeceraPanelHistoricos):not(#vistaFiltroFecha):not(.pestanasHistoricos):not(#vistaKia),
-#panelHistoricos.pestanaKia #estadoHistorico {
+#panelHistoricos.pestanaKia > :not(.cabeceraPanelHistoricos):not(#vistaFiltroFecha):not(.pestanasHistoricos):not(#btnFiltrarPorZona):not(#vistaFiltroZona):not(#vistaKia),
+#panelHistoricos.pestanaKia #estadoHistorico,
+#panelHistoricos.pestanaKia #estadoZona {
+    display: none !important;
+}
+
+/* El filtro por zona es uno solo para las dos pestañas. En la pestaña Kia, su botón se muestra
+   si el Kia tiene recorridos en el rango (aunque la app no tenga) y se oculta si no tiene. */
+#panelHistoricos.pestanaKia.kiaConResultados #btnFiltrarPorZona {
+    display: block !important;
+}
+
+#panelHistoricos.pestanaKia:not(.kiaConResultados) #btnFiltrarPorZona,
+#panelHistoricos.pestanaKia:not(.kiaConResultados) #vistaFiltroZona {
     display: none !important;
 }
 

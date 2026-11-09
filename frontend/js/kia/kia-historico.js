@@ -7,7 +7,7 @@
 // =============================================================================
 import { API_BASE } from '../constantes.js';
 import { estado } from '../estado.js';
-import { escaparHtml } from '../utilidades.js';
+import { distanciaSegmentoAPunto, escaparHtml } from '../utilidades.js';
 import { crearIconoInicio, crearIconoFin } from '../historico/lista-slidebar.js';
 import { crearIconoKia } from './kia-vivo.js';
 import {
@@ -264,7 +264,7 @@ async function alternarRecorridoKia(recorrido, numero, elemento) {
     elemento.classList.add('enReproduccion');
     mostrarEstadoKia('Cargando traza…');
     try {
-        const datos = await pedirJson(`/api/kia/recorridos/${encodeURIComponent(recorrido.recorrido_id)}`);
+        const datos = { puntos: await pedirPuntos(recorrido.recorrido_id) };
         // Si mientras cargaba se eligió otro o se salió de la pestaña, no se dibuja.
         if (estado.kiaSeleccionado !== recorrido.recorrido_id || estado.pestanaHistoricos !== 'kia') return;
         if (!datos.puntos || datos.puntos.length === 0) {
@@ -335,25 +335,29 @@ function recorridosListadosKia(todos) {
     return conModelo.filter(r => instante(r) >= corte);
 }
 
-function renderLista(todos) {
+function renderLista() {
     const lista = document.getElementById('listaKia');
     if (!lista) return;
     guardarReproductorKia();
     lista.innerHTML = '';
-    const recorridos = recorridosListadosKia(todos);
+    const todos = estado.kiaRecorridos;                 // todo el rango (para numerar)
+    const base = kiaEnZona ?? todos;                    // con el filtro por zona, si hay
+    const recorridos = recorridosListadosKia(base);     // y con el límite semanal
 
+    const agregarEncabezado = texto => {
+        const encabezado = document.createElement('div');
+        encabezado.className = 'encabezadoSemana';
+        encabezado.textContent = texto;
+        lista.appendChild(encabezado);
+    };
     if (todos.length === 0) {
         lista.textContent = 'No hay recorridos del Kia en este rango.';
-    } else if (recorridos.length < todos.length) {
-        const encabezado = document.createElement('div');
-        encabezado.className = 'encabezadoSemana';
-        encabezado.textContent = `Mostrando la última semana, con estimado del modelo (${recorridos.length} de ${todos.length})`;
-        lista.appendChild(encabezado);
+    } else if (kiaEnZona && base.length === 0) {
+        agregarEncabezado('Sin recorridos del Kia en esta zona (los que no tienen GNSS no se pueden ubicar).');
+    } else if (recorridos.length < base.length) {
+        agregarEncabezado(`Mostrando la última semana, con estimado del modelo (${recorridos.length} de ${base.length})`);
     } else if (estado.kiaMostrarTodos) {
-        const encabezado = document.createElement('div');
-        encabezado.className = 'encabezadoSemana';
-        encabezado.textContent = `Mostrando todos los recorridos (${todos.length})`;
-        lista.appendChild(encabezado);
+        agregarEncabezado(`Mostrando todos los recorridos (${base.length})`);
     }
 
     recorridos.forEach(r => {
@@ -388,12 +392,72 @@ function renderLista(todos) {
 
     const boton = document.getElementById('btnTodosKia');
     if (boton) {
-        const ocultos = todos.length > recorridos.length;
-        boton.style.display = (ocultos || estado.kiaMostrarTodos) && todos.length > 0 ? '' : 'none';
+        const ocultos = base.length > recorridos.length;
+        boton.style.display = (ocultos || estado.kiaMostrarTodos) && base.length > 0 ? '' : 'none';
         boton.textContent = estado.kiaMostrarTodos
             ? 'Ver solo la última semana con estimado'
-            : `Ver todos (${todos.length})`;
+            : `Ver todos (${base.length})`;
     }
+}
+
+// -----------------------------------------------------------------------------
+// Filtro por zona: el mismo círculo de la app (filtro-zona.js avisa con 'historico:zona').
+// Un recorrido pasa si algún punto o tramo de su traza queda dentro del radio, como en la app.
+// Los puntos de cada recorrido se piden una vez y quedan en caché.
+// -----------------------------------------------------------------------------
+let zonaKia = null;        // { lat, lng, radio } o null
+let kiaEnZona = null;      // recorridos del rango que pasan por la zona (null = sin filtro)
+let consultaZona = 0;
+const puntosPorRecorrido = new Map();   // recorrido_id -> Promise<puntos>
+
+function pedirPuntos(recorridoId) {
+    if (!puntosPorRecorrido.has(recorridoId)) {
+        const promesa = pedirJson(`/api/kia/recorridos/${encodeURIComponent(recorridoId)}`)
+            .then(datos => datos.puntos || []);
+        promesa.catch(() => puntosPorRecorrido.delete(recorridoId));  // se reintenta la próxima vez
+        puntosPorRecorrido.set(recorridoId, promesa);
+    }
+    return puntosPorRecorrido.get(recorridoId);
+}
+
+function pasaPorZona(puntos, zona) {
+    const centro = L.latLng(zona.lat, zona.lng);
+    if (puntos.some(p => centro.distanceTo(L.latLng(p.lat, p.lng)) <= zona.radio)) return true;
+    for (let i = 1; i < puntos.length; i++) {
+        if (distanciaSegmentoAPunto(puntos[i - 1], puntos[i], centro) <= zona.radio) return true;
+    }
+    return false;
+}
+
+async function aplicarZonaKia() {
+    const numero = ++consultaZona;
+    if (!zonaKia || estado.kiaRecorridos.length === 0) {
+        kiaEnZona = null;
+        renderLista();
+        if (estado.pestanaHistoricos === 'kia') mostrarEstadoKia('');
+        return;
+    }
+    const zona = zonaKia;
+    if (estado.pestanaHistoricos === 'kia') mostrarEstadoKia('Filtrando recorridos del Kia en la zona…');
+    try {
+        const conTraza = estado.kiaRecorridos.filter(r => r.con_traza);
+        const trazas = await Promise.all(conTraza.map(r => pedirPuntos(r.recorrido_id)));
+        if (numero !== consultaZona) return;  // la zona cambió mientras tanto
+        const ids = new Set(conTraza.filter((r, i) => pasaPorZona(trazas[i], zona)).map(r => r.recorrido_id));
+        kiaEnZona = estado.kiaRecorridos.filter(r => ids.has(r.recorrido_id));
+        renderLista();
+        mostrarEstadoKia(kiaEnZona.length ? `${kiaEnZona.length} recorrido(s) del Kia en la zona` : '',
+            '#4cd964');
+    } catch (error) {
+        if (numero !== consultaZona) return;
+        console.error('[Kia] Error filtrando por zona:', error);
+        mostrarEstadoKia('No se pudo filtrar por zona.', '#e74c3c');
+    }
+}
+
+function alCambiarZona(evento) {
+    zonaKia = evento.detail;
+    aplicarZonaKia();
 }
 
 // -----------------------------------------------------------------------------
@@ -421,8 +485,9 @@ async function cargarVistaKia() {
         ]);
         if (numero !== consultaKia) return;  // llegó otra búsqueda mientras tanto
         estado.kiaRecorridos = recorridos;
+        document.getElementById('panelHistoricos')?.classList.toggle('kiaConResultados', recorridos.length > 0);
         renderMetricas(metricas);
-        renderLista(recorridos);
+        aplicarZonaKia();  // pinta la lista (con la zona, si hay una)
         actualizarTitulosPestanas();
         mostrarEstadoKia('');
     } catch (error) {
@@ -436,6 +501,9 @@ function alBuscarRango(evento) {
     rangoKia = evento.detail;
     estado.kiaMostrarTodos = false;
     estado.kiaRecorridos = [];
+    kiaEnZona = null;
+    puntosPorRecorrido.clear();
+    document.getElementById('panelHistoricos')?.classList.remove('kiaConResultados');
     limpiarCapasKia();
     document.getElementById('panelHistoricos')?.classList.add('conBusqueda');
     actualizarTitulosPestanas();
@@ -468,7 +536,11 @@ function reiniciarHistoricoKia() {
     consultaKia++;
     estado.kiaRecorridos = [];
     estado.kiaMostrarTodos = false;
-    document.getElementById('panelHistoricos')?.classList.remove('conBusqueda');
+    zonaKia = null;
+    kiaEnZona = null;
+    consultaZona++;
+    puntosPorRecorrido.clear();
+    document.getElementById('panelHistoricos')?.classList.remove('conBusqueda', 'kiaConResultados');
     if (estado.pestanaHistoricos !== 'app') cambiarPestana('app');
     const lista = document.getElementById('listaKia');
     if (lista) lista.innerHTML = '';
@@ -482,9 +554,10 @@ export function initKiaHistorico() {
     document.getElementById('tabHistKia')?.addEventListener('click', () => cambiarPestana('kia'));
     document.getElementById('btnTodosKia')?.addEventListener('click', () => {
         estado.kiaMostrarTodos = !estado.kiaMostrarTodos;
-        renderLista(estado.kiaRecorridos);
+        renderLista();
     });
     document.addEventListener('historico:busqueda', alBuscarRango);
+    document.addEventListener('historico:zona', alCambiarZona);
 
     // El título de la pestaña App muestra cuántos recorridos encontró su búsqueda (que corre
     // en main.js): se actualiza cuando cambia su lista o su mensaje de estado.
