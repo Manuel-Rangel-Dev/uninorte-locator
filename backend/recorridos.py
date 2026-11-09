@@ -179,6 +179,43 @@ def resumir(filas: list[dict]) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Métricas de validación (modelo y ecuación frente al PID 0x5E)
+# ---------------------------------------------------------------------------
+
+def error_pct(estimado, real) -> float | None:
+    """Error con signo en %: positivo si el estimado sobreestima el real."""
+    if estimado is None or not real:
+        return None
+    return (estimado / real - 1) * 100
+
+
+def metricas_litros(pares: list[tuple]) -> dict:
+    """Métricas de una lista de (litros_real, litros_estimado, distancia_km):
+    n, mape_pct, error_total_pct (Σ estimado / Σ real − 1), mae_litros y r2_l100km
+    (R² de los L/100 km ponderado por la distancia). None en lo que no se puede
+    calcular (sin pares, o R² con menos de 2 recorridos o sin varianza)."""
+    pares = [(r, e, d) for r, e, d in pares if r and e is not None and d]
+    n = len(pares)
+    if n == 0:
+        return {"n": 0, "mape_pct": None, "error_total_pct": None, "mae_litros": None, "r2_l100km": None}
+    mape = sum(abs(e - r) / r for r, e, _ in pares) / n * 100
+    total = (sum(e for _, e, _ in pares) / sum(r for r, _, _ in pares) - 1) * 100
+    mae = sum(abs(e - r) for r, e, _ in pares) / n
+
+    r2 = None
+    if n >= 2:
+        pesos = [d for _, _, d in pares]
+        y = [r / d * 100 for r, _, d in pares]
+        y_est = [e / d * 100 for _, e, d in pares]
+        media = sum(w * v for w, v in zip(pesos, y)) / sum(pesos)
+        total_cuadrados = sum(w * (v - media) ** 2 for w, v in zip(pesos, y))
+        residuo = sum(w * (v - ve) ** 2 for w, v, ve in zip(pesos, y, y_est))
+        if total_cuadrados > 0:
+            r2 = 1 - residuo / total_cuadrados
+    return {"n": n, "mape_pct": mape, "error_total_pct": total, "mae_litros": mae, "r2_l100km": r2}
+
+
+# ---------------------------------------------------------------------------
 # Relleno de lo que ya hay en la base
 # ---------------------------------------------------------------------------
 

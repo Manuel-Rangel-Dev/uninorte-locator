@@ -515,6 +515,11 @@ def _ampliar_tabla_obd(cur) -> None:
     cur.execute(sql.SQL("ALTER TABLE {tabla} ADD COLUMN IF NOT EXISTS fuel_lph_ecuacion DOUBLE PRECISION").format(
         tabla=sql.Identifier(DB_TABLE_OBD)
     ))
+    # La última fila del Kia se busca por hora de llegada, no por id: las filas que se
+    # suben después (recorridos grabados con el PC) tienen id más alto pero son viejas.
+    cur.execute(sql.SQL("CREATE INDEX IF NOT EXISTS {indice} ON {tabla} (recibido_en)").format(
+        indice=sql.Identifier(f"idx_{DB_TABLE_OBD}_recibido"), tabla=sql.Identifier(DB_TABLE_OBD)
+    ))
 
 
 def _crear_vista_factor(cur) -> None:
@@ -644,13 +649,16 @@ def rellenar_fuel_lph_ecuacion() -> int:
 
 
 def _precio_vigente(cur, instante: datetime) -> tuple | None:
-    """(id, cop_por_galon) del precio vigente en ese instante, o None si no hay."""
+    """(id, cop_por_galon) del precio vigente en ese instante, o None si la tabla está
+    vacía. Antes del primer precio registrado se usa ese primero: los recorridos del
+    28 de octubre (grabados con el PC) son anteriores al precio inicial del 1 de noviembre."""
     cur.execute(
         sql.SQL(
-            "SELECT id, cop_por_galon FROM {tabla} WHERE vigente_desde <= %s "
-            "ORDER BY vigente_desde DESC LIMIT 1"
+            "SELECT id, cop_por_galon FROM {tabla} "
+            "ORDER BY vigente_desde <= %s DESC, "
+            "CASE WHEN vigente_desde <= %s THEN vigente_desde END DESC, vigente_desde ASC LIMIT 1"
         ).format(tabla=sql.Identifier(DB_TABLE_PRECIOS)),
-        (instante,),
+        (instante, instante),
     )
     return cur.fetchone()
 
@@ -838,7 +846,7 @@ def obtener_consumo_vivo(vid: str = VID_KIA, max_edad_s: float = 30) -> dict | N
                 sql.SQL(
                     "SELECT recorrido_id, fuel_lph, fuel_lph_ecuacion, vel, lat, lng, "
                     "COALESCE(ts, recibido_en) AS hora "
-                    "FROM {tabla} ORDER BY id DESC LIMIT 1"
+                    "FROM {tabla} ORDER BY recibido_en DESC, id DESC LIMIT 1"
                 ).format(tabla=sql.Identifier(DB_TABLE_OBD))
             )
             fila = cur.fetchone()
@@ -860,12 +868,60 @@ def factor_modelo_actual(modelo: str) -> float | None:
         conexion.close()
 
 
-def precio_vigente_actual() -> tuple | None:
-    """(id, cop_por_galon) del precio vigente ahora, o None si no hay."""
+def precio_vigente_actual(instante: datetime | None = None) -> tuple | None:
+    """(id, cop_por_galon) del precio vigente en instante (por defecto, ahora), o None."""
     conexion = _conectar()
     try:
         with conexion.cursor() as cur:
-            return _precio_vigente(cur, ahora_colombia())
+            return _precio_vigente(cur, instante or ahora_colombia())
+    finally:
+        conexion.close()
+
+
+def obtener_ultima_fila_kia() -> dict | None:
+    """Última fila OBD del Kia, sin límite de edad: recorrido_id, fuel_lph,
+    fuel_lph_ecuacion, vel, hora (GNSS o llegada al servidor) y la última posición con
+    fix de ese recorrido (lat, lng, hora_posicion), que puede ser de una fila anterior
+    si la última llegó sin GNSS. None si la tabla está vacía."""
+    conexion = _conectar()
+    try:
+        with conexion.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            tabla = sql.Identifier(DB_TABLE_OBD)
+            cur.execute(
+                sql.SQL(
+                    "SELECT recorrido_id, fuel_lph, fuel_lph_ecuacion, vel, "
+                    "COALESCE(ts, recibido_en) AS hora FROM {tabla} ORDER BY recibido_en DESC, id DESC LIMIT 1"
+                ).format(tabla=tabla)
+            )
+            fila = cur.fetchone()
+            if fila is None:
+                return None
+            cur.execute(
+                sql.SQL(
+                    "SELECT lat, lng, COALESCE(ts, recibido_en) AS hora_posicion FROM {tabla} "
+                    "WHERE recorrido_id = %s AND lat IS NOT NULL ORDER BY t_ms DESC, seq DESC LIMIT 1"
+                ).format(tabla=tabla),
+                (fila["recorrido_id"],),
+            )
+            posicion = cur.fetchone() or {"lat": None, "lng": None, "hora_posicion": None}
+            return {**dict(fila), **dict(posicion)}
+    finally:
+        conexion.close()
+
+
+def obtener_resumen_recorrido(recorrido_id: str) -> dict | None:
+    """Fila de la tabla recorridos, o None si el recorrido aún no se ha resumido."""
+    conexion = _conectar()
+    try:
+        with conexion.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                sql.SQL("SELECT * FROM {tabla} WHERE recorrido_id = %s").format(
+                    tabla=sql.Identifier(DB_TABLE_RECORRIDOS)
+                ),
+                (recorrido_id,),
+            )
+            fila = cur.fetchone()
+            return dict(fila) if fila else None
     finally:
         conexion.close()
 
