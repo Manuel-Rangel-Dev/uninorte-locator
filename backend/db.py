@@ -16,6 +16,7 @@ from recorridos import (AFR_GASOLINA, CILINDRADA_KIA_L, DENSIDAD_AIRE_G_L, DENSI
                         MINUTOS_CIERRE, NOMBRE_CARRO_2, NOMBRE_KIA, PRECIO_INICIAL_COP_GALON,
                         PRECIO_INICIAL_FUENTE, VID_CARRO_2, VID_KIA, constante_k, costo_en_pesos,
                         fuel_lph_ecuacion, resumir, velocidad_media_kmh)
+import modelo_ruta
 from tiempo import ahora_colombia
 from validacion import NOMBRES_OBD
 
@@ -50,6 +51,20 @@ DB_TABLE_PREDICCIONES = os.environ.get("DB_TABLE_PREDICCIONES", "predicciones")
 DB_TABLE_PREDICCIONES_RUTAS = os.environ.get("DB_TABLE_PREDICCIONES_RUTAS", "predicciones_rutas")
 
 VISTA_FACTOR_CORRECCION = "v_factor_correccion"
+# Factor por modelo calculado con los litros sin factor. Es una vista aparte para no
+# cambiar v_factor_correccion, que main vuelve a crear con su definición al reiniciar.
+VISTA_FACTOR_MODELO = "v_factor_modelo"
+
+# Columnas del modelo de ruta (P3-S3) en la tabla recorridos. litros_modelo es
+# litros_modelo_sin_factor · factor_modelo. modelo_calculado_en permite saber si el
+# modelo está al día: el listener de main actualiza la tabla sin calcular el modelo.
+COLUMNAS_MODELO_RECORRIDOS = (
+    ("litros_modelo_sin_factor", "DOUBLE PRECISION"),
+    ("factor_modelo", "DOUBLE PRECISION"),
+    ("subida_m_km", "DOUBLE PRECISION"),
+    ("bajada_m_km", "DOUBLE PRECISION"),
+    ("modelo_calculado_en", "TIMESTAMP"),
+)
 
 # Serializa init_db_p3 entre listeners: con varias EC2 reiniciando a la vez sobre la
 # misma RDS, CREATE OR REPLACE VIEW puede fallar con "tuple concurrently updated".
@@ -512,6 +527,37 @@ def _crear_vista_factor(cur) -> None:
              recorridos=sql.Identifier(DB_TABLE_RECORRIDOS)))
 
 
+def _ampliar_tabla_recorridos(cur) -> None:
+    """Columnas del modelo de ruta en recorridos (P3-S3)."""
+    for columna, tipo in COLUMNAS_MODELO_RECORRIDOS:
+        cur.execute(sql.SQL("ALTER TABLE {tabla} ADD COLUMN IF NOT EXISTS {columna} {tipo}").format(
+            tabla=sql.Identifier(DB_TABLE_RECORRIDOS), columna=sql.Identifier(columna),
+            tipo=sql.SQL(tipo),
+        ))
+
+
+def _crear_vista_factor_modelo(cur) -> None:
+    """Factor y error por modelo, con los litros sin factor (el factor no se corrige
+    sobre sí mismo). error_sin_factor_pct y error_con_factor_pct conservan el signo:
+    positivo significa que el modelo sobreestima el consumo real (PID)."""
+    cur.execute(sql.SQL(
+        """
+        CREATE OR REPLACE VIEW {vista} AS
+        SELECT vid,
+               modelo,
+               COUNT(*) AS recorridos,
+               SUM(litros_pid) / NULLIF(SUM(litros_modelo_sin_factor), 0) AS factor,
+               AVG((litros_modelo_sin_factor - litros_pid) / NULLIF(litros_pid, 0)) * 100
+                   AS error_sin_factor_pct,
+               AVG((litros_modelo - litros_pid) / NULLIF(litros_pid, 0)) * 100 AS error_con_factor_pct
+        FROM {recorridos}
+        WHERE cerrado AND litros_pid IS NOT NULL AND litros_modelo_sin_factor IS NOT NULL
+        GROUP BY vid, modelo
+        """
+    ).format(vista=sql.Identifier(VISTA_FACTOR_MODELO),
+             recorridos=sql.Identifier(DB_TABLE_RECORRIDOS)))
+
+
 def init_db_p3() -> None:
     """Crea las tablas del Proyecto 3, sus datos iniciales, las columnas nuevas de la
     tabla OBD y la vista. Idempotente. Debe correr después de init_db_obd()."""
@@ -522,7 +568,9 @@ def init_db_p3() -> None:
             _crear_tablas_p3(cur)
             _sembrar_datos_p3(cur)
             _ampliar_tabla_obd(cur)
+            _ampliar_tabla_recorridos(cur)
             _crear_vista_factor(cur)
+            _crear_vista_factor_modelo(cur)
         conexion.commit()
     finally:
         conexion.close()
@@ -598,11 +646,58 @@ def _precio_vigente(cur, instante: datetime) -> tuple | None:
     return cur.fetchone()
 
 
+def _factor_previo(cur, modelo: str, inicio: datetime) -> float | None:
+    """Factor del Kia para un recorrido que empieza en inicio: SUM(litros_pid) /
+    SUM(litros_modelo_sin_factor) de los recorridos cerrados anteriores del mismo
+    modelo, igual que el MAPE con factor de route_model.py. Así el factor se recalcula
+    solo con cada recorrido nuevo. Con menos de min_recorridos_factor devuelve None
+    (modelo_ruta.estimar usa entonces el factor del PC)."""
+    cur.execute(
+        sql.SQL(
+            "SELECT COUNT(*), SUM(litros_pid), SUM(litros_modelo_sin_factor) FROM {tabla} "
+            "WHERE vid = %s AND modelo = %s AND cerrado AND inicio < %s "
+            "AND litros_pid IS NOT NULL AND litros_modelo_sin_factor > 0"
+        ).format(tabla=sql.Identifier(DB_TABLE_RECORRIDOS)),
+        (VID_KIA, modelo, inicio),
+    )
+    cantidad, litros_pid, litros_modelo = cur.fetchone()
+    if cantidad < modelo_ruta.min_recorridos_factor() or not litros_modelo:
+        return None
+    return litros_pid / litros_modelo
+
+
+def _columnas_modelo(cur, filas: list[dict], resumen: dict, cop_por_galon) -> dict:
+    """Columnas del modelo de ruta de un recorrido. Con traza GNSS usa el modelo con
+    pendiente y su factor; sin ella, el de respaldo (sin factor). Todo en None si el
+    recorrido es muy corto para el modelo."""
+    distancia_km, duracion_s = resumen["distancia_km"], resumen["duracion_s"]
+    pendiente = modelo_ruta.pendiente_por_km(modelo_ruta.traza_obd(filas), distancia_km)
+    estimado = modelo_ruta.estimar(distancia_km, duracion_s, pendiente)
+    if estimado is not None and estimado["usa_factor"]:
+        factor = _factor_previo(cur, estimado["modelo"], resumen["inicio"])
+        if factor is not None:
+            estimado = modelo_ruta.estimar(distancia_km, duracion_s, pendiente, factor=factor)
+    if estimado is None:
+        return {"litros_modelo": None, "litros_modelo_sin_factor": None, "factor_modelo": None,
+                "modelo": None, "costo_modelo_cop": None, "subida_m_km": None, "bajada_m_km": None}
+    return {
+        "litros_modelo": estimado["litros"],
+        "litros_modelo_sin_factor": estimado["litros_sin_factor"],
+        "factor_modelo": estimado["factor"],
+        "modelo": estimado["modelo"],
+        "costo_modelo_cop": costo_en_pesos(estimado["litros"], cop_por_galon),
+        "subida_m_km": estimado["subida_m_km"],
+        "bajada_m_km": estimado["bajada_m_km"],
+    }
+
+
 def actualizar_recorrido(recorrido_id: str, cerrar: bool = False) -> dict | None:
     """Recalcula el resumen de un recorrido y lo guarda. Devuelve el resumen, o None
     si el recorrido no tiene filas. Si llegan datos nuevos a uno cerrado, se reabre
     y el hilo del listener lo vuelve a cerrar cuando pasen los minutos de cierre.
-    litros_modelo, modelo, costo_modelo_cop y prediccion_ruta_id no se tocan."""
+    Si el modelo de ruta está disponible, también llena las columnas del modelo
+    (COLUMNAS_MODELO_RECORRIDOS, litros_modelo, modelo, costo_modelo_cop). Sin
+    modelo no las toca. prediccion_ruta_id nunca se toca."""
     # Se toma antes de leer: una fila que llegue durante la lectura queda más nueva
     # que actualizado_en, y el recorrido sigue pendiente en el siguiente ciclo.
     actualizado_en = ahora_colombia()
@@ -625,6 +720,9 @@ def actualizar_recorrido(recorrido_id: str, cerrar: bool = False) -> dict | None
                 cerrado=cerrar,
                 actualizado_en=actualizado_en,
             )
+            if modelo_ruta.cargar_modelo() is not None:
+                resumen.update(_columnas_modelo(cur, filas, resumen, cop_por_galon),
+                               modelo_calculado_en=actualizado_en)
 
             columnas = list(resumen)
             cur.execute(
@@ -653,8 +751,11 @@ def recorridos_pendientes(minutos_cierre: int = MINUTOS_CIERRE, todos: bool = Fa
     Son los que no están en recorridos, los que tienen filas más nuevas que su
     actualizado_en y los que siguen abiertos pero ya no reciben datos. Sin esta última
     condición, un recorrido actualizado después de su última fila nunca se cerraría.
+    Si el modelo de ruta está disponible, también los que tienen el modelo sin
+    calcular o desactualizado (el listener de main los actualiza sin el modelo).
     Con todos=True devuelve todos los recorridos de la tabla OBD."""
     limite_inactivo = ahora_colombia() - timedelta(minutes=minutos_cierre)
+    con_modelo = modelo_ruta.cargar_modelo() is not None
     conexion = _conectar()
     try:
         with conexion.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
@@ -671,11 +772,13 @@ def recorridos_pendientes(minutos_cierre: int = MINUTOS_CIERRE, todos: bool = Fa
                        OR r.id IS NULL
                        OR o.ultimo > r.actualizado_en
                        OR (NOT r.cerrado AND o.ultimo < %(limite)s)
+                       OR (%(con_modelo)s AND (r.modelo_calculado_en IS NULL
+                                               OR r.modelo_calculado_en < r.actualizado_en))
                     ORDER BY o.ultimo
                     """
                 ).format(obd=sql.Identifier(DB_TABLE_OBD),
                          recorridos=sql.Identifier(DB_TABLE_RECORRIDOS)),
-                {"limite": limite_inactivo, "todos": todos},
+                {"limite": limite_inactivo, "todos": todos, "con_modelo": con_modelo},
             )
             return [dict(f) for f in cur.fetchall()]
     finally:

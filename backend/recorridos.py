@@ -4,7 +4,8 @@ Resumen de los recorridos del Kia: consumo, distancia, velocidad media y costo.
 Este módulo no importa db.py al cargarse a propósito: así se puede probar sin base
 de datos ni variables de entorno, igual que validacion.py. Solo --rellenar lo usa.
 
-Relleno de los datos que ya están en la base (se puede correr varias veces):
+Relleno de los datos que ya están en la base, incluido el modelo de ruta (se puede
+correr varias veces):
     python backend/recorridos.py --rellenar
 """
 
@@ -189,17 +190,26 @@ def rellenar() -> None:
 
     # Todos y no solo los pendientes: si el hilo del listener ya resumió un recorrido
     # antes de este relleno, su litros_ecuacion debe recalcularse con las filas nuevas.
+    # En orden de llegada (recorridos_pendientes ordena por la última fila): el factor del
+    # modelo de cada recorrido sale de los recorridos anteriores ya cerrados.
     pendientes = db.recorridos_pendientes(todos=True)
+    con_modelo = 0
     for pendiente in pendientes:
-        db.actualizar_recorrido(pendiente["recorrido_id"], cerrar=pendiente["cerrar"])
+        resumen = db.actualizar_recorrido(pendiente["recorrido_id"], cerrar=pendiente["cerrar"])
+        if resumen and resumen.get("modelo"):
+            con_modelo += 1
+            print(f"[relleno] {pendiente['recorrido_id']}: {resumen['modelo']}, "
+                  f"{resumen['litros_modelo']:.3f} L (factor {resumen['factor_modelo']:.3f}), "
+                  f"PID {resumen['litros_pid'] or 0:.3f} L")
     cerrados = sum(1 for p in pendientes if p["cerrar"])
-    print(f"[relleno] {len(pendientes)} recorrido(s) actualizados, {cerrados} cerrados")
+    print(f"[relleno] {len(pendientes)} recorrido(s) actualizados, {cerrados} cerrados, "
+          f"{con_modelo} con modelo de ruta")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Herramientas de la tabla recorridos")
     parser.add_argument("--rellenar", action="store_true",
-                        help="calcula fuel_lph_ecuacion y crea o actualiza todos los recorridos")
+                        help="calcula fuel_lph_ecuacion y crea o actualiza todos los recorridos (con el modelo)")
     argumentos = parser.parse_args()
     if argumentos.rellenar:
         rellenar()
