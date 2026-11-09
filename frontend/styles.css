@@ -58,9 +58,8 @@ html, body {
 
 #btnCentrar {
     position: absolute;
-    top: 50%;
-    right: 12px;
-    transform: translateY(-50%);
+    bottom: 156px;       /* encima de #panelInfo (bottom 12 px, unos 136 px de alto) */
+    left: 12px;
     z-index: 1000;
     background-color: rgba(18, 18, 18, 0.9);
     border: 1px solid #2A2A2A;
@@ -1129,8 +1128,7 @@ html, body {
     font-family: monospace;
 }
 
-#btnMinimizarKia:hover,
-#btnCentrarKia:hover {
+#btnMinimizarKia:hover {
     border-color: #dc0303;
 }
 
@@ -1151,18 +1149,6 @@ html, body {
     padding-top: 6px;
 }
 
-#btnCentrarKia {
-    margin-top: 8px;
-    width: 100%;
-    background-color: #1a1a1a;
-    border: 1px solid #2A2A2A;
-    border-radius: 4px;
-    color: #ffffff;
-    padding: 6px;
-    cursor: pointer;
-    font-family: monospace;
-    font-size: 11px;
-}
 
 .iconoKia {
     width: 30px;
@@ -1345,4 +1331,48 @@ body:not(.pestanaKiaActiva) #reproductorKia.flotante {
 /* El slider del Kia puede encogerse para que la hora final (HH:MM:SS) no se corte en el panel */
 #sliderKia {
     min-width: 0;
+}
+
+/* Seguimiento del Kia: mismo aspecto que #btnCentrar, encima de la tarjeta del Kia */
+#btnSeguirKia {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: 0;
+    background-color: rgba(18, 18, 18, 0.9);
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    color: #ffffff;
+    width: 42px;
+    height: 42px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#btnSeguirKia:hover {
+    border-color: #dc0303;
+}
+
+#btnSeguirKia.activo {
+    border-color: #dc0303;
+    background-color: rgba(220, 3, 3, 0.2);
+    color: #dc0303;
+    box-shadow: 0 0 10px rgba(220, 3, 3, 0.35);
+}
+
+/* Sin posición GNSS del Kia: aviso breve en el botón */
+#btnSeguirKia.sinPosicion {
+    border-color: #e5a50a;
+    color: #e5a50a;
+}
+
+@media (max-width: 600px) {
+    /* La tarjeta del Kia está arriba: el botón va a su izquierda para no tapar "Históricos" */
+    #btnSeguirKia {
+        bottom: auto;
+        top: 0;
+        right: calc(100% + 8px);
+    }
 }

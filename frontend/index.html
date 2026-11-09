@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="" />
-    <link rel="stylesheet" href="styles.css?v=32">
+    <link rel="stylesheet" href="styles.css?v=33">
     <script src="config.js"></script>
     <script>
         if (typeof APP_CONFIG === 'undefined') {
@@ -35,6 +35,17 @@
 
     <!-- KIA EN VIVO (P3-S3): consumo por ecuación y PID del recorrido en curso -->
     <div id="panelKia">
+        <!-- Seguimiento del Kia: mira con un carro en el centro, encima de la tarjeta -->
+        <button id="btnSeguirKia" type="button" title="Seguir al Kia K3: activar modo seguimiento" aria-label="Seguir al Kia K3">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M12 1.5V4M12 20V22.5M1.5 12H4M20 12H22.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M8.2 12.6L9.1 10.2C9.25 9.8 9.6 9.6 10 9.6H14C14.4 9.6 14.75 9.8 14.9 10.2L15.8 12.6" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+                <rect x="7.4" y="12.4" width="9.2" height="2.8" rx="0.8" fill="currentColor"/>
+                <circle cx="9.3" cy="15.6" r="0.9" fill="currentColor"/>
+                <circle cx="14.7" cy="15.6" r="0.9" fill="currentColor"/>
+            </svg>
+        </button>
         <div class="cabeceraKia">
             <span class="tituloKia">KIA K3 <span class="puntoVivo"></span> <span id="kiaEstado">--</span></span>
             <button id="btnMinimizarKia" type="button" title="Minimizar panel del Kia">–</button>
@@ -47,18 +58,16 @@
             <div class="filaInfo"><span class="etiquetaInfo">RECORRIDO:</span><span id="kiaRecorrido">--</span></div>
             <div class="filaInfo"><span class="etiquetaInfo">PID:</span><span id="kiaLitrosPid">--</span></div>
             <div class="filaInfo"><span class="etiquetaInfo">ECUACIÓN:</span><span id="kiaLitrosEcuacion">--</span></div>
-            <button id="btnCentrarKia" type="button">Centrar Kia</button>
         </div>
     </div>
 
-    <button id="btnCentrar" title="Activar modo seguimiento">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="3" fill="currentColor"/>
-            <path d="M12 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <path d="M12 19V22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <path d="M2 12H5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <path d="M19 12H22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.5"/>
+    <!-- Seguimiento del celular (app): mira con un celular en el centro. Encima de #panelInfo -->
+    <button id="btnCentrar" title="Seguir al celular (app): activar modo seguimiento" aria-label="Seguir al celular (app)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M12 1.5V4M12 20V22.5M1.5 12H4M20 12H22.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="9.3" y="7.3" width="5.4" height="9.4" rx="1.1" stroke="currentColor" stroke-width="1.4"/>
+            <path d="M11.2 15.1H12.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
         </svg>
     </button>
     <button id="btnHistoricos" title="Ver histórico de recorrido">
@@ -289,6 +298,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
-    <script type="module" src="js/main.js?v=36"></script>
+    <script type="module" src="js/main.js?v=37"></script>
 </body>
 </html>

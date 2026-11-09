@@ -317,8 +317,8 @@ export async function initMap() {
             // Si tracking está on: "Desactivar modo seguimiento"
             // Si tracking está off: "Activar modo seguimiento"
             btnCentrar.title = estado.modoTracking 
-                ? 'Desactivar modo seguimiento' 
-                : 'Activar modo seguimiento';
+                ? 'Seguir al celular (app): desactivar modo seguimiento' 
+                : 'Seguir al celular (app): activar modo seguimiento';
             
             // Si el tracking se acaba de activar:
             if (estado.modoTracking && estado.marcador && estado.marcador.getLatLng()) {

@@ -53,6 +53,7 @@ export const estado = {
     kiaRecorridoTraza: null,     // recorrido_id de la traza dibujada
     kiaUltimoPuntoTraza: null,   // último punto agregado a la traza ({lat, lng, hora, lph})
     kiaPanelMinimizado: false,
+    kiaTracking: false,          // modo seguimiento del Kia (#btnSeguirKia)
 
     // Kia en el histórico (P3-S3)
     pestanaHistoricos: 'app',    // 'app' o 'kia'

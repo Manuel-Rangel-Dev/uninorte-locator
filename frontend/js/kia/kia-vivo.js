@@ -181,9 +181,57 @@ async function actualizarKia() {
             estado.kiaMarcador.setIcon(crearIconoKia(datos.en_vivo));
         }
         estado.kiaMarcador.setPopupContent(textoPopupKia(datos));
+        // Modo seguimiento del Kia: el mapa se mueve con él (como #btnCentrar con el celular)
+        if (estado.kiaTracking && !document.body.classList.contains('modoHistorico')) {
+            estado.mapa.setView(posicion, estado.mapa.getZoom());
+        }
     }
     await actualizarTraza(datos);
     sincronizarVisibilidad();
+}
+
+// -----------------------------------------------------------------------------
+// Botón de seguimiento del Kia (#btnSeguirKia). Es exclusivo con el del celular
+// (#btnCentrar, mapa-vivo.js): activar uno apaga el otro, si no el mapa saltaría
+// entre los dos vehículos.
+// -----------------------------------------------------------------------------
+function marcarBotonSeguirKia(activo) {
+    const boton = document.getElementById('btnSeguirKia');
+    if (!boton) return;
+    boton.classList.toggle('activo', activo);
+    boton.title = activo ? 'Seguir al Kia K3: desactivar modo seguimiento'
+        : 'Seguir al Kia K3: activar modo seguimiento';
+}
+
+function apagarSeguimientoCelular() {
+    if (!estado.modoTracking) return;
+    estado.modoTracking = false;
+    const boton = document.getElementById('btnCentrar');
+    if (boton) {
+        boton.classList.remove('activo');
+        boton.title = 'Seguir al celular (app): activar modo seguimiento';
+    }
+}
+
+function alternarSeguimientoKia() {
+    const boton = document.getElementById('btnSeguirKia');
+    if (!estado.kiaTracking && !estado.kiaMarcador) {
+        // Sin ninguna posición GNSS del Kia no hay a dónde ir: aviso breve en el botón
+        boton.classList.add('sinPosicion');
+        boton.title = 'Sin posición GNSS del Kia';
+        setTimeout(() => {
+            boton.classList.remove('sinPosicion');
+            marcarBotonSeguirKia(estado.kiaTracking);
+        }, 2500);
+        return;
+    }
+    estado.kiaTracking = !estado.kiaTracking;
+    marcarBotonSeguirKia(estado.kiaTracking);
+    if (estado.kiaTracking) {
+        apagarSeguimientoCelular();
+        // Centra en la última posición conocida (aunque sea de un recorrido anterior)
+        estado.mapa.setView(estado.kiaMarcador.getLatLng(), ZOOM_CENTRADO);
+    }
 }
 
 async function cicloKia() {
@@ -199,19 +247,15 @@ export function initKiaVivo() {
     const botonMinimizar = document.getElementById('btnMinimizarKia');
     if (botonMinimizar) botonMinimizar.addEventListener('click', alternarPanel);
 
-    const botonCentrar = document.getElementById('btnCentrarKia');
-    if (botonCentrar) {
-        // Centra en la última posición conocida del Kia (aunque sea de un recorrido anterior).
-        botonCentrar.addEventListener('click', () => {
-            if (estado.kiaMarcador) {
-                estado.mapa.setView(estado.kiaMarcador.getLatLng(), ZOOM_CENTRADO);
-                estado.kiaMarcador.openPopup();
-                return;
-            }
-            botonCentrar.textContent = 'Sin posición GNSS del Kia';
-            setTimeout(() => { botonCentrar.textContent = 'Centrar Kia'; }, 2500);
-        });
-    }
+    document.getElementById('btnSeguirKia')?.addEventListener('click', alternarSeguimientoKia);
+    // Si se activa el seguimiento del celular (su listener en mapa-vivo.js corre antes que
+    // este), se apaga el del Kia.
+    document.getElementById('btnCentrar')?.addEventListener('click', () => {
+        if (estado.modoTracking && estado.kiaTracking) {
+            estado.kiaTracking = false;
+            marcarBotonSeguirKia(false);
+        }
+    });
 
     // Al entrar o salir del modo histórico (clase en body) se ocultan o muestran las capas.
     new MutationObserver(sincronizarVisibilidad).observe(document.body, {
