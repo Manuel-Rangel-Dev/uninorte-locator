@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="" />
-    <link rel="stylesheet" href="styles.css?v=11">
+    <link rel="stylesheet" href="styles.css?v=33">
     <script src="config.js"></script>
     <script>
         if (typeof APP_CONFIG === 'undefined') {
@@ -33,14 +33,41 @@
         <div class="filaInfo"><span class="etiquetaInfo">HOUR:</span><span id="valorHora">--</span></div>
     </div>
 
-    <button id="btnCentrar" title="Activar modo seguimiento">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="3" fill="currentColor"/>
-            <path d="M12 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <path d="M12 19V22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <path d="M2 12H5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <path d="M19 12H22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.5"/>
+    <!-- KIA EN VIVO (P3-S3): consumo por ecuación y PID del recorrido en curso -->
+    <div id="panelKia">
+        <!-- Seguimiento del Kia: mira con un carro en el centro, encima de la tarjeta -->
+        <button id="btnSeguirKia" type="button" title="Seguir al Kia K3: activar modo seguimiento" aria-label="Seguir al Kia K3">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M12 1.5V4M12 20V22.5M1.5 12H4M20 12H22.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M8.2 12.6L9.1 10.2C9.25 9.8 9.6 9.6 10 9.6H14C14.4 9.6 14.75 9.8 14.9 10.2L15.8 12.6" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+                <rect x="7.4" y="12.4" width="9.2" height="2.8" rx="0.8" fill="currentColor"/>
+                <circle cx="9.3" cy="15.6" r="0.9" fill="currentColor"/>
+                <circle cx="14.7" cy="15.6" r="0.9" fill="currentColor"/>
+            </svg>
+        </button>
+        <div class="cabeceraKia">
+            <span class="tituloKia">KIA K3 <span class="puntoVivo"></span> <span id="kiaEstado">--</span></span>
+            <button id="btnMinimizarKia" type="button" title="Minimizar panel del Kia">–</button>
+        </div>
+        <div class="cuerpoKia">
+            <div class="filaInfo"><span class="etiquetaInfo">VEL:</span><span id="kiaVelocidad">--</span></div>
+            <div class="filaInfo"><span class="etiquetaInfo">L/h ECUACIÓN:</span><span id="kiaLphEcuacion">--</span></div>
+            <div class="filaInfo"><span class="etiquetaInfo">L/h PID:</span><span id="kiaLphPid">--</span></div>
+            <div class="subtituloKia" id="kiaTituloRecorrido">RECORRIDO EN CURSO</div>
+            <div class="filaInfo"><span class="etiquetaInfo">RECORRIDO:</span><span id="kiaRecorrido">--</span></div>
+            <div class="filaInfo"><span class="etiquetaInfo">PID:</span><span id="kiaLitrosPid">--</span></div>
+            <div class="filaInfo"><span class="etiquetaInfo">ECUACIÓN:</span><span id="kiaLitrosEcuacion">--</span></div>
+        </div>
+    </div>
+
+    <!-- Seguimiento del celular (app): mira con un celular en el centro. Encima de #panelInfo -->
+    <button id="btnCentrar" title="Seguir al celular (app): activar modo seguimiento" aria-label="Seguir al celular (app)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M12 1.5V4M12 20V22.5M1.5 12H4M20 12H22.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="9.3" y="7.3" width="5.4" height="9.4" rx="1.1" stroke="currentColor" stroke-width="1.4"/>
+            <path d="M11.2 15.1H12.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
         </svg>
     </button>
     <button id="btnHistoricos" title="Ver histórico de recorrido">
@@ -63,18 +90,29 @@
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
-            <input type="text" id="inputBusquedaLugar" placeholder="Buscar dirección, ciudad o lugar..." autocomplete="off">
+            <input type="text" id="inputBusquedaLugar" placeholder="Buscar dirección, ciudad o lugar... (Enter)" autocomplete="off">
             <button type="button" id="btnLimpiarBusquedaLugar" class="btnLimpiarBusqueda" title="Borrar texto" style="display: none;">✕</button>
             <div id="spinnerBusquedaLugar" class="spinnerBusqueda" style="display: none;"></div>
         </div>
         <div id="sugerenciasBusquedaLugar" class="sugerenciasBusqueda" style="display: none;"></div>
     </div>
 
+    <button id="btnRestaurarPanel" type="button" aria-label="Mostrar panel de históricos">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M7 10L12 5L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M7 14L12 19L17 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Mostrar panel</span>
+    </button>
+
     <div id="panelHistoricos">
-        <!-- Selector de Tipo de Filtro (Fecha / Zona) -->
-        <div class="selectorTipoFiltro">
-            <button id="btnFiltroFecha" class="tabTipoFiltro activo" type="button">Filtrar por fecha</button>
-            <button id="btnFiltroZona" class="tabTipoFiltro" type="button">Filtrar por zona</button>
+        <div class="cabeceraPanelHistoricos">
+            <span class="tituloPanelHistoricos">HISTÓRICOS</span>
+            <button id="btnMinimizarPanel" type="button" aria-label="Minimizar históricos" title="Minimizar históricos">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </button>
         </div>
 
         <!-- SECCIÓN 1: FILTRAR POR FECHA (Mantiene exactamente lo existente) -->
@@ -136,16 +174,20 @@
             </div>
 
             <div id="estadoHistorico"></div>
-
-            <div id="selectorRecorridos" style="display: none;">
-                <div class="tituloRecorridos">
-                    RECORRIDOS ENCONTRADOS
-                </div>
-                <div id="listaRecorridos"></div>
-            </div>
         </div>
 
-        <!-- SECCIÓN 2: FILTRAR POR ZONA (Basado en img4.png) -->
+        <!-- PESTAÑAS (P3-S3): aparecen después de buscar un rango en el calendario.
+             App = históricos de siempre; Kia K3 = consumo medido frente a estimado en ese rango -->
+        <div class="pestanasHistoricos">
+            <button type="button" id="tabHistApp" class="tabHistoricos activo">App</button>
+            <button type="button" id="tabHistKia" class="tabHistoricos">Kia K3</button>
+        </div>
+
+        <button id="btnFiltrarPorZona" class="btnFiltrarPorZona" type="button" style="display: none;">
+            Filtrar estas rutas por zona
+        </button>
+
+        <!-- SECCIÓN 2: FILTRAR POR ZONA -->
         <div id="vistaFiltroZona" style="display: none;">
             <!-- Sub-selector de Modo de Zona (En Mapa / Buscar Lugar) -->
             <div class="selectorSubmodoZona">
@@ -169,16 +211,15 @@
                 <button id="btnLimpiarZona" class="btnSecundarioZona" type="button">Limpiar</button>
             </div>
 
-            <button id="btnBuscarZona" class="btnBuscarZona" type="button">Buscar en esta zona</button>
-
             <div id="estadoZona" class="estadoZona"></div>
 
-            <div id="contenedorRutasZona" style="display: none;">
-                <div class="tituloRecorridos">
-                    RUTAS POR EL ÁREA
-                </div>
-                <div id="listaRutasZona"></div>
+        </div>
+
+        <div id="selectorRecorridos" style="display: none;">
+            <div class="tituloRecorridos">
+                RECORRIDOS ENCONTRADOS
             </div>
+            <div id="listaRecorridos"></div>
         </div>
 
         <!-- REPRODUCTOR COMPARTIDO (Se muestra al elegir un recorrido en fecha o zona) -->
@@ -218,12 +259,45 @@
                 </select>
             </div>
         </div>
+
+        <!-- SECCIÓN KIA (P3-S3): métricas del modelo y recorridos del Kia -->
+        <div id="vistaKia">
+            <div id="metricasKia" class="metricasKia"></div>
+            <div class="tituloRecorridos">RECORRIDOS DEL KIA</div>
+            <div id="estadoKia" class="estadoKia"></div>
+            <div id="listaKia"></div>
+            <button id="btnTodosKia" class="btnAlternarListaRutas" type="button" style="display: none;">Ver todos</button>
+
+            <!-- REPRODUCTOR DEL KIA: se mueve debajo de la tarjeta elegida, como el de la app -->
+            <div id="reproductorKia" style="display: none;">
+                <div class="infoReproduccion">
+                    <div id="infoKiaReproduccion">Kia --</div>
+                    <div id="fechaHoraKiaReproduccion">--/--/---- --:--:--</div>
+                    <div id="datosKiaReproduccion" class="datosKiaReproduccion">--</div>
+                </div>
+                <div class="contenedorSlider">
+                    <span id="tiempoInicioKia">--:--</span>
+                    <input type="range" id="sliderKia" min="0" max="0" value="0" step="1">
+                    <span id="tiempoFinKia">--:--</span>
+                </div>
+                <div class="controlesReproduccion">
+                    <button id="btnPlayKia" type="button">▶</button>
+                    <button id="btnReiniciarKia" type="button">↺</button>
+                    <select id="velocidadKia">
+                        <option value="1000">1x</option>
+                        <option value="500">2x</option>
+                        <option value="250">4x</option>
+                        <option value="100">10x</option>
+                    </select>
+                </div>
+            </div>
+        </div>
     </div>
     <div id="mapa"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
-    <script type="module" src="js/main.js?v=11"></script>
+    <script type="module" src="js/main.js?v=37"></script>
 </body>
 </html>

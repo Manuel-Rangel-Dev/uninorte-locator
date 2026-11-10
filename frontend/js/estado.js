@@ -11,8 +11,13 @@ export const estado = {
     ultimaPosicionRecorrido: null,
     mapaCentradoInicial: false,
     modoTracking: false,
+    ultimaPosicionValida: null,
+    instanteUltimaPosicionValida: 0,
+    candidatoSalto: null,
 
     // Históricos: recorridos y reproductor
+    modoHistoricoActivo: false,
+    panelMinimizado: false,
     hayRecorridoHistorico: false,
     lineasHistoricas: [],
     marcadoresHistoricos: [],
@@ -30,14 +35,30 @@ export const estado = {
     fechaHasta: new Date(),
     modoSeleccion: 'desde',
 
-    // Históricos: caché y filtro por zona
-    cachePuntosHistoricos: null,
-    tipoFiltroHistorico: 'fecha',
+    // Históricos: filtro por zona
+    recorridosBase: [],
+    mostrarTodasLasRutas: false,
+    zonaActiva: false,
     submodoFiltroZona: 'mapa',
     centroZona: null,
     radioZona: 300,
     circuloZona: null,
     marcadorCentroZona: null,
     modoSeleccionCentro: false,
-    rutasZona: []
+    arrastrandoZona: false,
+
+    // Kia en vivo (P3-S3)
+    kiaMarcador: null,
+    kiaTraza: null,              // L.featureGroup con la traza del recorrido en curso
+    kiaRecorridoTraza: null,     // recorrido_id de la traza dibujada
+    kiaUltimoPuntoTraza: null,   // último punto agregado a la traza ({lat, lng, hora, lph})
+    kiaPanelMinimizado: false,
+    kiaTracking: false,          // modo seguimiento del Kia (#btnSeguirKia)
+
+    // Kia en el histórico (P3-S3)
+    pestanaHistoricos: 'app',    // 'app' o 'kia'
+    kiaMostrarTodos: false,      // false: solo los recorridos con estimado del modelo
+    kiaRecorridos: [],
+    kiaSeleccionado: null,       // recorrido_id dibujado en el mapa
+    kiaCapasHistorico: null      // L.featureGroup con traza, puntos e inicio/fin
 };
