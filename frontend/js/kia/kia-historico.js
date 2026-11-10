@@ -369,7 +369,7 @@ function renderLista() {
         if (estado.kiaSeleccionado === r.recorrido_id) elemento.classList.add('enReproduccion');
         elemento.innerHTML = `
             <div class="numeroRecorrido">
-                Kia ${numero}${r.con_traza ? '' : ' <span class="etiquetaSinGnss">sin GNSS</span>'}
+                Kia ${numero}${r.emulado ? ' <span class="etiquetaEmulado">Emulado</span>' : ''}${r.con_traza ? '' : ' <span class="etiquetaSinGnss">sin GNSS</span>'}
             </div>
             <div class="datosRecorrido">
                 <div>${escaparHtml((r.inicio || '--').slice(0, 16))} · ${escaparHtml(formatearDuracion(r.duracion_s))}

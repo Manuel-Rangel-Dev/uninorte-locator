@@ -10,6 +10,7 @@ exportada a JSON con 2_modelo_ruta/export_ec2_model.py:
 con v = velocidad media (distancia / duración total, con paradas) y d = distancia (km).
 - "slope/linear_physics" (principal) usa la subida y la bajada del terreno en m/km,
   calculadas con el SRTM sobre la traza GNSS. Lleva el factor de corrección del Kia.
+  Los recorridos emulados usan explícitamente factor 1.0: no son datos del Kia.
 - "base/linear_physics" (respaldo) no usa pendiente ni factor. Se usa cuando el
   recorrido no tiene traza GNSS suficiente o sale del recorte SRTM.
 
@@ -19,7 +20,8 @@ con una media móvil de 5 muestras (150 m) y se suman las subidas y las bajadas.
 
 Archivos (por defecto en backend/modelo/, se pueden cambiar por variables de entorno):
     MODELO_RUTA_JSON   modelo_ruta.json
-    SRTM_RECORTE       srtm_barranquilla.hgt (y su .json con los metadatos al lado)
+    SRTM_RECORTE       opcional: limita la carga a un único .hgt y su .json
+Por defecto se descubren todos los srtm_*.hgt del directorio modelo/ mediante mmap.
 Si falta el modelo, estimar() devuelve None. Si falta el SRTM, se usa el respaldo. Cada
 problema se registra en el log una sola vez.
 """
@@ -27,7 +29,8 @@ problema se registra en el log una sola vez.
 import json
 import math
 import os
-from array import array
+import mmap
+import struct
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -73,7 +76,7 @@ def cargar_modelo() -> dict | None:
 
 
 class _Srtm:
-    """Recorte del SRTM en memoria (int16, fila 0 = borde norte)."""
+    """Recorte SRTM mapeado en modo lectura (int16 big-endian, sin copia en RAM)."""
 
     def __init__(self, ruta: Path):
         meta = json.loads(ruta.with_suffix(".json").read_text(encoding="utf-8"))
@@ -82,26 +85,31 @@ class _Srtm:
         self.por_grado = meta["muestras_por_grado"]
         self.filas = meta["filas"]
         self.columnas = meta["columnas"]
-        self.datos = array("h")
         with open(ruta, "rb") as archivo:
-            self.datos.frombytes(archivo.read())
-        if len(self.datos) != self.filas * self.columnas:
-            raise ValueError(f"tamaño inesperado: {len(self.datos)} muestras")
-        if array("h", [1]).tobytes() != b"\x00\x01":  # el archivo es big-endian
-            self.datos.byteswap()
+            if os.fstat(archivo.fileno()).st_size != self.filas * self.columnas * 2:
+                raise ValueError("tamaño inesperado del recorte")
+            self.datos = mmap.mmap(archivo.fileno(), 0, access=mmap.ACCESS_READ)
+
+    def contiene(self, lat: float, lon: float) -> bool:
+        return (self.lat_norte - (self.filas - 1) / self.por_grado <= lat <= self.lat_norte
+                and self.lon_oeste <= lon <= self.lon_oeste + (self.columnas - 1) / self.por_grado)
+
+    def _muestra(self, indice: int) -> int:
+        return struct.unpack_from(">h", self.datos, indice * 2)[0]
 
     def altitud(self, lat: float, lon: float) -> float | None:
         """Altitud bilineal en metros. None fuera del recorte o en un hueco del SRTM."""
-        fila = (self.lat_norte - lat) * self.por_grado
-        columna = (lon - self.lon_oeste) * self.por_grado
-        if not (0 <= fila <= self.filas - 1 and 0 <= columna <= self.columnas - 1):
+        if not self.contiene(lat, lon):
             return None
+        # Los bordes pueden desviarse unas ulp al convertir grados a índices.
+        fila = min(max((self.lat_norte - lat) * self.por_grado, 0), self.filas - 1)
+        columna = min(max((lon - self.lon_oeste) * self.por_grado, 0), self.columnas - 1)
         f0 = min(int(fila), self.filas - 2)
         c0 = min(int(columna), self.columnas - 2)
         df, dc = fila - f0, columna - c0
         i = f0 * self.columnas + c0
-        esquinas = (self.datos[i], self.datos[i + self.columnas],
-                    self.datos[i + 1], self.datos[i + self.columnas + 1])
+        esquinas = (self._muestra(i), self._muestra(i + self.columnas),
+                    self._muestra(i + 1), self._muestra(i + self.columnas + 1))
         if min(esquinas) < VACIO_SRTM:
             return None
         z00, z10, z01, z11 = esquinas
@@ -109,14 +117,33 @@ class _Srtm:
                 + z01 * (1 - df) * dc + z11 * df * dc)
 
 
-def cargar_srtm() -> _Srtm | None:
+class _RecortesSrtm:
+    """Selecciona por cobertura; los archivos mmap solo paginan los datos consultados."""
+
+    def __init__(self, recortes):
+        self.recortes = recortes
+
+    def seleccionar(self, lat, lon):
+        return next((r for r in self.recortes if r.contiene(lat, lon)), None)
+
+    def altitud(self, lat, lon):
+        recorte = self.seleccionar(lat, lon)
+        return recorte.altitud(lat, lon) if recorte else None
+
+
+def cargar_srtm() -> _RecortesSrtm:
     global _srtm
     if _srtm is None:
-        try:
-            _srtm = _Srtm(RUTA_SRTM)
-        except (OSError, ValueError, KeyError) as error:
-            _avisar("srtm", f"sin SRTM ({RUTA_SRTM}): {error}. Se usa el modelo sin pendiente")
-            return None
+        rutas = [RUTA_SRTM] if os.environ.get("SRTM_RECORTE") else sorted(CARPETA_MODELO.glob("srtm_*.hgt"))
+        recortes = []
+        if not rutas:
+            _avisar("srtm", "sin recortes SRTM. Se usa el modelo sin pendiente")
+        for ruta in rutas:
+            try:
+                recortes.append(_Srtm(ruta))
+            except (OSError, ValueError, KeyError) as error:
+                _avisar(str(ruta), f"sin SRTM ({ruta}): {error}. Se usa el modelo sin pendiente")
+        _srtm = _RecortesSrtm(recortes)
     return _srtm
 
 
@@ -210,10 +237,19 @@ def pendiente_por_km(puntos: list[tuple[float, float]], distancia_km: float) -> 
             "bajada_m_km": traza["bajada_m"] / distancia_km}
 
 
+def fix_util(fila: dict, min_satelites: int, max_precision_m: float = 20) -> bool:
+    """Con sats manda su umbral; sin sats se usa acc, o se acepta el dato antiguo."""
+    sats, acc = fila.get("sats"), fila.get("acc")
+    if sats is not None:
+        return sats >= min_satelites
+    return acc is None or acc <= max_precision_m
+
+
 def traza_obd(filas: list[dict]) -> list[tuple[float, float]]:
     """Puntos GNSS útiles de un recorrido OBD (como route_model.kia_slope): vacío si
     menos de min_fraccion_gnss de las filas con velocidad tiene fix, y sin los puntos
-    con menos de min_satelites."""
+    con satélites insuficientes o precisión horizontal peor que max_precision_m.
+    Sin sats ni acc se aceptan las filas antiguas del ESP32."""
     modelo = cargar_modelo()
     if modelo is None:
         return []
@@ -222,7 +258,7 @@ def traza_obd(filas: list[dict]) -> list[tuple[float, float]]:
     if not con_vel or len(con_fix) / len(con_vel) < modelo["min_fraccion_gnss"]:
         return []
     return [(f["lat"], f["lng"]) for f in con_fix
-            if f.get("sats") is None or f["sats"] >= modelo["min_satelites"]]
+            if fix_util(f, modelo["min_satelites"], modelo.get("max_precision_m", 20))]
 
 
 # ---------------------------------------------------------------------------

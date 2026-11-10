@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 from recorridos import (AFR_GASOLINA, CILINDRADA_KIA_L, DENSIDAD_AIRE_G_L, DENSIDAD_COMBUSTIBLE_G_L,
                         MINUTOS_CIERRE, NOMBRE_CARRO_2, NOMBRE_KIA, PRECIO_INICIAL_COP_GALON,
                         PRECIO_INICIAL_FUENTE, VID_CARRO_2, VID_KIA, constante_k, costo_en_pesos,
-                        fuel_lph_ecuacion, resumir, velocidad_media_kmh)
+                        es_emulado, fuel_lph_ecuacion, resumir, velocidad_media_kmh)
 import modelo_ruta
 from tiempo import ahora_colombia
 from validacion import NOMBRES_OBD
@@ -245,7 +245,7 @@ def obtener_registros_en_rango(desde, hasta, limite: int = 200_000,
 
 # Columnas de la tabla OBD en el orden de log_csv.py, más los datos del GNSS.
 # Las claves del dict validado se mapean a las columnas donde el nombre cambia.
-_COLUMNAS_GNSS = (("lat", "lat"), ("lng", "lng"), ("alt", "alt"), ("gnss_kmh", "gkmh"), ("sats", "sat"))
+_COLUMNAS_GNSS = (("lat", "lat"), ("lng", "lng"), ("alt", "alt"), ("gnss_kmh", "gkmh"), ("sats", "sat"), ("acc", "acc"))
 
 
 def init_db_obd() -> None:
@@ -283,6 +283,7 @@ def init_db_obd() -> None:
                     unico=sql.Identifier(f"uq_{DB_TABLE_OBD}_rid_seq"),
                 )
             )
+            cur.execute(sql.SQL("ALTER TABLE {tabla} ADD COLUMN IF NOT EXISTS acc REAL").format(tabla=tabla))
             cur.execute(
                 sql.SQL("CREATE INDEX IF NOT EXISTS {indice} ON {tabla} (recorrido_id, t_ms)").format(
                     indice=sql.Identifier(f"idx_{DB_TABLE_OBD}_rid_tms"),
@@ -533,7 +534,7 @@ def _crear_vista_factor(cur) -> None:
                SUM(litros_pid) / NULLIF(SUM(litros_modelo), 0) AS factor,
                AVG((litros_modelo - litros_pid) / NULLIF(litros_pid, 0)) * 100 AS error_medio_pct
         FROM {recorridos}
-        WHERE cerrado AND litros_pid IS NOT NULL AND litros_modelo IS NOT NULL
+        WHERE NOT emulado AND cerrado AND litros_pid IS NOT NULL AND litros_modelo IS NOT NULL
         GROUP BY vid
         """
     ).format(vista=sql.Identifier(VISTA_FACTOR_CORRECCION),
@@ -542,6 +543,18 @@ def _crear_vista_factor(cur) -> None:
 
 def _ampliar_tabla_recorridos(cur) -> None:
     """Columnas del modelo de ruta en recorridos y en predicciones_rutas (P3-S3)."""
+    cur.execute(sql.SQL("ALTER TABLE {tabla} ADD COLUMN IF NOT EXISTS emulado BOOLEAN NOT NULL DEFAULT FALSE").format(
+        tabla=sql.Identifier(DB_TABLE_RECORRIDOS)
+    ))
+    # Clasifica también los recorridos previos al despliegue, usando la regla única.
+    cur.execute(sql.SQL("SELECT recorrido_id, emulado FROM {tabla}").format(tabla=sql.Identifier(DB_TABLE_RECORRIDOS)))
+    for recorrido_id, emulado_anterior in cur.fetchall():
+        emulado = es_emulado(recorrido_id or "")
+        if emulado_anterior == emulado:
+            continue
+        cur.execute(sql.SQL("UPDATE {tabla} SET emulado = %s WHERE recorrido_id = %s AND emulado IS DISTINCT FROM %s").format(
+            tabla=sql.Identifier(DB_TABLE_RECORRIDOS)
+        ), (emulado, recorrido_id, emulado))
     for tabla, columnas in ((DB_TABLE_RECORRIDOS, COLUMNAS_MODELO_RECORRIDOS),
                             (DB_TABLE_PREDICCIONES_RUTAS, COLUMNAS_MODELO_RUTAS)):
         for columna, tipo in columnas:
@@ -565,7 +578,7 @@ def _crear_vista_factor_modelo(cur) -> None:
                    AS error_sin_factor_pct,
                AVG((litros_modelo - litros_pid) / NULLIF(litros_pid, 0)) * 100 AS error_con_factor_pct
         FROM {recorridos}
-        WHERE cerrado AND litros_pid IS NOT NULL AND litros_modelo_sin_factor IS NOT NULL
+        WHERE NOT emulado AND cerrado AND litros_pid IS NOT NULL AND litros_modelo_sin_factor IS NOT NULL
         GROUP BY vid, modelo
         """
     ).format(vista=sql.Identifier(VISTA_FACTOR_MODELO),
@@ -665,14 +678,14 @@ def _precio_vigente(cur, instante: datetime) -> tuple | None:
 
 def _factor_previo(cur, modelo: str, inicio: datetime) -> float | None:
     """Factor del Kia para un recorrido que empieza en inicio: SUM(litros_pid) /
-    SUM(litros_modelo_sin_factor) de los recorridos cerrados anteriores del mismo
+    SUM(litros_modelo_sin_factor) de los recorridos reales cerrados anteriores del mismo
     modelo, igual que el MAPE con factor de route_model.py. Así el factor se recalcula
     solo con cada recorrido nuevo. Con menos de min_recorridos_factor devuelve None
     (modelo_ruta.estimar usa entonces el factor del PC)."""
     cur.execute(
         sql.SQL(
             "SELECT COUNT(*), SUM(litros_pid), SUM(litros_modelo_sin_factor) FROM {tabla} "
-            "WHERE vid = %s AND modelo = %s AND cerrado AND inicio < %s "
+            "WHERE vid = %s AND modelo = %s AND NOT emulado AND cerrado AND inicio < %s "
             "AND litros_pid IS NOT NULL AND litros_modelo_sin_factor > 0"
         ).format(tabla=sql.Identifier(DB_TABLE_RECORRIDOS)),
         (VID_KIA, modelo, inicio),
@@ -689,8 +702,10 @@ def _columnas_modelo(cur, filas: list[dict], resumen: dict, cop_por_galon) -> di
     recorrido es muy corto para el modelo."""
     distancia_km, duracion_s = resumen["distancia_km"], resumen["duracion_s"]
     pendiente = modelo_ruta.pendiente_por_km(modelo_ruta.traza_obd(filas), distancia_km)
-    estimado = modelo_ruta.estimar(distancia_km, duracion_s, pendiente)
-    if estimado is not None and estimado["usa_factor"]:
+    # El factor pertenece al Kia: otros vehículos emulados siempre usan 1.0.
+    emulado = es_emulado(resumen["recorrido_id"])
+    estimado = modelo_ruta.estimar(distancia_km, duracion_s, pendiente, factor=1.0 if emulado else None)
+    if estimado is not None and estimado["usa_factor"] and not emulado:
         factor = _factor_previo(cur, estimado["modelo"], resumen["inicio"])
         if factor is not None:
             estimado = modelo_ruta.estimar(distancia_km, duracion_s, pendiente, factor=factor)
@@ -787,6 +802,7 @@ def recorridos_pendientes(minutos_cierre: int = MINUTOS_CIERRE, todos: bool = Fa
                     LEFT JOIN {recorridos} AS r ON r.recorrido_id = o.recorrido_id
                     WHERE %(todos)s
                        OR r.id IS NULL
+                       OR (r.emulado AND r.modelo IS NOT NULL AND r.factor_modelo IS DISTINCT FROM 1.0)
                        OR o.ultimo > r.actualizado_en
                        OR (NOT r.cerrado AND o.ultimo < %(limite)s)
                        OR (%(con_modelo)s AND (r.modelo_calculado_en IS NULL

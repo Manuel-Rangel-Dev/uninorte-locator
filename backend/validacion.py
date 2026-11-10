@@ -12,11 +12,12 @@ Hay dos tipos de datagrama:
   opcionales:   acc (precisión en metros), spd (velocidad en m/s), seq (contador),
                 vid (identificador del vehículo)
 
-2. Nodo OBD del Kia (ESP32-S3 + A7608SA), se reconoce por "tipo": "obd":
-  obligatorios: tipo ("obd"), rid (id del recorrido), seq (contador), t_ms (millis del ESP32)
+2. Nodo OBD (Android GPS-System; compatible con ESP32-S3 + A7608SA), se reconoce por "tipo": "obd":
+  obligatorios: tipo ("obd"), rid (id del recorrido), seq (contador), t_ms (milisegundos del nodo)
   opcionales:   tok (token compartido, obligatorio si el servidor define OBD_TOKEN),
-                utc ("YYYY-MM-DDTHH:MM:SS", hora UTC del GNSS),
+                utc ("YYYY-MM-DDTHH:MM:SS", hora UTC del celular o GNSS),
                 lat, lng, alt (m), gkmh (velocidad GNSS en km/h), sat (satélites),
+                acc (precisión horizontal, 0..10000 m; inválida -> None),
                 y los 15 PIDs con los mismos nombres de columnas de log_csv.py (CAMPOS_OBD).
   Un PID inválido o ausente se guarda como NULL, no descarta el paquete.
 """
@@ -187,7 +188,7 @@ def _token_coincide(recibido: str, esperado: str) -> bool:
 def _validar_obd(payload: dict, token_esperado: str | None) -> dict:
     """Valida un datagrama del nodo OBD. Devuelve un dict con: rid, seq, t_ms,
     ts (datetime naive hora Colombia, o None sin fix GNSS), lat, lng, alt,
-    gkmh, sat y los PIDs de NOMBRES_OBD (cualquiera puede ser None)."""
+    gkmh, sat, acc y los PIDs de NOMBRES_OBD (cualquiera puede ser None)."""
     if token_esperado:
         token = payload.get("tok")
         if not isinstance(token, str) or not _token_coincide(token, token_esperado):
@@ -227,6 +228,7 @@ def _validar_obd(payload: dict, token_esperado: str | None) -> dict:
         "alt": _opcional_float(payload.get("alt"), -500.0, 9_000.0),
         "gkmh": _opcional_float(payload.get("gkmh"), 0.0, 400.0),
         "sat": _opcional_int(payload.get("sat"), 0, 200),
+        "acc": _opcional_float(payload.get("acc"), 0.0, 10_000.0),
     }
     for nombre, minimo, maximo in CAMPOS_OBD:
         limpio[nombre] = _opcional_float(payload.get(nombre), minimo, maximo)

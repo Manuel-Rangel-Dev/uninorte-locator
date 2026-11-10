@@ -12,6 +12,7 @@
   "min_recorridos_factor": 3,
   "min_cobertura_traza": 0.5,
   "min_fraccion_gnss": 0.5,
+  "max_precision_m": 20,
   "min_satelites": 6,
   "modelos": {
     "slope/linear_physics": {
