@@ -17,7 +17,7 @@ import { estado } from './estado.js';
 // =============================================================================
 // FUNCIÓN: crearIconoVehiculo2
 // =============================================================================
-function crearIconoVehiculo2() {
+export function crearIconoVehiculo2() {
     return L.divIcon({
         className: '',
         html: `

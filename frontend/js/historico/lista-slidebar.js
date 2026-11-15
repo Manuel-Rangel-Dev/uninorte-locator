@@ -2,6 +2,7 @@
 // HISTÓRICOS: LISTA DE RECORRIDOS Y REPRODUCTOR
 // =============================================================================
 import { estado } from '../estado.js';
+import { crearIconoVehiculo2 } from '../mapa-vivo.js';
 import { calcularDistanciaRecorrido } from './segmentacion.js';
 import { formatearDistancia, obtenerTimestampPunto, escaparHtml } from '../utilidades.js';
 import { UMBRAL_HUECO_SEGUNDOS } from '../constantes.js';
@@ -532,7 +533,7 @@ export function seleccionarRecorrido(indice) {
     if (!estado.marcadorReproduccion) {
         estado.marcadorReproduccion = L.marker(
             [estado.recorridoSeleccionado[0].lat, estado.recorridoSeleccionado[0].lng],
-            { zIndexOffset: 1000 }
+            { icon: crearIconoVehiculo2(), zIndexOffset: 1000 }
         ).addTo(estado.mapa);
     } else {
         estado.marcadorReproduccion.setLatLng([
