@@ -290,10 +290,10 @@ export async function initMap() {
     // Crea un marcador (pin) en el mapa
     // L.marker(CENTRO_DEFAULT) = coloca un pin en Barranquilla inicialmente
     // .addTo(estado.mapa) = lo añade al mapa
-    // .bindPopup('Vehículo') = cuando hagas clic, muestra "Vehículo" en un popup
+    // .bindPopup('Vehículo 2') = cuando hagas clic, muestra "Vehículo 2" en un popup
     // Se guarda en estado.marcador para poder moverlo después
     estado.marcador = L.marker(CENTRO_DEFAULT).addTo(estado.mapa)
-        .bindPopup('Vehículo');
+        .bindPopup('Vehículo 2');
     
     // ─────────────────────────────────────────────────────────────────────
     // PARTE 3: Configurar el botón "Centrar"
@@ -317,8 +317,8 @@ export async function initMap() {
             // Si tracking está on: "Desactivar modo seguimiento"
             // Si tracking está off: "Activar modo seguimiento"
             btnCentrar.title = estado.modoTracking 
-                ? 'Seguir al celular (app): desactivar modo seguimiento' 
-                : 'Seguir al celular (app): activar modo seguimiento';
+                ? 'Seguir al Vehículo 2: desactivar modo seguimiento'
+                : 'Seguir al Vehículo 2: activar modo seguimiento';
             
             // Si el tracking se acaba de activar:
             if (estado.modoTracking && estado.marcador && estado.marcador.getLatLng()) {

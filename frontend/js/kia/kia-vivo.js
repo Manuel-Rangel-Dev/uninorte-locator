@@ -211,7 +211,7 @@ function apagarSeguimientoCelular() {
     const boton = document.getElementById('btnCentrar');
     if (boton) {
         boton.classList.remove('activo');
-        boton.title = 'Seguir al celular (app): activar modo seguimiento';
+        boton.title = 'Seguir al Vehículo 2: activar modo seguimiento';
     }
 }
 

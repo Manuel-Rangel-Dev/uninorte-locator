@@ -20,14 +20,16 @@ from datetime import timedelta
 # Los recorridos OBD se muestran bajo el Kia, incluidos los emulados identificados por rid.
 VID_KIA = "kia_k3"
 NOMBRE_KIA = "Kia K3 GT Line 2025"
+NOMBRE_CORTO_KIA = "Kia K3"
 CILINDRADA_KIA_L = 1.6
 AFR_GASOLINA = 14.7
 DENSIDAD_COMBUSTIBLE_G_L = 745.0
 DENSIDAD_AIRE_G_L = 1.184
 
 # Es el vid que la app manda hoy. Este carro solo reporta ubicación.
-VID_CARRO_2 = "celular"
-NOMBRE_CARRO_2 = "Carro 2 (solo ubicación por app)"
+VID_VEHICULO_2 = "celular"
+NOMBRE_VEHICULO_2 = "Vehículo 2 (solo ubicación por app)"
+NOMBRE_CORTO_VEHICULO_2 = "Vehículo 2"
 
 PRECIO_INICIAL_COP_GALON = 15964.0
 PRECIO_INICIAL_FUENTE = "Precio de referencia Barranquilla"

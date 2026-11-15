@@ -22,6 +22,9 @@ from db import (factor_modelo_actual, guardar_prediccion, listar_recorridos, lis
                 precio_vigente_actual)
 from filtros import distancia_m, filtrar_ruido
 from recorridos import VID_KIA, costo_en_pesos, error_pct, es_emulado, horas_pc, metricas_litros, resumir
+from recorridos import NOMBRE_CORTO_KIA, NOMBRE_CORTO_VEHICULO_2, VID_VEHICULO_2
+from segmentacion import (completar_rango, filtrar_vehiculo_2, memorizar_por_clave, recorrido_kia,
+                          recorrido_vehiculo_2, segmentar_recorridos)
 from tiempo import ahora_colombia
 from validacion import NOMBRES_OBD, RID_VALIDO
 
@@ -739,7 +742,8 @@ def kia_metricas():
     })
 
 
-def _consumo_estimado(puntos: list[dict]) -> dict:
+def _consumo_estimado(puntos: list[dict], obtener_factor=factor_modelo_actual,
+                      obtener_precio=precio_vigente_actual) -> dict:
     """Estimado del modelo para una traza de la app (lat, lng, ts ordenados), como si
     fuera el Kia. Coordenadas redondeadas y sin repetidos seguidos, como en la página."""
     traza = []
@@ -765,14 +769,57 @@ def _consumo_estimado(puntos: list[dict]) -> dict:
     estimado = modelo_ruta.estimar(distancia_km, duracion_s, pendiente)
     if estimado is None:
         return vacio
-    factor = factor_modelo_actual(estimado["modelo"]) if estimado["usa_factor"] else None
+    factor = obtener_factor(estimado["modelo"]) if estimado["usa_factor"] else None
     if factor is not None:
         estimado = modelo_ruta.estimar(distancia_km, duracion_s, pendiente, factor=factor)
-    precio = precio_vigente_actual(inicio)
+    precio = obtener_precio(inicio)
     vacio.update(litros=estimado["litros"], modelo=estimado["modelo"], factor=estimado["factor"],
                  costo_cop=costo_en_pesos(estimado["litros"], precio[1] if precio else None),
                  subida_m_km=estimado["subida_m_km"], bajada_m_km=estimado["bajada_m_km"])
     return vacio
+
+
+@app.get("/api/recorridos")
+def recorridos_por_vehiculo():
+    """Lista común del Kia y del Vehículo 2, con consumo y costo estimados."""
+    vid = request.args.get("vid")
+    if vid not in (VID_KIA, VID_VEHICULO_2):
+        return jsonify({"error": "vid es obligatorio y debe ser kia_k3 o celular"}), 400
+    rango, error = _rango_opcional()
+    if error:
+        return error
+    ahora = ahora_colombia()
+    try:
+        desde, hasta = completar_rango(*rango, ahora)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    truncado = False
+    try:
+        if vid == VID_KIA:
+            filas = listar_recorridos(vid=VID_KIA, desde=desde, hasta=hasta)
+            recorridos = [recorrido_kia(f) for f in filas]
+        else:
+            registros = obtener_registros_en_rango(desde, hasta, MAX_REGISTROS_HISTORICO)
+            truncado = len(registros) >= MAX_REGISTROS_HISTORICO
+            registros = filtrar_vehiculo_2(registros)
+            segmentos = segmentar_recorridos(filtrar_ruido(registros))
+            obtener_factor = memorizar_por_clave(factor_modelo_actual, lambda modelo: modelo)
+            # La primera consulta de cada día usa el inicio completo, sin truncarlo a medianoche.
+            obtener_precio = memorizar_por_clave(precio_vigente_actual, lambda inicio: inicio.date())
+            recorridos = [recorrido_vehiculo_2(_consumo_estimado(r, obtener_factor, obtener_precio),
+                                               r[-1]["ts"], ahora,
+                                               i == len(segmentos) - 1)
+                          for i, r in enumerate(segmentos) if len(r) >= 2]
+    except Exception:
+        app.logger.exception("Error consultando los recorridos por vehículo")
+        return jsonify({"error": "Error interno consultando la base de datos"}), 500
+    if request.args.get("todos") != "1":
+        recorridos = [r for r in recorridos if r["litros"] is not None]
+    recorridos.sort(key=lambda r: r["inicio"] or "", reverse=True)
+    return jsonify({"vid": vid,
+                    "nombre": NOMBRE_CORTO_KIA if vid == VID_KIA else NOMBRE_CORTO_VEHICULO_2,
+                    "desde": _texto_fecha(desde), "hasta": _texto_fecha(hasta),
+                    "truncado": truncado, "recorridos": recorridos})
 
 
 @app.get("/api/historico/consumo")

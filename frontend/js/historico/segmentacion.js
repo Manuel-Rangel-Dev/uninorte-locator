@@ -2,6 +2,7 @@
 // HISTÓRICOS: SEGMENTACIÓN Y CÁLCULO DE DISTANCIA
 // =============================================================================
 
+// Comparte las reglas y umbrales con backend/segmentacion.py: si cambia uno, cambiar el otro.
 // Importa los umbrales configurados para decidir cuándo separar un recorrido
 import { UMBRAL_SEGMENTACION_MINUTOS, UMBRAL_SEGMENTACION_METROS, UMBRAL_ESTACIONADO_METROS } from '../constantes.js';
 // Importa utilidades para normalizar coordenadas y convertir fechas a timestamp
