@@ -8,8 +8,9 @@ import unittest
 from unittest.mock import Mock, call, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'backend'))
-from segmentacion import (completar_rango, filtrar_vehiculo_2, memorizar_por_clave, recorrido_kia, recorrido_vehiculo_2,
-                          segmentar_recorridos)
+from filtros import filtrar_ruido
+from segmentacion import (completar_rango, filtrar_vehiculo_2, memorizar_por_clave, preparar_segmentos,
+                          recorrido_kia, recorrido_vehiculo_2, segmentar_recorridos)
 
 
 class PruebasMemoriaConsultas(unittest.TestCase):
@@ -133,6 +134,46 @@ class PruebasSegmentacion(unittest.TestCase):
         with patch('segmentacion.distancia_m', return_value=0) as distancia:
             segmentar_recorridos(registros)
         self.assertEqual(distancia.call_args_list[0].args[:2], (11.0313, -74.7813))
+
+
+class PruebasPrepararSegmentos(unittest.TestCase):
+    def setUp(self):
+        self.inicio = datetime(2026, 11, 4, 17, 50, 52)
+
+    def punto(self, segundos, lat):
+        return {'lat': lat, 'lng': -74.8, 'ts': self.inicio + timedelta(seconds=segundos)}
+
+    def test_refiltra_salto_inicial_como_consumo_de_la_pagina(self):
+        anteriores = [self.punto(-1900, 11.0), self.punto(-1890, 11.001)]
+        recorrido = [self.punto(0, 11.0), self.punto(4, 11.0135),
+                     self.punto(14, 11.014), self.punto(24, 11.015)]
+        registros = anteriores + recorrido
+        copia = deepcopy(registros)
+        self.assertEqual(segmentar_recorridos(filtrar_ruido(registros))[-1], recorrido)
+        preparados = preparar_segmentos(registros)
+        self.assertEqual(preparados, [(anteriores, anteriores[-1]['ts'], False),
+                                      (filtrar_ruido(recorrido), recorrido[-1]['ts'], True)])
+        self.assertEqual(preparados[-1][0], recorrido[1:])
+        self.assertEqual(preparados[-1][0][0]['ts'].strftime('%H:%M:%S'), '17:50:56')
+        self.assertEqual(registros, copia)
+        self.assertIs(preparados[-1][0][0], recorrido[1])
+
+    def test_descarta_si_segundo_filtro_deja_menos_de_dos(self):
+        anteriores = [self.punto(-1900, 11.0), self.punto(-1890, 11.001)]
+        # Ambos saltos son imposibles: el ancla del segundo filtro queda en el último punto.
+        recorrido = [self.punto(0, 11.0), self.punto(4, 11.0135), self.punto(8, 11.027)]
+        self.assertEqual(segmentar_recorridos(filtrar_ruido(anteriores + recorrido))[-1], recorrido)
+        self.assertEqual(preparar_segmentos(anteriores + recorrido),
+                         [(anteriores, anteriores[-1]['ts'], False)])
+
+    def test_conserva_ultimo_ts_del_segmento_antes_del_segundo_filtro(self):
+        registros = [self.punto(0, 11.0), self.punto(10, 11.001), self.punto(20, 11.002)]
+        with patch('segmentacion.filtrar_ruido', side_effect=[registros, registros[:-1]]):
+            self.assertEqual(preparar_segmentos(registros),
+                             [(registros[:-1], registros[-1]['ts'], True)])
+
+    def test_vacio(self):
+        self.assertEqual(preparar_segmentos([]), [])
 
 
 class PruebasFiltroVehiculo2(unittest.TestCase):

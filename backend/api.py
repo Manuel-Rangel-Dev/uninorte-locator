@@ -23,8 +23,8 @@ from db import (factor_modelo_actual, guardar_prediccion, listar_recorridos, lis
 from filtros import distancia_m, filtrar_ruido
 from recorridos import VID_KIA, costo_en_pesos, error_pct, es_emulado, horas_pc, metricas_litros, resumir
 from recorridos import NOMBRE_CORTO_KIA, NOMBRE_CORTO_VEHICULO_2, VID_VEHICULO_2
-from segmentacion import (completar_rango, filtrar_vehiculo_2, memorizar_por_clave, recorrido_kia,
-                          recorrido_vehiculo_2, segmentar_recorridos)
+from segmentacion import (completar_rango, filtrar_vehiculo_2, memorizar_por_clave, preparar_segmentos,
+                          recorrido_kia, recorrido_vehiculo_2)
 from tiempo import ahora_colombia
 from validacion import NOMBRES_OBD, RID_VALIDO
 
@@ -802,14 +802,13 @@ def recorridos_por_vehiculo():
             registros = obtener_registros_en_rango(desde, hasta, MAX_REGISTROS_HISTORICO)
             truncado = len(registros) >= MAX_REGISTROS_HISTORICO
             registros = filtrar_vehiculo_2(registros)
-            segmentos = segmentar_recorridos(filtrar_ruido(registros))
+            segmentos = preparar_segmentos(registros)
             obtener_factor = memorizar_por_clave(factor_modelo_actual, lambda modelo: modelo)
             # La primera consulta de cada día usa el inicio completo, sin truncarlo a medianoche.
             obtener_precio = memorizar_por_clave(precio_vigente_actual, lambda inicio: inicio.date())
             recorridos = [recorrido_vehiculo_2(_consumo_estimado(r, obtener_factor, obtener_precio),
-                                               r[-1]["ts"], ahora,
-                                               i == len(segmentos) - 1)
-                          for i, r in enumerate(segmentos) if len(r) >= 2]
+                                               ultimo_ts, ahora, es_mas_reciente)
+                          for r, ultimo_ts, es_mas_reciente in segmentos]
     except Exception:
         app.logger.exception("Error consultando los recorridos por vehículo")
         return jsonify({"error": "Error interno consultando la base de datos"}), 500

@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
-from filtros import distancia_m
+from filtros import distancia_m, filtrar_ruido
 from recorridos import MINUTOS_CIERRE, VID_VEHICULO_2, es_emulado
 
 # Umbrales compartidos con frontend/js/historico/segmentacion.js y constantes.js:
@@ -81,6 +81,18 @@ def segmentar_recorridos(registros: list[dict]) -> list[list[dict]]:
 def filtrar_vehiculo_2(registros: list[dict]) -> list[dict]:
     """Incluye la telemetría de celular y las filas antiguas cuyo vid es NULL."""
     return [r for r in registros if r.get("vid") in (None, VID_VEHICULO_2)]
+
+
+def preparar_segmentos(registros: list[dict]) -> list[tuple[list[dict], datetime, bool]]:
+    """Devuelve puntos para estimar, último ts original y si era el segmento más reciente."""
+    segmentos = segmentar_recorridos(filtrar_ruido(registros))
+    preparados = []
+    for i, segmento in enumerate(segmentos):
+        # Refiltrar cada recorrido reproduce el ancla inicial de /api/historico/consumo.
+        puntos = filtrar_ruido(segmento)
+        if len(puntos) >= 2:
+            preparados.append((puntos, segmento[-1]["ts"], i == len(segmentos) - 1))
+    return preparados
 
 
 def completar_rango(desde: datetime | None, hasta: datetime | None, ahora: datetime) -> tuple:
