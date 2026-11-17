@@ -15,6 +15,26 @@ import { redondearCoord, formatearFechaISO, formatearHoraISO } from './utilidade
 import { estado } from './estado.js';
 
 // =============================================================================
+// FUNCIÓN: crearIconoVehiculo2
+// =============================================================================
+export function crearIconoVehiculo2() {
+    return L.divIcon({
+        className: '',
+        html: `
+            <div class="iconoKia" style="background:#dc0303;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <rect x="7.68" y="4.48" width="8.64" height="15.04" rx="1.76" stroke="#ffffff" stroke-width="2"/>
+                    <path d="M10.72 16.96H13.28" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </div>
+        `,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+        popupAnchor: [0, -16]
+    });
+}
+
+// =============================================================================
 // FUNCIÓN: refrescarCampo
 // =============================================================================
 // Propósito: Conectar el backend con el HTML
@@ -287,13 +307,12 @@ export async function initMap() {
     // PARTE 2: Crear el marcador del vehículo
     // ─────────────────────────────────────────────────────────────────────
     
-    // Crea un marcador (pin) en el mapa
-    // L.marker(CENTRO_DEFAULT) = coloca un pin en Barranquilla inicialmente
+    // Crea un marcador de celular en Barranquilla inicialmente, debajo del Kia (800)
     // .addTo(estado.mapa) = lo añade al mapa
-    // .bindPopup('Vehículo') = cuando hagas clic, muestra "Vehículo" en un popup
+    // .bindPopup('Vehículo 2') = cuando hagas clic, muestra "Vehículo 2" en un popup
     // Se guarda en estado.marcador para poder moverlo después
-    estado.marcador = L.marker(CENTRO_DEFAULT).addTo(estado.mapa)
-        .bindPopup('Vehículo');
+    estado.marcador = L.marker(CENTRO_DEFAULT, { icon: crearIconoVehiculo2(), zIndexOffset: 700 }).addTo(estado.mapa)
+        .bindPopup('Vehículo 2');
     
     // ─────────────────────────────────────────────────────────────────────
     // PARTE 3: Configurar el botón "Centrar"
@@ -317,8 +336,8 @@ export async function initMap() {
             // Si tracking está on: "Desactivar modo seguimiento"
             // Si tracking está off: "Activar modo seguimiento"
             btnCentrar.title = estado.modoTracking 
-                ? 'Seguir al celular (app): desactivar modo seguimiento' 
-                : 'Seguir al celular (app): activar modo seguimiento';
+                ? 'Seguir al Vehículo 2: desactivar modo seguimiento'
+                : 'Seguir al Vehículo 2: activar modo seguimiento';
             
             // Si el tracking se acaba de activar:
             if (estado.modoTracking && estado.marcador && estado.marcador.getLatLng()) {

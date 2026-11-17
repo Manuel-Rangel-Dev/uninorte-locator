@@ -469,7 +469,7 @@ let consultaKia = 0;      // para descartar respuestas de búsquedas anteriores
 function actualizarTitulosPestanas() {
     const app = document.getElementById('tabHistApp');
     const kia = document.getElementById('tabHistKia');
-    if (app) app.textContent = `App (${estado.recorridosBase.length})`;
+    if (app) app.textContent = `Vehículo 2 (${estado.recorridosBase.length})`;
     if (kia) kia.textContent = rangoKia ? `Kia K3 (${estado.kiaRecorridos.length})` : 'Kia K3';
 }
 

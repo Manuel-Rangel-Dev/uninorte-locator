@@ -13,8 +13,8 @@ from psycopg2 import sql
 from dotenv import load_dotenv
 
 from recorridos import (AFR_GASOLINA, CILINDRADA_KIA_L, DENSIDAD_AIRE_G_L, DENSIDAD_COMBUSTIBLE_G_L,
-                        MINUTOS_CIERRE, NOMBRE_CARRO_2, NOMBRE_KIA, PRECIO_INICIAL_COP_GALON,
-                        PRECIO_INICIAL_FUENTE, VID_CARRO_2, VID_KIA, constante_k, costo_en_pesos,
+                        MINUTOS_CIERRE, NOMBRE_VEHICULO_2, NOMBRE_KIA, PRECIO_INICIAL_COP_GALON,
+                        PRECIO_INICIAL_FUENTE, VID_VEHICULO_2, VID_KIA, constante_k, costo_en_pesos,
                         es_emulado, fuel_lph_ecuacion, resumir, velocidad_media_kmh)
 import modelo_ruta
 from tiempo import ahora_colombia
@@ -499,7 +499,13 @@ def _sembrar_datos_p3(cur) -> None:
             """
         ).format(tabla=sql.Identifier(DB_TABLE_VEHICULOS)),
         (VID_KIA, NOMBRE_KIA, CILINDRADA_KIA_L, True, AFR_GASOLINA, DENSIDAD_COMBUSTIBLE_G_L,
-         DENSIDAD_AIRE_G_L, ahora_colombia(), VID_CARRO_2, NOMBRE_CARRO_2, ahora_colombia()),
+         DENSIDAD_AIRE_G_L, ahora_colombia(), VID_VEHICULO_2, NOMBRE_VEHICULO_2, ahora_colombia()),
+    )
+    # Actualiza solo la semilla antigua; conserva los nombres editados a mano.
+    cur.execute(
+        sql.SQL("UPDATE {tabla} SET nombre = %s WHERE vid = %s AND nombre = %s").format(
+            tabla=sql.Identifier(DB_TABLE_VEHICULOS)),
+        (NOMBRE_VEHICULO_2, VID_VEHICULO_2, "Carro 2 (solo ubicación por app)"),
     )
     cur.execute(
         sql.SQL(
