@@ -32,6 +32,7 @@ html, body {
     padding: 10px 14px;
     font-size: 13px;
     min-width: 200px;
+    max-width: calc(100vw - 24px);
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
@@ -39,10 +40,9 @@ html, body {
     transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
 }
 
-#panelInfo h1 {
-    color: #dc0303;
-    font-size: 14px;
-    margin: 0 0 8px 0;
+#panelInfo .cabeceraKia {
+    line-height: 16px;
+    margin-bottom: 8px;
 }
 
 .filaInfo {
@@ -1097,7 +1097,7 @@ html, body {
     font-weight: bold;
 }
 
-#kiaEstado {
+.estadoVivo {
     color: #B3B3B3;
     font-size: 11px;
     font-weight: normal;
@@ -1112,6 +1112,7 @@ html, body {
     margin: 0 2px;
 }
 
+#panelInfo.enVivo .puntoVivo,
 #panelKia.enVivo .puntoVivo {
     background-color: #2ecc71;
     box-shadow: 0 0 6px #2ecc71;
@@ -1295,6 +1296,11 @@ html, body {
 /* Pantallas angostas (celular): el panel del Kia sube a la derecha, debajo de "Históricos",
    para no tapar #panelInfo. En modo histórico está oculto, así que no choca con ese panel. */
 @media (max-width: 600px) {
+    #panelInfo {
+        /* Reserva 8 px antes del botón L/h (42 px, right 12 px). */
+        max-width: calc(100vw - 74px);
+    }
+
     #panelKia {
         bottom: auto;
         top: 58px;

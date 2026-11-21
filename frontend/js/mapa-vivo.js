@@ -11,7 +11,7 @@ import {
     DIST_MIN_SALTO_VIVO_M,
     MINUTOS_PRECARGA_RECORRIDO
 } from './constantes.js';
-import { redondearCoord, formatearFechaISO, formatearHoraISO } from './utilidades.js';
+import { redondearCoord, formatearFechaISO, formatearHoraISO, textoEdad } from './utilidades.js';
 import { estado } from './estado.js';
 
 // =============================================================================
@@ -112,6 +112,27 @@ function esPosicionVivaValida(posicion) {
     return false;
 }
 
+// El estado de señal se actualiza aunque la posición se descarte o falle lat/lng.
+async function actualizarSenalGps() {
+    const panel = document.getElementById('panelInfo');
+    const etiqueta = document.getElementById('gpsEstado');
+    try {
+        const respuesta = await fetch(`${API_BASE}/api/ultimo`);
+        if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+        const datos = await respuesta.json();
+        const enVivo = datos?.en_vivo === true;
+        panel.classList.toggle('enVivo', enVivo);
+        etiqueta.textContent = datos?.edad_s == null ? 'SIN DATOS'
+            : enVivo ? 'EN VIVO' : `SIN SEÑAL · ${textoEdad(datos.edad_s)}`;
+        estado.marcador.setPopupContent(enVivo ? 'Vehículo con GPS' : 'Vehículo con GPS (sin señal)');
+    } catch (error) {
+        panel.classList.remove('enVivo');
+        etiqueta.textContent = '--';
+        estado.marcador.setPopupContent('Vehículo con GPS (sin señal)');
+        console.warn('[GPS] No se pudo actualizar el estado de señal:', error);
+    }
+}
+
 export async function actualizarMarcador() {
     // ─────────────────────────────────────────────────────────────────────
     // PASO 1: Obtener datos del backend
@@ -119,7 +140,10 @@ export async function actualizarMarcador() {
     
     // Trae la latitud actual del vehículo
     // Ejemplo: 11.0195
-    const lat = await refrescarCampo('lat', 'valorLat');
+    const [lat] = await Promise.all([
+        refrescarCampo('lat', 'valorLat'),
+        actualizarSenalGps()
+    ]);
     
     // Trae la longitud actual del vehículo
     // Ejemplo: -74.8516

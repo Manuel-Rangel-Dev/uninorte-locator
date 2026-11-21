@@ -36,24 +36,24 @@ VENTANA_POR_DEFECTO = timedelta(hours=24)
 MAX_REGISTROS_HISTORICO = 200_000
 
 
-def registro_o_vacio() -> dict:
+def registro_o_vacio(incluir_estado: bool = False) -> dict:
     """Devuelve el último registro (del vehículo ?vid= si se indica), o vacíos."""
     registro = obtener_ultimo_registro(request.args.get("vid"))
-    if registro is None:
-        return {"lat": None, "lng": None, "fecha": None, "hora": None, "vid": None}
-    return {
-        "lat": registro["lat"],
-        "lng": registro["lng"],
-        "fecha": registro["fecha"],
-        "hora": registro["hora"],
-        "vid": registro.get("vid"),
+    datos = {
+        campo: registro.get(campo) if registro else None
+        for campo in ("lat", "lng", "fecha", "hora", "vid")
     }
+    if incluir_estado:
+        edad_s = edad_registro(registro, ahora_colombia())
+        datos.update(edad_s=round(edad_s, 1) if edad_s is not None else None,
+                     en_vivo=edad_s is not None and edad_s <= EDAD_EN_VIVO_S)
+    return datos
 
 
 @app.get("/api/ultimo")
 def ultimo_completo():
-    """Devuelve los cuatro campos juntos (útil para carga inicial de la página)."""
-    return jsonify(registro_o_vacio())
+    """Devuelve el último registro y su estado de señal."""
+    return jsonify(registro_o_vacio(incluir_estado=True))
 
 
 @app.get("/api/lat")
@@ -117,6 +117,19 @@ def _parsear_param_fecha_hora(fecha_val: str | None, hora_val: str | None, combi
             pass
 
     return None, False
+
+
+def edad_registro(registro: dict | None, ahora: datetime) -> float | None:
+    """Segundos desde el fix (hora Colombia), o None sin un instante válido."""
+    if registro is None:
+        return None
+    instante = registro.get("ts")
+    if instante is None:
+        # El listener guarda fecha YYYY-MM-DD y hora HH:MM:SS.
+        instante, _ = _parsear_param_fecha_hora(registro.get("fecha"), registro.get("hora"), None)
+    if instante is None:
+        return None
+    return max(0.0, (ahora - instante).total_seconds())
 
 
 @app.get("/api/historico")
@@ -523,7 +536,7 @@ def recorrido_obd_csv(recorrido_id: str):
 # Consumo del Kia y del histórico de la app (P3-S3)
 # ---------------------------------------------------------------------------
 
-EDAD_EN_VIVO_S = 30          # sin datos por más tiempo, el Kia ya no está "en vivo"
+EDAD_EN_VIVO_S = 30          # sin datos por más tiempo, el vehículo ya no está "en vivo"
 CACHE_VIVO_S = 5             # el acumulado del recorrido en curso se recalcula a lo sumo cada 5 s
 MAX_PUNTOS_RECORRIDO = 600   # tope de puntos del detalle de un recorrido del Kia
 MAX_RANGO_CONSUMO = timedelta(hours=24)  # tope del rango de /api/historico/consumo

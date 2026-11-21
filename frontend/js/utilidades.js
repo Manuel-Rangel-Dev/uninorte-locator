@@ -106,3 +106,11 @@ export function escaparHtml(texto) {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
 }
+
+// Edad de la última señal, compartida por los paneles GPS y OBD.
+export function textoEdad(segundos) {
+    if (segundos < 90) return `hace ${Math.round(segundos)} s`;
+    if (segundos < 5400) return `hace ${Math.round(segundos / 60)} min`;
+    if (segundos < 172800) return `hace ${Math.round(segundos / 3600)} h`;
+    return `hace ${Math.round(segundos / 86400)} días`;
+}

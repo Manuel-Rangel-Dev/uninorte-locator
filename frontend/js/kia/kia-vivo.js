@@ -6,7 +6,7 @@
 // =============================================================================
 import { API_BASE, INTERVALO_KIA_MS, ZOOM_CENTRADO } from '../constantes.js';
 import { estado } from '../estado.js';
-import { escaparHtml } from '../utilidades.js';
+import { escaparHtml, textoEdad } from '../utilidades.js';
 import {
     crearTramoConsumo,
     crearTrazaConsumo,
@@ -54,12 +54,6 @@ function textoPopupKia(datos) {
 // -----------------------------------------------------------------------------
 // Panel
 // -----------------------------------------------------------------------------
-function textoEdad(segundos) {
-    if (segundos < 90) return `hace ${Math.round(segundos)} s`;
-    if (segundos < 5400) return `hace ${Math.round(segundos / 60)} min`;
-    if (segundos < 172800) return `hace ${Math.round(segundos / 3600)} h`;
-    return `hace ${Math.round(segundos / 86400)} días`;
-}
 
 function escribir(id, texto) {
     const elemento = document.getElementById(id);

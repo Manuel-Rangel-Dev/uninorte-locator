@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="" />
-    <link rel="stylesheet" href="styles.css?v=44">
+    <link rel="stylesheet" href="styles.css?v=45">
     <script src="config.js"></script>
     <script>
         if (typeof APP_CONFIG === 'undefined') {
@@ -28,7 +28,9 @@
 <body>
 
     <div id="panelInfo">
-        <h1>Uninorte Locator</h1>
+        <div class="cabeceraKia">
+            <span class="tituloKia">VEHÍCULO CON GPS <span class="puntoVivo"></span> <span id="gpsEstado" class="estadoVivo">--</span></span>
+        </div>
         <div class="filaInfo"><span class="etiquetaInfo">LAT:</span><span id="valorLat">--</span></div>
         <div class="filaInfo"><span class="etiquetaInfo">LONG:</span><span id="valorLng">--</span></div>
         <div class="filaInfo"><span class="etiquetaInfo">DATE:</span><span id="valorFecha">--</span></div>
@@ -49,7 +51,7 @@
             </svg>
         </button>
         <div class="cabeceraKia">
-            <span class="tituloKia">VEHÍCULO CON OBD <span id="kiaEmulado" class="etiquetaEmulado" hidden>Emulado</span> <span class="puntoVivo"></span> <span id="kiaEstado">--</span></span>
+            <span class="tituloKia">VEHÍCULO CON OBD <span id="kiaEmulado" class="etiquetaEmulado" hidden>Emulado</span> <span class="puntoVivo"></span> <span id="kiaEstado" class="estadoVivo">--</span></span>
             <button id="btnMinimizarKia" type="button" title="Minimizar panel del vehículo con OBD">–</button>
         </div>
         <div class="cuerpoKia">
@@ -306,6 +308,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
-    <script type="module" src="js/main.js?v=44"></script>
+    <script type="module" src="js/main.js?v=45"></script>
 </body>
 </html>
