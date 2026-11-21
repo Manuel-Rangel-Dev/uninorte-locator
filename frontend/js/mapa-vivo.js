@@ -312,7 +312,7 @@ export async function initMap() {
     // .bindPopup('Vehículo 2') = cuando hagas clic, muestra "Vehículo 2" en un popup
     // Se guarda en estado.marcador para poder moverlo después
     estado.marcador = L.marker(CENTRO_DEFAULT, { icon: crearIconoVehiculo2(), zIndexOffset: 700 }).addTo(estado.mapa)
-        .bindPopup('Vehículo 2');
+        .bindPopup('Vehículo con GPS');
     
     // ─────────────────────────────────────────────────────────────────────
     // PARTE 3: Configurar el botón "Centrar"
@@ -336,8 +336,8 @@ export async function initMap() {
             // Si tracking está on: "Desactivar modo seguimiento"
             // Si tracking está off: "Activar modo seguimiento"
             btnCentrar.title = estado.modoTracking 
-                ? 'Seguir al Vehículo 2: desactivar modo seguimiento'
-                : 'Seguir al Vehículo 2: activar modo seguimiento';
+                ? 'Seguir al vehículo con GPS: desactivar modo seguimiento'
+                : 'Seguir al vehículo con GPS: activar modo seguimiento';
             
             // Si el tracking se acaba de activar:
             if (estado.modoTracking && estado.marcador && estado.marcador.getLatLng()) {

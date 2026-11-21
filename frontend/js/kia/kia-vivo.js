@@ -42,7 +42,7 @@ export function crearIconoKia(enVivo) {
 
 function textoPopupKia(datos) {
     return `
-        <strong>Kia K3</strong>${datos.en_vivo ? '' : ' (sin señal)'}<br>
+        <strong>Vehículo con OBD</strong>${datos.en_vivo ? '' : ' (sin señal)'}<br>
         ${escaparHtml(formatearNumero(datos.vel_kmh, 0, ' km/h'))}
         · ${escaparHtml(formatearNumero(datos.lph_ecuacion, 2, ' L/h'))} (ecuación)<br>
         PID: ${escaparHtml(formatearNumero(datos.lph_pid, 2, ' L/h'))}<br>
@@ -201,8 +201,8 @@ function marcarBotonSeguirKia(activo) {
     const boton = document.getElementById('btnSeguirKia');
     if (!boton) return;
     boton.classList.toggle('activo', activo);
-    boton.title = activo ? 'Seguir al Kia K3: desactivar modo seguimiento'
-        : 'Seguir al Kia K3: activar modo seguimiento';
+    boton.title = activo ? 'Seguir al vehículo con OBD: desactivar modo seguimiento'
+        : 'Seguir al vehículo con OBD: activar modo seguimiento';
 }
 
 function apagarSeguimientoCelular() {
@@ -211,7 +211,7 @@ function apagarSeguimientoCelular() {
     const boton = document.getElementById('btnCentrar');
     if (boton) {
         boton.classList.remove('activo');
-        boton.title = 'Seguir al Vehículo 2: activar modo seguimiento';
+        boton.title = 'Seguir al vehículo con GPS: activar modo seguimiento';
     }
 }
 
@@ -220,7 +220,7 @@ function alternarSeguimientoKia() {
     if (!estado.kiaTracking && !estado.kiaMarcador) {
         // Sin ninguna posición GNSS del Kia no hay a dónde ir: aviso breve en el botón
         boton.classList.add('sinPosicion');
-        boton.title = 'Sin posición GNSS del Kia';
+        boton.title = 'Sin posición GNSS del vehículo con OBD';
         setTimeout(() => {
             boton.classList.remove('sinPosicion');
             marcarBotonSeguirKia(estado.kiaTracking);

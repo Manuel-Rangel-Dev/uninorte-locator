@@ -36,7 +36,7 @@
     <!-- KIA EN VIVO (P3-S3): consumo por ecuación y PID del recorrido en curso -->
     <div id="panelKia">
         <!-- Seguimiento del Kia: mira con un carro en el centro, encima de la tarjeta -->
-        <button id="btnSeguirKia" type="button" title="Seguir al Kia K3: activar modo seguimiento" aria-label="Seguir al Kia K3">
+        <button id="btnSeguirKia" type="button" title="Seguir al vehículo con OBD: activar modo seguimiento" aria-label="Seguir al vehículo con OBD">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M12 1.5V4M12 20V22.5M1.5 12H4M20 12H22.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                 <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.5"/>
@@ -47,8 +47,8 @@
             </svg>
         </button>
         <div class="cabeceraKia">
-            <span class="tituloKia">KIA K3 <span id="kiaEmulado" class="etiquetaEmulado" hidden>Emulado</span> <span class="puntoVivo"></span> <span id="kiaEstado">--</span></span>
-            <button id="btnMinimizarKia" type="button" title="Minimizar panel del Kia">–</button>
+            <span class="tituloKia">VEHÍCULO CON OBD <span id="kiaEmulado" class="etiquetaEmulado" hidden>Emulado</span> <span class="puntoVivo"></span> <span id="kiaEstado">--</span></span>
+            <button id="btnMinimizarKia" type="button" title="Minimizar panel del vehículo con OBD">–</button>
         </div>
         <div class="cuerpoKia">
             <div class="filaInfo"><span class="etiquetaInfo">VEL:</span><span id="kiaVelocidad">--</span></div>
@@ -62,7 +62,7 @@
     </div>
 
     <!-- Seguimiento del celular (app): mira con un celular en el centro. Encima de #panelInfo -->
-    <button id="btnCentrar" title="Seguir al Vehículo 2: activar modo seguimiento" aria-label="Seguir al Vehículo 2">
+    <button id="btnCentrar" title="Seguir al vehículo con GPS: activar modo seguimiento" aria-label="Seguir al vehículo con GPS">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <path d="M12 1.5V4M12 20V22.5M1.5 12H4M20 12H22.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.5"/>
@@ -179,8 +179,8 @@
         <!-- PESTAÑAS (P3-S3): aparecen después de buscar un rango en el calendario.
              App = históricos de siempre; Kia K3 = consumo medido frente a estimado en ese rango -->
         <div class="pestanasHistoricos">
-            <button type="button" id="tabHistApp" class="tabHistoricos activo">Vehículo 2</button>
-            <button type="button" id="tabHistKia" class="tabHistoricos">Kia K3</button>
+            <button type="button" id="tabHistApp" class="tabHistoricos activo">Vehículo con GPS</button>
+            <button type="button" id="tabHistKia" class="tabHistoricos">Vehículo con OBD</button>
         </div>
 
         <button id="btnFiltrarPorZona" class="btnFiltrarPorZona" type="button" style="display: none;">
@@ -263,7 +263,7 @@
         <!-- SECCIÓN KIA (P3-S3): métricas del modelo y recorridos del Kia -->
         <div id="vistaKia">
             <div id="metricasKia" class="metricasKia"></div>
-            <div class="tituloRecorridos">RECORRIDOS DEL KIA</div>
+            <div class="tituloRecorridos">RECORRIDOS DEL VEHÍCULO CON OBD</div>
             <div id="estadoKia" class="estadoKia"></div>
             <div id="listaKia"></div>
             <button id="btnTodosKia" class="btnAlternarListaRutas" type="button" style="display: none;">Ver todos</button>
@@ -271,7 +271,7 @@
             <!-- REPRODUCTOR DEL KIA: se mueve debajo de la tarjeta elegida, como el de la app -->
             <div id="reproductorKia" style="display: none;">
                 <div class="infoReproduccion">
-                    <div id="infoKiaReproduccion">Kia --</div>
+                    <div id="infoKiaReproduccion">Recorrido --</div>
                     <div id="fechaHoraKiaReproduccion">--/--/---- --:--:--</div>
                     <div id="datosKiaReproduccion" class="datosKiaReproduccion">--</div>
                 </div>
@@ -298,6 +298,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
-    <script type="module" src="js/main.js?v=41"></script>
+    <script type="module" src="js/main.js?v=42"></script>
 </body>
 </html>
