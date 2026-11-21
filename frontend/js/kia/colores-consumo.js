@@ -76,13 +76,6 @@ export function formatearNumero(valor, decimales = 1, sufijo = '') {
     return (valor === null || valor === undefined) ? '--' : `${Number(valor).toFixed(decimales).replace('.', ',')}${sufijo}`;
 }
 
-// Error con signo: "+2,1 %" o "−1,5 %".
-export function formatearError(pct) {
-    if (pct === null || pct === undefined) return '';
-    const signo = pct > 0 ? '+' : (pct < 0 ? '−' : '');
-    return `${signo}${Math.abs(pct).toFixed(1).replace('.', ',')} %`;
-}
-
 export function formatearDuracion(segundos) {
     if (segundos === null || segundos === undefined) return '--';
     const minutos = Math.round(segundos / 60);

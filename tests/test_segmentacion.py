@@ -204,23 +204,17 @@ class PruebasFormatoRecorridos(unittest.TestCase):
     def test_solo_hasta(self):
         self.assertEqual(completar_rango(None, self.ahora, self.ahora), (self.ahora - self.semana, self.ahora))
 
-    def test_tope_31_dias(self):
-        desde = self.ahora - timedelta(days=31)
+    def test_rango_de_400_dias_sin_tope(self):
+        desde = self.ahora - timedelta(days=400)
         self.assertEqual(completar_rango(desde, self.ahora, self.ahora), (desde, self.ahora))
-        desde -= timedelta(microseconds=1)
-        self.assertEqual(completar_rango(desde, self.ahora, self.ahora), (desde, self.ahora))
-        with self.assertRaises(ValueError):
-            completar_rango(self.ahora, desde, self.ahora)
 
-    def test_tope_31_dias_con_hasta_al_final_del_dia(self):
-        desde = datetime(2026, 10, 15)
-        hasta = datetime(2026, 11, 15, 23, 59, 59, 999999)
-        self.assertEqual(completar_rango(desde, hasta, self.ahora), (desde, hasta))
+    def test_rango_invertido(self):
+        with self.assertRaisesRegex(ValueError, "anterior"):
+            completar_rango(self.ahora, self.ahora - timedelta(seconds=1), self.ahora)
 
-    def test_rechaza_32_dias_entre_fechas(self):
-        with self.assertRaises(ValueError):
-            completar_rango(datetime(2026, 10, 14), datetime(2026, 11, 15, 23, 59, 59, 999999),
-                            self.ahora)
+    def test_rango_de_duracion_cero(self):
+        self.assertEqual(completar_rango(self.ahora, self.ahora, self.ahora),
+                         (self.ahora, self.ahora))
 
     def test_conversion_kia(self):
         fila = {'recorrido_id': 'emu_prueba', 'inicio': self.ahora - self.semana,

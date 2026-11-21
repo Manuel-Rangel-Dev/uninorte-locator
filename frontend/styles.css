@@ -1225,7 +1225,7 @@ html, body {
     display: none !important;
 }
 
-.metricasKia {
+.resumenRango {
     border: 1px solid #2A2A2A;
     border-radius: 6px;
     padding: 8px;
@@ -1240,14 +1240,13 @@ html, body {
     color: #ffffff;
 }
 
-.filaMetrica {
-    display: flex;
-    justify-content: space-between;
-    gap: 6px;
-    color: #d0d0d0;
+#resumenApp[hidden],
+#resumenKia[hidden] {
+    display: none;
 }
 
-.filaMetrica.secundaria {
+.resumenRango small {
+    display: block;
     color: #9a9a9a;
 }
 
@@ -1268,16 +1267,6 @@ html, body {
 
 .itemKia {
     display: block;
-}
-
-.filaConsumoKia {
-    display: grid;
-    grid-template-columns: 58px 1fr 52px;
-    gap: 4px;
-}
-
-.errorConsumo {
-    text-align: right;
 }
 
 .etiquetaSinGnss {

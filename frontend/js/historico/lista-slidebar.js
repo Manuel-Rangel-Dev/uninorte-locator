@@ -4,7 +4,8 @@
 import { estado } from '../estado.js';
 import { crearIconoVehiculo2 } from '../mapa-vivo.js';
 import { calcularDistanciaRecorrido } from './segmentacion.js';
-import { formatearDistancia, obtenerTimestampPunto, escaparHtml } from '../utilidades.js';
+import { formatearFechaHoraRecorrido, obtenerTimestampPunto, escaparHtml } from '../utilidades.js';
+import { formatearNumero } from '../kia/colores-consumo.js';
 import { UMBRAL_HUECO_SEGUNDOS } from '../constantes.js';
 import { pintarConsumoEnTarjeta, agregarConsumoAPopup } from './consumo-app.js';
 
@@ -223,6 +224,10 @@ export function mostrarListaRecorridos(recorridos) {
         const inicio = recorridoActual[0];
         const fin = recorridoActual[recorridoActual.length - 1];
         const distancia = calcularDistanciaRecorrido(recorridoActual);
+        const tInicio = obtenerTimestampPunto(inicio);
+        const tFin = obtenerTimestampPunto(fin);
+        const velocidadMedia = tInicio !== null && tFin !== null && tFin > tInicio && Number.isFinite(distancia)
+            ? distancia * 3600 / (tFin - tInicio) : null;
 
         const elemento = document.createElement('div');
         elemento.className = 'itemRecorrido';
@@ -238,22 +243,9 @@ export function mostrarListaRecorridos(recorridos) {
                     Recorrido ${numero}
                 </div>
                 <div class="datosRecorrido">
-                    <div>
-                        ${escaparHtml(inicio.fecha || '--')}
-                        ·
-                        ${escaparHtml(inicio.hora || '--')}
-                    </div>
-                    <div>
-                        →
-                        ${escaparHtml(fin.fecha || '--')}
-                        ·
-                        ${escaparHtml(fin.hora || '--')}
-                    </div>
-                    <div>
-                        ${recorridoActual.length} puntos
-                        ·
-                        ${formatearDistancia(distancia)}
-                    </div>
+                    <div>Inicio: ${escaparHtml(formatearFechaHoraRecorrido(inicio.fecha, inicio.hora))}</div>
+                    <div>Fin: ${escaparHtml(formatearFechaHoraRecorrido(fin.fecha, fin.hora))}</div>
+                    <div>${formatearNumero(distancia / 1000, 2, ' km')} · ${formatearNumero(velocidadMedia, 0, ' km/h')} promedio</div>
                     <div class="consumoRecorrido"></div>
                 </div>
             </button>

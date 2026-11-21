@@ -28,6 +28,7 @@ import { initMap } from './mapa-vivo.js';
 import { initLeyendaConsumo } from './leyenda-consumo.js';
 import { initKiaVivo } from './kia/kia-vivo.js';
 import { initKiaHistorico } from './kia/kia-historico.js';
+import { initResumenRango } from './historico/resumen-rango.js';
 import {
     initFiltroZona,
     activarModoFiltroZonaUI,
@@ -285,6 +286,7 @@ async function bootstrap() {
     try {
         initKiaVivo();
         initKiaHistorico();
+        initResumenRango();
     } catch (err) {
         console.error('[Locator] Error al inicializar el Kia:', err);
     }

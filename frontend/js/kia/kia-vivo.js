@@ -2,7 +2,7 @@
 // KIA EN VIVO: MARCADOR, PANEL DE CONSUMO Y TRAZA COLOREADA POR L/h (P3-S3)
 // Ciclo propio sobre /api/kia/vivo, separado del de la app (mapa-vivo.js): el marcador
 // del celular, su filtro de saltos y las pruebas con Lockito no dependen de este módulo.
-// En vivo no hay modelo: solo la ecuación y el PID acumulados (decisión de P3-S3).
+// El panel y los popups muestran el consumo medido del vehículo.
 // =============================================================================
 import { API_BASE, INTERVALO_KIA_MS, ZOOM_CENTRADO } from '../constantes.js';
 import { estado } from '../estado.js';
@@ -44,8 +44,7 @@ function textoPopupKia(datos) {
     return `
         <strong>Vehículo con OBD</strong>${datos.en_vivo ? '' : ' (sin señal)'}<br>
         ${escaparHtml(formatearNumero(datos.vel_kmh, 0, ' km/h'))}
-        · ${escaparHtml(formatearNumero(datos.lph_ecuacion, 2, ' L/h'))} (ecuación)<br>
-        PID: ${escaparHtml(formatearNumero(datos.lph_pid, 2, ' L/h'))}<br>
+        · ${escaparHtml(formatearNumero(datos.lph_pid, 2, ' L/h'))}<br>
         Última posición: ${escaparHtml(datos.hora_posicion || '--')}
         ${datos.recorrido_posicion && datos.recorrido_posicion !== datos.recorrido_id
             ? '<br><em>(de un recorrido anterior: el actual no tiene GNSS)</em>' : ''}
@@ -82,13 +81,11 @@ function actualizarPanel(datos) {
     panel.classList.toggle('enVivo', datos.en_vivo);
     escribir('kiaEstado', datos.en_vivo ? 'EN VIVO' : `SIN SEÑAL · ${textoEdad(datos.edad_s)}`);
     escribir('kiaVelocidad', formatearNumero(datos.vel_kmh, 0, ' km/h'));
-    escribir('kiaLphEcuacion', formatearNumero(datos.lph_ecuacion, 2, ' L/h'));
     escribir('kiaLphPid', formatearNumero(datos.lph_pid, 2, ' L/h'));
 
     const r = datos.recorrido || {};
     escribir('kiaRecorrido', `${formatearNumero(r.distancia_km, 2, ' km')} · ${formatearDuracion(r.duracion_s)}`);
     escribir('kiaLitrosPid', `${formatearLitros(r.litros_pid)} · ${formatearPesos(r.costo_pid_cop)}`);
-    escribir('kiaLitrosEcuacion', `${formatearLitros(r.litros_ecuacion)} · ${formatearPesos(r.costo_ecuacion_cop)}`);
     escribir('kiaTituloRecorrido', datos.en_vivo ? 'RECORRIDO EN CURSO' : 'ÚLTIMO RECORRIDO');
 }
 
