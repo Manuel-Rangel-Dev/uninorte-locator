@@ -60,18 +60,13 @@ export function formatearRadio(metros) {
     return `${(metros / 1000).toFixed(1)} KM`;
 }
 
-// Formatea fecha y hora para tarjetas de recorrido.
-export function formatearFechaHoraCard(fechaStr, horaStr) {
-    if (!fechaStr) return '--';
-    const partesFecha = fechaStr.split('-');
-    let fechaFmt = fechaStr;
-    if (partesFecha.length === 3) {
-        const [yyyy, mm, dd] = partesFecha;
-        const yy = yyyy.slice(-2);
-        fechaFmt = `${dd}/${mm}/${yy}`;
-    }
-    const horaFmt = horaStr ? horaStr.slice(0, 5) : '';
-    return horaFmt ? `${fechaFmt} - ${horaFmt}` : fechaFmt;
+// Fecha de la API (YYYY-MM-DD HH:MM:SS) o fecha y hora de un punto GPS.
+export function formatearFechaHoraRecorrido(fecha, hora) {
+    if (!fecha) return '--';
+    const [diaISO, horaAPI] = String(fecha).split(/[ T]/);
+    const partes = diaISO.split('-');
+    const fechaVisible = partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : diaISO;
+    return `${fechaVisible} · ${hora || horaAPI || '--'}`;
 }
 
 // Calcula la distancia de un punto a un segmento de línea.
@@ -110,4 +105,12 @@ export function escaparHtml(texto) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+}
+
+// Edad de la última señal, compartida por los paneles GPS y OBD.
+export function textoEdad(segundos) {
+    if (segundos < 90) return `hace ${Math.round(segundos)} s`;
+    if (segundos < 5400) return `hace ${Math.round(segundos / 60)} min`;
+    if (segundos < 172800) return `hace ${Math.round(segundos / 3600)} h`;
+    return `hace ${Math.round(segundos / 86400)} días`;
 }

@@ -14,7 +14,6 @@ UMBRAL_ESTACIONADO_METROS = 50
 DECIMALES_COORDENADAS = 4
 
 VENTANA_RECORRIDOS = timedelta(days=7)
-MAX_RANGO_RECORRIDOS = timedelta(days=31)
 
 
 def memorizar_por_clave(consulta, clave):
@@ -96,7 +95,7 @@ def preparar_segmentos(registros: list[dict]) -> list[tuple[list[dict], datetime
 
 
 def completar_rango(desde: datetime | None, hasta: datetime | None, ahora: datetime) -> tuple:
-    """Completa extremos a siete días; admite hasta 31 días de diferencia entre fechas."""
+    """Completa extremos a siete días, sin tope de duración; rechaza rangos invertidos."""
     if desde is None and hasta is None:
         hasta = ahora
     if desde is None:
@@ -105,8 +104,6 @@ def completar_rango(desde: datetime | None, hasta: datetime | None, ahora: datet
         hasta = desde + VENTANA_RECORRIDOS
     if hasta < desde:
         raise ValueError("'hasta' no puede ser anterior a 'desde'")
-    if (hasta.date() - desde.date()).days > MAX_RANGO_RECORRIDOS.days:
-        raise ValueError("El rango no puede pasar de 31 días de diferencia entre fechas")
     return desde, hasta
 
 

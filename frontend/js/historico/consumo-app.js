@@ -52,11 +52,11 @@ export function pedirConsumo(recorrido) {
     return cache.get(clave);
 }
 
-// Texto corto del estimado: "≈ 0,548 L · $2.310 (modelo)".
+// Texto corto del estimado: "≈ 0,548 L · $2.310 del modelo".
 export function textoConsumo(datos) {
     if (!datos) return 'Consumo estimado no disponible';
     if (datos.litros === null || datos.litros === undefined) return 'Sin estimado (recorrido muy corto o lento)';
-    return `≈ ${formatearLitros(datos.litros)} · ${formatearPesos(datos.costo_cop)} (modelo)`;
+    return `≈ ${formatearLitros(datos.litros)} · ${formatearPesos(datos.costo_cop)} del modelo`;
 }
 
 // Línea de consumo en la tarjeta de un recorrido. Se llena cuando llega la respuesta.
@@ -67,7 +67,6 @@ export function pintarConsumoEnTarjeta(elemento, recorrido) {
     pedirConsumo(recorrido).then(datos => {
         linea.textContent = textoConsumo(datos);
         linea.classList.toggle('sinEstimado', !datos || datos.litros === null || datos.litros === undefined);
-        if (datos && datos.modelo) linea.title = `Modelo ${datos.modelo}, factor ${datos.factor?.toFixed(3) ?? '--'}`;
     });
 }
 

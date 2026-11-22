@@ -2,11 +2,11 @@
 // KIA EN VIVO: MARCADOR, PANEL DE CONSUMO Y TRAZA COLOREADA POR L/h (P3-S3)
 // Ciclo propio sobre /api/kia/vivo, separado del de la app (mapa-vivo.js): el marcador
 // del celular, su filtro de saltos y las pruebas con Lockito no dependen de este módulo.
-// En vivo no hay modelo: solo la ecuación y el PID acumulados (decisión de P3-S3).
+// El panel y los popups muestran el consumo medido del vehículo.
 // =============================================================================
 import { API_BASE, INTERVALO_KIA_MS, ZOOM_CENTRADO } from '../constantes.js';
 import { estado } from '../estado.js';
-import { escaparHtml } from '../utilidades.js';
+import { escaparHtml, textoEdad } from '../utilidades.js';
 import {
     crearTramoConsumo,
     crearTrazaConsumo,
@@ -42,10 +42,9 @@ export function crearIconoKia(enVivo) {
 
 function textoPopupKia(datos) {
     return `
-        <strong>Kia K3</strong>${datos.en_vivo ? '' : ' (sin señal)'}<br>
+        <strong>Vehículo con OBD</strong>${datos.en_vivo ? '' : ' (sin señal)'}<br>
         ${escaparHtml(formatearNumero(datos.vel_kmh, 0, ' km/h'))}
-        · ${escaparHtml(formatearNumero(datos.lph_ecuacion, 2, ' L/h'))} (ecuación)<br>
-        PID: ${escaparHtml(formatearNumero(datos.lph_pid, 2, ' L/h'))}<br>
+        · ${escaparHtml(formatearNumero(datos.lph_pid, 2, ' L/h'))}<br>
         Última posición: ${escaparHtml(datos.hora_posicion || '--')}
         ${datos.recorrido_posicion && datos.recorrido_posicion !== datos.recorrido_id
             ? '<br><em>(de un recorrido anterior: el actual no tiene GNSS)</em>' : ''}
@@ -55,12 +54,6 @@ function textoPopupKia(datos) {
 // -----------------------------------------------------------------------------
 // Panel
 // -----------------------------------------------------------------------------
-function textoEdad(segundos) {
-    if (segundos < 90) return `hace ${Math.round(segundos)} s`;
-    if (segundos < 5400) return `hace ${Math.round(segundos / 60)} min`;
-    if (segundos < 172800) return `hace ${Math.round(segundos / 3600)} h`;
-    return `hace ${Math.round(segundos / 86400)} días`;
-}
 
 function escribir(id, texto) {
     const elemento = document.getElementById(id);
@@ -82,13 +75,11 @@ function actualizarPanel(datos) {
     panel.classList.toggle('enVivo', datos.en_vivo);
     escribir('kiaEstado', datos.en_vivo ? 'EN VIVO' : `SIN SEÑAL · ${textoEdad(datos.edad_s)}`);
     escribir('kiaVelocidad', formatearNumero(datos.vel_kmh, 0, ' km/h'));
-    escribir('kiaLphEcuacion', formatearNumero(datos.lph_ecuacion, 2, ' L/h'));
     escribir('kiaLphPid', formatearNumero(datos.lph_pid, 2, ' L/h'));
 
     const r = datos.recorrido || {};
     escribir('kiaRecorrido', `${formatearNumero(r.distancia_km, 2, ' km')} · ${formatearDuracion(r.duracion_s)}`);
     escribir('kiaLitrosPid', `${formatearLitros(r.litros_pid)} · ${formatearPesos(r.costo_pid_cop)}`);
-    escribir('kiaLitrosEcuacion', `${formatearLitros(r.litros_ecuacion)} · ${formatearPesos(r.costo_ecuacion_cop)}`);
     escribir('kiaTituloRecorrido', datos.en_vivo ? 'RECORRIDO EN CURSO' : 'ÚLTIMO RECORRIDO');
 }
 
@@ -201,8 +192,8 @@ function marcarBotonSeguirKia(activo) {
     const boton = document.getElementById('btnSeguirKia');
     if (!boton) return;
     boton.classList.toggle('activo', activo);
-    boton.title = activo ? 'Seguir al Kia K3: desactivar modo seguimiento'
-        : 'Seguir al Kia K3: activar modo seguimiento';
+    boton.title = activo ? 'Seguir al vehículo con OBD: desactivar modo seguimiento'
+        : 'Seguir al vehículo con OBD: activar modo seguimiento';
 }
 
 function apagarSeguimientoCelular() {
@@ -211,7 +202,7 @@ function apagarSeguimientoCelular() {
     const boton = document.getElementById('btnCentrar');
     if (boton) {
         boton.classList.remove('activo');
-        boton.title = 'Seguir al Vehículo 2: activar modo seguimiento';
+        boton.title = 'Seguir al vehículo con GPS: activar modo seguimiento';
     }
 }
 
@@ -220,7 +211,7 @@ function alternarSeguimientoKia() {
     if (!estado.kiaTracking && !estado.kiaMarcador) {
         // Sin ninguna posición GNSS del Kia no hay a dónde ir: aviso breve en el botón
         boton.classList.add('sinPosicion');
-        boton.title = 'Sin posición GNSS del Kia';
+        boton.title = 'Sin posición GNSS del vehículo con OBD';
         setTimeout(() => {
             boton.classList.remove('sinPosicion');
             marcarBotonSeguirKia(estado.kiaTracking);

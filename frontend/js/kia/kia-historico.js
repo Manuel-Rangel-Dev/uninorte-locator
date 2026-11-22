@@ -1,23 +1,14 @@
-// =============================================================================
-// KIA EN EL HISTÓRICO: PESTAÑA, MÉTRICAS DEL MODELO, LISTA, TRAZA Y REPRODUCTOR (P3-S3)
-// La pestaña "Kia K3" del panel de históricos muestra las métricas de /api/kia/metricas y
-// los recorridos de /api/kia/recorridos con lo medido (PID) frente al modelo y la ecuación.
-// La pestaña "App" es la de siempre: este módulo solo la oculta con una clase en el panel,
-// sin tocar su estado (rango, zona, rutas dibujadas ni reproductor).
-// =============================================================================
+// Histórico OBD: lista, traza y reproductor; comparte el rango del calendario con GPS.
 import { API_BASE } from '../constantes.js';
 import { estado } from '../estado.js';
-import { distanciaSegmentoAPunto, escaparHtml } from '../utilidades.js';
+import { distanciaSegmentoAPunto, escaparHtml, formatearFechaHoraRecorrido } from '../utilidades.js';
 import { crearIconoInicio, crearIconoFin } from '../historico/lista-slidebar.js';
 import { crearIconoKia } from './kia-vivo.js';
+import { textoConsumo } from '../historico/consumo-app.js';
 import {
     colorLph,
     crearTrazaConsumo,
-    formatearDuracion,
-    formatearError,
-    formatearLitros,
     formatearNumero,
-    formatearPesos,
     lphDePunto
 } from './colores-consumo.js';
 
@@ -82,8 +73,7 @@ function mostrarPuntoKia(indice) {
     if (fechaHora) fechaHora.textContent = punto.hora || '--';
     const datos = document.getElementById('datosKiaReproduccion');
     if (datos) {
-        datos.textContent = `${formatearNumero(punto.vel_kmh, 0, ' km/h')} · PID ${formatearNumero(punto.lph_pid, 2, ' L/h')}`
-            + ` · Ec. ${formatearNumero(punto.lph_ecuacion, 2, ' L/h')}`;
+        datos.textContent = `${formatearNumero(punto.vel_kmh, 0, ' km/h')} · ${formatearNumero(punto.lph_pid, 2, ' L/h')}`;
     }
 }
 
@@ -143,7 +133,7 @@ function abrirReproductorKia(puntos, numero) {
         slider.max = Math.max(0, puntos.length - 1);
     }
     const hora = punto => (punto.hora || '--:--').slice(11, 19);
-    document.getElementById('infoKiaReproduccion').textContent = `Kia ${numero}`;
+    document.getElementById('infoKiaReproduccion').textContent = `Recorrido ${numero}`;
     document.getElementById('tiempoInicioKia').textContent = hora(puntos[0]);
     document.getElementById('tiempoFinKia').textContent = hora(puntos[puntos.length - 1]);
     mostrarPuntoKia(0);
@@ -208,8 +198,7 @@ function popupPunto(punto) {
     return `
         ${escaparHtml(punto.hora)}<br>
         ${escaparHtml(formatearNumero(punto.vel_kmh, 0, ' km/h'))}<br>
-        PID: ${escaparHtml(formatearNumero(punto.lph_pid, 2, ' L/h'))}
-        · Ecuación: ${escaparHtml(formatearNumero(punto.lph_ecuacion, 2, ' L/h'))}
+        L/h: ${escaparHtml(formatearNumero(punto.lph_pid, 2, ' L/h'))}
     `;
 }
 
@@ -232,18 +221,17 @@ function dibujarRecorridoKia(recorrido, puntos, numero) {
     const inicio = puntos[0];
     const fin = puntos[puntos.length - 1];
     grupo.addLayer(L.marker([inicio.lat, inicio.lng], { icon: crearIconoInicio(numero), zIndexOffset: 500 })
-        .bindTooltip(`Inicio Kia ${numero}`, { permanent: true, direction: 'top', offset: [0, -14],
+        .bindTooltip(`Inicio ${numero}`, { permanent: true, direction: 'top', offset: [0, -14],
             className: 'tooltipRecorrido tooltipInicio' })
-        .bindPopup(escaparHtml(`Inicio Kia ${numero} — ${recorrido.inicio || '--'}`)));
+        .bindPopup(escaparHtml(`Inicio ${numero} — ${recorrido.inicio || '--'}`)));
 
     const cerca = L.latLng(inicio.lat, inicio.lng).distanceTo(L.latLng(fin.lat, fin.lng)) < 30;
     grupo.addLayer(L.marker([fin.lat, fin.lng], { icon: crearIconoFin(numero), zIndexOffset: 500 })
-        .bindTooltip(`Fin Kia ${numero}`, { permanent: true, direction: cerca ? 'bottom' : 'top',
+        .bindTooltip(`Fin ${numero}`, { permanent: true, direction: cerca ? 'bottom' : 'top',
             offset: cerca ? [0, 14] : [0, -14], className: 'tooltipRecorrido tooltipFin' })
         .bindPopup(`
-            ${escaparHtml(`Fin Kia ${numero} — ${recorrido.fin || '--'}`)}<br>
-            PID: ${escaparHtml(`${formatearLitros(recorrido.litros_pid)} · ${formatearPesos(recorrido.costo_cop)}`)}<br>
-            Modelo: ${escaparHtml(`${formatearLitros(recorrido.litros_modelo)} · ${formatearPesos(recorrido.costo_modelo_cop)}`)}
+            ${escaparHtml(`Fin ${numero} — ${recorrido.fin || '--'}`)}<br>
+            ${escaparHtml(textoConsumo({ litros: recorrido.litros_modelo, costo_cop: recorrido.costo_modelo_cop }))}
         `));
 
     grupo.addTo(estado.mapa);
@@ -257,7 +245,7 @@ async function alternarRecorridoKia(recorrido, numero, elemento) {
     limpiarCapasKia();
     if (yaElegido) return;
     if (!recorrido.con_traza) {
-        mostrarEstadoKia(`Kia ${numero} no tiene GNSS: no hay traza para dibujar.`, '#e5a50a');
+        mostrarEstadoKia(`Recorrido ${numero} no tiene GNSS: no hay traza para dibujar.`, '#e5a50a');
         return;
     }
     estado.kiaSeleccionado = recorrido.recorrido_id;
@@ -268,12 +256,12 @@ async function alternarRecorridoKia(recorrido, numero, elemento) {
         // Si mientras cargaba se eligió otro o se salió de la pestaña, no se dibuja.
         if (estado.kiaSeleccionado !== recorrido.recorrido_id || estado.pestanaHistoricos !== 'kia') return;
         if (!datos.puntos || datos.puntos.length === 0) {
-            mostrarEstadoKia(`Kia ${numero} no tiene puntos con GNSS.`, '#e5a50a');
+            mostrarEstadoKia(`Recorrido ${numero} no tiene puntos con GNSS.`, '#e5a50a');
             return;
         }
         dibujarRecorridoKia(recorrido, datos.puntos, numero);
         abrirReproductorKia(datos.puntos, numero);
-        mostrarEstadoKia(`Kia ${numero}: ${datos.puntos.length} puntos, coloreados por L/h.`);
+        mostrarEstadoKia(`Recorrido ${numero}: ${datos.puntos.length} puntos, coloreados por L/h.`);
     } catch (error) {
         console.error('[Kia] Error cargando el recorrido:', error);
         mostrarEstadoKia('No se pudo cargar la traza del recorrido.', '#e74c3c');
@@ -282,47 +270,8 @@ async function alternarRecorridoKia(recorrido, numero, elemento) {
 }
 
 // -----------------------------------------------------------------------------
-// Métricas y lista
+// Lista
 // -----------------------------------------------------------------------------
-function renderMetricas(m) {
-    const contenedor = document.getElementById('metricasKia');
-    if (!contenedor) return;
-    if (!m || !m.modelo || m.modelo.n === 0) {
-        contenedor.innerHTML = '<div class="tituloMetricas">MODELO FRENTE AL PID</div>'
-            + '<div>Sin recorridos cerrados con PID en este rango.</div>';
-        return;
-    }
-    const fila = (nombre, x, clase = '') => `
-        <div class="filaMetrica ${clase}"><span>${escaparHtml(nombre)} (${escaparHtml(x.n)})</span>
-        <span>MAPE ${escaparHtml(formatearNumero(x.mape_pct, 1, ' %'))} · R² ${escaparHtml(formatearNumero(x.r2_l100km, 2))}</span></div>`;
-    const porModelo = m.por_modelo || {};
-    const nombreSlope = Object.keys(porModelo).find(n => n.startsWith('slope/'));
-    const nombreBase = Object.keys(porModelo).find(n => n.startsWith('base/'));
-    // Primero el modelo elegido (con pendiente); el respaldo sin GNSS y el total van aparte
-    contenedor.innerHTML = `
-        <div class="tituloMetricas">MODELO FRENTE AL PID</div>
-        ${nombreSlope ? fila('Pendiente', porModelo[nombreSlope]) : ''}
-        ${nombreSlope ? `<div class="filaMetrica secundaria"><span></span>
-            <span>total ${escaparHtml(formatearError(porModelo[nombreSlope].error_total_pct))}
-            · MAE ${escaparHtml(formatearLitros(porModelo[nombreSlope].mae_litros))}</span></div>` : ''}
-        ${nombreBase ? fila('Sin GNSS', porModelo[nombreBase], 'secundaria') : ''}
-        ${fila('Todos', m.modelo, 'secundaria')}
-        ${fila('Ecuación', m.ecuacion)}
-    `;
-    contenedor.title = 'Con pendiente: slope/linear_physics (recorridos con GNSS). '
-        + 'Sin GNSS: respaldo base/linear_physics. Todos: lo que muestra la página. '
-        + 'R² de L/100 km ponderado por distancia.';
-}
-
-function filaConsumo(nombre, litros, pesos, error) {
-    return `
-        <div class="filaConsumoKia">
-            <span>${escaparHtml(nombre)}</span>
-            <span>${escaparHtml(formatearLitros(litros))}${pesos === undefined ? '' : ' · ' + escaparHtml(formatearPesos(pesos))}</span>
-            <span class="errorConsumo">${escaparHtml(formatearError(error))}</span>
-        </div>`;
-}
-
 // Por defecto, como en la app: solo los recorridos de la última semana (7 días antes del fin
 // del más reciente) y, de esos, solo los que tienen estimado del modelo. "Ver todos" quita ambos filtros.
 const SEMANA_MS = 7 * 24 * 60 * 60 * 1000;
@@ -351,9 +300,9 @@ function renderLista() {
         lista.appendChild(encabezado);
     };
     if (todos.length === 0) {
-        lista.textContent = 'No hay recorridos del Kia en este rango.';
+        lista.textContent = 'No hay recorridos del vehículo con OBD en este rango.';
     } else if (kiaEnZona && base.length === 0) {
-        agregarEncabezado('Sin recorridos del Kia en esta zona (los que no tienen GNSS no se pueden ubicar).');
+        agregarEncabezado('Sin recorridos del vehículo con OBD en esta zona (los que no tienen GNSS no se pueden ubicar).');
     } else if (recorridos.length < base.length) {
         agregarEncabezado(`Mostrando la última semana, con estimado del modelo (${recorridos.length} de ${base.length})`);
     } else if (estado.kiaMostrarTodos) {
@@ -369,17 +318,15 @@ function renderLista() {
         if (estado.kiaSeleccionado === r.recorrido_id) elemento.classList.add('enReproduccion');
         elemento.innerHTML = `
             <div class="numeroRecorrido">
-                Kia ${numero}${r.emulado ? ' <span class="etiquetaEmulado">Emulado</span>' : ''}${r.con_traza ? '' : ' <span class="etiquetaSinGnss">sin GNSS</span>'}
+                Recorrido ${numero}${r.emulado ? ' <span class="etiquetaEmulado">Emulado</span>' : ''}${r.con_traza ? '' : ' <span class="etiquetaSinGnss">sin GNSS</span>'}
             </div>
             <div class="datosRecorrido">
-                <div>${escaparHtml((r.inicio || '--').slice(0, 16))} · ${escaparHtml(formatearDuracion(r.duracion_s))}
-                    · ${escaparHtml(formatearNumero(r.distancia_km, 2, ' km'))}</div>
-                ${filaConsumo('PID', r.litros_pid, r.costo_cop, null)}
-                ${filaConsumo('Modelo', r.litros_modelo, r.costo_modelo_cop, r.error_modelo_pct)}
-                ${filaConsumo('Ecuación', r.litros_ecuacion, undefined, r.error_ecuacion_pct)}
+                <div>Inicio: ${escaparHtml(formatearFechaHoraRecorrido(r.inicio))}</div>
+                <div>Fin: ${escaparHtml(formatearFechaHoraRecorrido(r.fin))}</div>
+                <div>${escaparHtml(formatearNumero(r.distancia_km, 2, ' km'))} · ${escaparHtml(formatearNumero(r.vel_media_kmh, 0, ' km/h'))} promedio</div>
+                <div class="consumoRecorrido${r.litros_modelo == null ? ' sinEstimado' : ''}">${escaparHtml(textoConsumo({ litros: r.litros_modelo, costo_cop: r.costo_modelo_cop }))}</div>
             </div>
         `;
-        if (r.modelo) elemento.title = `Modelo ${r.modelo}, factor ${formatearNumero(r.factor, 3)}`;
         elemento.addEventListener('click', () => alternarRecorridoKia(r, numero, elemento));
         lista.appendChild(elemento);
     });
@@ -438,7 +385,7 @@ async function aplicarZonaKia() {
         return;
     }
     const zona = zonaKia;
-    if (estado.pestanaHistoricos === 'kia') mostrarEstadoKia('Filtrando recorridos del Kia en la zona…');
+    if (estado.pestanaHistoricos === 'kia') mostrarEstadoKia('Filtrando recorridos del vehículo con OBD en la zona…');
     try {
         const conTraza = estado.kiaRecorridos.filter(r => r.con_traza);
         const trazas = await Promise.all(conTraza.map(r => pedirPuntos(r.recorrido_id)));
@@ -446,7 +393,7 @@ async function aplicarZonaKia() {
         const ids = new Set(conTraza.filter((r, i) => pasaPorZona(trazas[i], zona)).map(r => r.recorrido_id));
         kiaEnZona = estado.kiaRecorridos.filter(r => ids.has(r.recorrido_id));
         renderLista();
-        mostrarEstadoKia(kiaEnZona.length ? `${kiaEnZona.length} recorrido(s) del Kia en la zona` : '',
+        mostrarEstadoKia(kiaEnZona.length ? `${kiaEnZona.length} recorrido(s) del vehículo con OBD en la zona` : '',
             '#4cd964');
     } catch (error) {
         if (numero !== consultaZona) return;
@@ -469,31 +416,27 @@ let consultaKia = 0;      // para descartar respuestas de búsquedas anteriores
 function actualizarTitulosPestanas() {
     const app = document.getElementById('tabHistApp');
     const kia = document.getElementById('tabHistKia');
-    if (app) app.textContent = `Vehículo 2 (${estado.recorridosBase.length})`;
-    if (kia) kia.textContent = rangoKia ? `Kia K3 (${estado.kiaRecorridos.length})` : 'Kia K3';
+    if (app) app.textContent = `Vehículo con GPS (${estado.recorridosBase.length})`;
+    if (kia) kia.textContent = rangoKia ? `Vehículo con OBD (${estado.kiaRecorridos.length})` : 'Vehículo con OBD';
 }
 
 async function cargarVistaKia() {
     if (!rangoKia) return;
     const numero = ++consultaKia;
     const parametros = `desde=${encodeURIComponent(rangoKia.desde)}&hasta=${encodeURIComponent(rangoKia.hasta)}`;
-    mostrarEstadoKia('Cargando recorridos del Kia…');
+    mostrarEstadoKia('Cargando recorridos del vehículo con OBD…');
     try {
-        const [metricas, recorridos] = await Promise.all([
-            pedirJson(`/api/kia/metricas?${parametros}`),
-            pedirJson(`/api/kia/recorridos?todos=1&${parametros}`)
-        ]);
+        const recorridos = await pedirJson(`/api/kia/recorridos?todos=1&${parametros}`);
         if (numero !== consultaKia) return;  // llegó otra búsqueda mientras tanto
         estado.kiaRecorridos = recorridos;
         document.getElementById('panelHistoricos')?.classList.toggle('kiaConResultados', recorridos.length > 0);
-        renderMetricas(metricas);
         aplicarZonaKia();  // pinta la lista (con la zona, si hay una)
         actualizarTitulosPestanas();
         mostrarEstadoKia('');
     } catch (error) {
         if (numero !== consultaKia) return;
         console.error('[Kia] Error cargando el histórico del Kia:', error);
-        mostrarEstadoKia('No se pudieron cargar los recorridos del Kia.', '#e74c3c');
+        mostrarEstadoKia('No se pudieron cargar los recorridos del vehículo con OBD.', '#e74c3c');
     }
 }
 
@@ -544,8 +487,6 @@ function reiniciarHistoricoKia() {
     if (estado.pestanaHistoricos !== 'app') cambiarPestana('app');
     const lista = document.getElementById('listaKia');
     if (lista) lista.innerHTML = '';
-    const metricas = document.getElementById('metricasKia');
-    if (metricas) metricas.innerHTML = '';
 }
 
 export function initKiaHistorico() {

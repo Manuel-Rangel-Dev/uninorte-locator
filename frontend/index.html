@@ -7,10 +7,12 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>Uninorte Locator</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=1">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon.png?v=1">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="" />
-    <link rel="stylesheet" href="styles.css?v=34">
+    <link rel="stylesheet" href="styles.css?v=45">
     <script src="config.js"></script>
     <script>
         if (typeof APP_CONFIG === 'undefined') {
@@ -26,17 +28,19 @@
 <body>
 
     <div id="panelInfo">
-        <h1>Uninorte Locator</h1>
+        <div class="cabeceraKia">
+            <span class="tituloKia">VEHÍCULO CON GPS <span class="puntoVivo"></span> <span id="gpsEstado" class="estadoVivo">--</span></span>
+        </div>
         <div class="filaInfo"><span class="etiquetaInfo">LAT:</span><span id="valorLat">--</span></div>
         <div class="filaInfo"><span class="etiquetaInfo">LONG:</span><span id="valorLng">--</span></div>
         <div class="filaInfo"><span class="etiquetaInfo">DATE:</span><span id="valorFecha">--</span></div>
         <div class="filaInfo"><span class="etiquetaInfo">HOUR:</span><span id="valorHora">--</span></div>
     </div>
 
-    <!-- KIA EN VIVO (P3-S3): consumo por ecuación y PID del recorrido en curso -->
+    <!-- KIA EN VIVO: consumo medido del recorrido en curso -->
     <div id="panelKia">
         <!-- Seguimiento del Kia: mira con un carro en el centro, encima de la tarjeta -->
-        <button id="btnSeguirKia" type="button" title="Seguir al Kia K3: activar modo seguimiento" aria-label="Seguir al Kia K3">
+        <button id="btnSeguirKia" type="button" title="Seguir al vehículo con OBD: activar modo seguimiento" aria-label="Seguir al vehículo con OBD">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M12 1.5V4M12 20V22.5M1.5 12H4M20 12H22.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                 <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.5"/>
@@ -47,22 +51,20 @@
             </svg>
         </button>
         <div class="cabeceraKia">
-            <span class="tituloKia">KIA K3 <span id="kiaEmulado" class="etiquetaEmulado" hidden>Emulado</span> <span class="puntoVivo"></span> <span id="kiaEstado">--</span></span>
-            <button id="btnMinimizarKia" type="button" title="Minimizar panel del Kia">–</button>
+            <span class="tituloKia">VEHÍCULO CON OBD <span id="kiaEmulado" class="etiquetaEmulado" hidden>Emulado</span> <span class="puntoVivo"></span> <span id="kiaEstado" class="estadoVivo">--</span></span>
+            <button id="btnMinimizarKia" type="button" title="Minimizar panel del vehículo con OBD">–</button>
         </div>
         <div class="cuerpoKia">
             <div class="filaInfo"><span class="etiquetaInfo">VEL:</span><span id="kiaVelocidad">--</span></div>
-            <div class="filaInfo"><span class="etiquetaInfo">L/h ECUACIÓN:</span><span id="kiaLphEcuacion">--</span></div>
-            <div class="filaInfo"><span class="etiquetaInfo">L/h PID:</span><span id="kiaLphPid">--</span></div>
+            <div class="filaInfo"><span class="etiquetaInfo">L/h:</span><span id="kiaLphPid">--</span></div>
             <div class="subtituloKia" id="kiaTituloRecorrido">RECORRIDO EN CURSO</div>
             <div class="filaInfo"><span class="etiquetaInfo">RECORRIDO:</span><span id="kiaRecorrido">--</span></div>
-            <div class="filaInfo"><span class="etiquetaInfo">PID:</span><span id="kiaLitrosPid">--</span></div>
-            <div class="filaInfo"><span class="etiquetaInfo">ECUACIÓN:</span><span id="kiaLitrosEcuacion">--</span></div>
+            <div class="filaInfo"><span class="etiquetaInfo">CONSUMO:</span><span id="kiaLitrosPid">--</span></div>
         </div>
     </div>
 
     <!-- Seguimiento del celular (app): mira con un celular en el centro. Encima de #panelInfo -->
-    <button id="btnCentrar" title="Seguir al Vehículo 2: activar modo seguimiento" aria-label="Seguir al Vehículo 2">
+    <button id="btnCentrar" title="Seguir al vehículo con GPS: activar modo seguimiento" aria-label="Seguir al vehículo con GPS">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <path d="M12 1.5V4M12 20V22.5M1.5 12H4M20 12H22.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.5"/>
@@ -70,6 +72,12 @@
             <path d="M11.2 15.1H12.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
         </svg>
     </button>
+    <!-- Leyenda independiente: disponible en vivo y en históricos. -->
+    <div id="controlLeyendaConsumo">
+        <button id="btnLeyendaConsumo" type="button" aria-expanded="false"
+            aria-controls="leyendaConsumo" title="Mostrar leyenda de consumo">L/h</button>
+        <section id="leyendaConsumo" aria-label="Consumo (L/h)" hidden></section>
+    </div>
     <button id="btnHistoricos" title="Ver histórico de recorrido">
         <svg id="iconoHistoricos" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="12" cy="12" r="9" stroke="#ffffff" stroke-width="1.5"/>
@@ -179,8 +187,8 @@
         <!-- PESTAÑAS (P3-S3): aparecen después de buscar un rango en el calendario.
              App = históricos de siempre; Kia K3 = consumo medido frente a estimado en ese rango -->
         <div class="pestanasHistoricos">
-            <button type="button" id="tabHistApp" class="tabHistoricos activo">Vehículo 2</button>
-            <button type="button" id="tabHistKia" class="tabHistoricos">Kia K3</button>
+            <button type="button" id="tabHistApp" class="tabHistoricos activo">Vehículo con GPS</button>
+            <button type="button" id="tabHistKia" class="tabHistoricos">Vehículo con OBD</button>
         </div>
 
         <button id="btnFiltrarPorZona" class="btnFiltrarPorZona" type="button" style="display: none;">
@@ -214,6 +222,8 @@
             <div id="estadoZona" class="estadoZona"></div>
 
         </div>
+
+        <div id="resumenApp" class="resumenRango" hidden></div>
 
         <div id="selectorRecorridos" style="display: none;">
             <div class="tituloRecorridos">
@@ -260,10 +270,10 @@
             </div>
         </div>
 
-        <!-- SECCIÓN KIA (P3-S3): métricas del modelo y recorridos del Kia -->
+        <!-- SECCIÓN KIA: resumen del rango y recorridos -->
         <div id="vistaKia">
-            <div id="metricasKia" class="metricasKia"></div>
-            <div class="tituloRecorridos">RECORRIDOS DEL KIA</div>
+            <div id="resumenKia" class="resumenRango" hidden></div>
+            <div class="tituloRecorridos">RECORRIDOS DEL VEHÍCULO CON OBD</div>
             <div id="estadoKia" class="estadoKia"></div>
             <div id="listaKia"></div>
             <button id="btnTodosKia" class="btnAlternarListaRutas" type="button" style="display: none;">Ver todos</button>
@@ -271,7 +281,7 @@
             <!-- REPRODUCTOR DEL KIA: se mueve debajo de la tarjeta elegida, como el de la app -->
             <div id="reproductorKia" style="display: none;">
                 <div class="infoReproduccion">
-                    <div id="infoKiaReproduccion">Kia --</div>
+                    <div id="infoKiaReproduccion">Recorrido --</div>
                     <div id="fechaHoraKiaReproduccion">--/--/---- --:--:--</div>
                     <div id="datosKiaReproduccion" class="datosKiaReproduccion">--</div>
                 </div>
@@ -298,6 +308,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
-    <script type="module" src="js/main.js?v=41"></script>
+    <script type="module" src="js/main.js?v=45"></script>
 </body>
 </html>
